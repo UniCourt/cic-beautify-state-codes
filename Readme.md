@@ -1,4 +1,5 @@
-# rtf-parser
+# cic-beautify-state-codes
+
 Welcome to the Code Improvement Commission
 
 This repository contains software that transforms official codes from ugly .rtf files into nice-looking, accessible HTML. We use "textutil" on a Mac to go from .rtf to bad HTML. Then, the code in this repository does the heavy lifting.
@@ -33,7 +34,7 @@ In subsequent months, we intend to add two more features:
 
 1. Create new folder named **transforms**
 
-2. Based on the state create a folder called *transforms/{state_name}*
+2. Based on the state create a folder called *transforms/<state_name>*
 
 3.Inside the above folder based on the release create a folder ocga/<release> which will contain raw files (raw files are textutil output files)
 
@@ -44,7 +45,7 @@ In subsequent months, we intend to add two more features:
                     │   README.md
                     │   requirements.txt    
                     │
-                    └───html_parse
+                    └───html_parser
                     │   │   file011.py
                     │   │   file012.py
                     |
