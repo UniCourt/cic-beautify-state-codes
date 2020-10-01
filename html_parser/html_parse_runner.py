@@ -1,3 +1,7 @@
+"""
+    - run this file with args state_key, input_file_name, release_number and release_date
+    - except input_file_name all the commandline args are mandatory
+"""
 import importlib
 import argparse
 import os
@@ -7,15 +11,17 @@ class HtmlParseRunner:
 
     @staticmethod
     def start_parser(state_key):
-        # parser_class = getattr(importlib.import_module(f'{state_key}_html_parser'),
-        #                            f'{state_key.upper()}ParseHtml')
-        # parser_class()
         from parser_base import ParserBase
         parser_base = ParserBase()
-        parser_base.start()
+        parser_base.start(state_key.lower())
 
 
 if __name__ == '__main__':
+    """
+        - Parse the command line args
+        - set environment variables using parsed command line args
+        - Call start parse method with state_key as arg 
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--state_key", help="State of which parser should be run", required=True, type=str)
     parser.add_argument("--input_file_name", help="file which needs to be parsed",  type=str)

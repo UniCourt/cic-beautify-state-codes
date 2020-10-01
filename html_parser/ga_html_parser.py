@@ -1,3 +1,9 @@
+"""
+    - this file accepts the text util generated html and parse it
+    - here the html is converted in such a way that it matches the html5 standards
+    - the start_parse method is called by parser base
+    - this method based on the file type(constitution files or title files) decides which methods to run
+"""
 from bs4 import BeautifulSoup, Doctype, element
 import re
 from datetime import datetime
@@ -41,8 +47,9 @@ class GAParseHtml(ParserBase):
         """
         self.meta_tags = []
         self.tag_to_unwrap = []
-        self.headers_class_dict = {'JUDICIAL DECISIONS': 'jdecisions', 'OPINIONS OF THE ATTORNEY GENERAL': 'opinionofag',
-                              'RESEARCH REFERENCES': 'rreferences'}
+        self.headers_class_dict = {'JUDICIAL DECISIONS': 'jdecisions',
+                                   'OPINIONS OF THE ATTORNEY GENERAL': 'opinionofag',
+                                   'RESEARCH REFERENCES': 'rreferences'}
 
     def create_page_soup(self):
         """
@@ -60,6 +67,10 @@ class GAParseHtml(ParserBase):
         print('created soup')
 
     def get_class_name(self):
+        """
+              - Find the textutil generated class names for each type of tag (h1, h2, ....)
+                using re pattern specified in self.tag_type_dict
+          """
         for key, value in self.tag_type_dict.items():
             class_tag = self.soup.find(
                 lambda tag: tag.name == 'p' and re.search(
@@ -78,13 +89,13 @@ class GAParseHtml(ParserBase):
             self.tag_type_dict['head3'] = h3_class
 
             if part_class := self.soup.find(lambda tag: tag.name == 'p' and re.search(
-                '^PART', tag.get_text().strip()) and tag.get('class')[0] != self.tag_type_dict['article']):
+                    '^PART', tag.get_text().strip()) and tag.get('class')[0] != self.tag_type_dict['article']):
                 if part_class['class'][0] not in self.tag_type_dict.values():
                     self.tag_type_dict['part'] = part_class['class'][0]
 
             if h3_class_1 := self.soup.find(lambda tag: tag.name == 'p' and re.search(
-                rf'^\d+-\d+-\d+\.', tag.get_text().strip(), re.I) and tag.get('class')[0]
-                                                    not in self.tag_type_dict.values()):
+                    rf'^\d+-\d+-\d+\.', tag.get_text().strip(), re.I) and tag.get('class')[0]
+                                                        not in self.tag_type_dict.values()):
                 self.tag_type_dict['head3.1'] = h3_class_1['class'][0]
 
         # self.junk_tag_class.append(
@@ -92,6 +103,10 @@ class GAParseHtml(ParserBase):
         print('updated class dict')
 
     def remove_junk(self):
+        """
+            - Delete the junk tags (empty tags and unwanted meta tags)
+            - Add new meta tags for storing release related information of parsed html
+        """
         for meta in self.soup.findAll('meta'):
             if meta.get('name') and meta.get('name') in ['Author', 'Description']:
                 meta.decompose()
@@ -115,6 +130,13 @@ class GAParseHtml(ParserBase):
         print('junk removed')
 
     def replace_tags(self):
+        """
+            - create dictionary with class names as keys with associated tag name as its value
+            - find all the tags in html with specified class names from dict
+              and replace tag with associated tag name (p1 -> h1)
+            - based on tag name find or build id for that tag
+            - create watermark tag and append it with h1 to first nav tag
+        """
         watermark_p = None
         title_tag = None
         tag_dict = {self.tag_type_dict['head1']: "h1", self.tag_type_dict['head2']: "h2",
@@ -154,7 +176,9 @@ class GAParseHtml(ParserBase):
                         if chapter := chap_section_regex.group('chap'):
                             if re.search('^article', p_tag.get_text().strip(), re.I) and \
                                     (chap_id := p_tag.findPrevious(lambda tag: tag.name == 'h2'
-                                                                    and not re.search('^part', tag.get_text(), re.I))):
+                                                                               and not re.search('^part',
+                                                                                                 tag.get_text(),
+                                                                                                 re.I))):
                                 if re.search(r'chapter \d', chap_id.get_text(), re.I):
                                     p_tag['id'] = f'{chap_id["id"]}a{chapter.zfill(2)}'
                                 else:
@@ -176,8 +200,10 @@ class GAParseHtml(ParserBase):
                             section = f'{self.title}-{chapter}-{chap_section_regex.group("section")}'
                             p_tag[
                                 'id'] = f't{self.title.zfill(2)}c{chapter.zfill(2)}s{section}'
-                        if previous_sibling_tag := p_tag.find_previous(lambda tag: tag.name == 'h3' and re.search(p_tag['id'], tag.get('id', ''))):
-                            if pervious_tag_id_num_match := re.search(rf'{p_tag["id"]}(\.\d)?\.(?P<count>\d+)', previous_sibling_tag['id'], re.I):
+                        if previous_sibling_tag := p_tag.find_previous(
+                                lambda tag: tag.name == 'h3' and re.search(p_tag['id'], tag.get('id', ''))):
+                            if pervious_tag_id_num_match := re.search(rf'{p_tag["id"]}(\.\d)?\.(?P<count>\d+)',
+                                                                      previous_sibling_tag['id'], re.I):
                                 p_tag['id'] = f"{p_tag['id']}.{int(pervious_tag_id_num_match.group('count')) + 1}"
                             else:
                                 p_tag['id'] = f"{p_tag['id']}.1"
@@ -202,11 +228,13 @@ class GAParseHtml(ParserBase):
                     if self.headers_class_dict.get(p_tag.get_text()):
                         p_tag['class'] = self.headers_class_dict.get(p_tag.get_text())
                     p_tag['id'] = re.sub(r'\s+|\'', '', f't{self.title.zfill(2)}-{p_tag.get_text()}')
-                    part_tag = p_tag.find_previous(lambda tag: re.search(r'h\d', tag.name) and tag.name != 'h5' and tag.has_attr('class')
-                                                               and tag['class'] not in self.headers_class_dict.values())
+                    part_tag = p_tag.find_previous(
+                        lambda tag: re.search(r'h\d', tag.name) and tag.name != 'h5' and tag.has_attr('class')
+                                    and tag['class'] not in self.headers_class_dict.values())
                     if re.search(r'^\d', p_tag.get_text()):
                         chap_id = p_tag.find_previous_sibling(lambda tag: re.search('^[a-zA-Z]', tag.get_text())
-                                                              and tag.name != 'h5' and re.search(r'h\d', tag.name))
+                                                                          and tag.name != 'h5' and re.search(r'h\d',
+                                                                                                             tag.name))
                     elif part_tag and part_tag.has_attr('class') and part_tag['class'] == 'part_header':
                         chap_id = part_tag
                     elif not p_tag.has_attr('class') or p_tag['class'] not in self.headers_class_dict.values():
@@ -218,12 +246,14 @@ class GAParseHtml(ParserBase):
                         id_text = re.sub(r'\s|"|\'', '', p_tag.get_text())
                         p_tag['id'] = f'{chap_id["id"]}-{id_text}'
                     if self.tag_type_dict.get('part') and key == self.tag_type_dict['part']:
-                        part_num = re.search(r'^part\s(?P<num>\w+(\.\w+)?)', p_tag.get_text().strip(), re.I).group('num')
+                        part_num = re.search(r'^part\s(?P<num>\w+(\.\w+)?)', p_tag.get_text().strip(), re.I).group(
+                            'num')
                         p_tag['class'] = 'part_header'
                         p_tag['id'] = f'{chap_tag["id"]}p{part_num.zfill(2)}'
                     if p_tag.get('class') in self.headers_class_dict.values():
                         previous_id_num = 0
-                        if previous_h4 := p_tag.findPrevious(lambda tag: tag.name == 'h4' and re.search(f"{p_tag['id']}\d+$", tag['id'], re.I)):
+                        if previous_h4 := p_tag.findPrevious(
+                                lambda tag: tag.name == 'h4' and re.search(f"{p_tag['id']}\d+$", tag['id'], re.I)):
                             previous_id_num = int(re.search(r'\d+$', previous_h4['id'], re.I).group())
                         p_tag['id'] = f'{p_tag["id"]}{str(previous_id_num + 1).zfill(2)}'
                 elif value == 'h5':
@@ -257,6 +287,12 @@ class GAParseHtml(ParserBase):
         print('tags replaced')
 
     def convert_paragraph_to_alphabetical_ol_tags(self):
+        """
+            For each tag which has to be converted to orderd list(<ol>)
+            - create new <ol> tags with appropriate type (1, A, i, a ..)
+            - get previous headers id to set unique id for each list item (<li>)
+            - append each li to respective ol accordingly
+        """
         main_sec_alpha = 'a'
         cap_alpha = 'A'
         ol_head = 1
@@ -530,6 +566,13 @@ class GAParseHtml(ParserBase):
         print('converted numeric ol')
 
     def create_analysis_nav_tag(self):
+        """
+            - match and find analysis navigation tag
+            - split the contents of tag by line break
+            - convert each line to a li
+            - create new nav tag and ul tag
+            - append each created li to new ul tag
+        """
         for analysis_p_tag in self.soup.findAll('p', {'class': self.tag_type_dict['normalp']}):
             if re.search(r'^Editor\'s notes.+ANALYSIS', analysis_p_tag.get_text(), re.DOTALL):
                 parent_id = analysis_p_tag.find_previous(lambda tag: tag.name in ['h2', 'h2', 'h3'])['id']
@@ -567,6 +610,16 @@ class GAParseHtml(ParserBase):
         print('created analysis tag')
 
     def remove_or_replace_class_names(self):
+        """
+            - create dictionary with h4 tags values as key
+              with appropriate class name and number of occurance as list of values
+            - for each tag in html
+            - if tag name is "b" replace it with new span tag with calss name "headbreak"
+            - if tag doesnt have any contents and tag name is meta or br delete it
+            - if tag only contains § and nothing, unwrap the tag
+            - if tag doesnt contain any alpha numeric characters delete the tag
+            - if tags value is present in 'notes_headers_dict' change tags name and add class name and id accordingly
+"""
         notes_headers_dict = {'Code Commission notes.': ['ccnotes', 0],
                               "Editor's notes.": ['ednotes', 0],
                               'Cross references.': ['crnotes', 0],
@@ -630,13 +683,13 @@ class GAParseHtml(ParserBase):
                     chap_tag = tag.find_previous(lambda tag: tag.name == 'h2')
                     tag['id'] = f'{chap_tag["id"]}{section_header_match.group()}'
                     if previous_sibling_tag := tag.find_previous(lambda tag: tag.name == 'h3' and
-                                            re.search(tag['id'], tag.get('id', ''))):
-                            if pervious_tag_id_num_match := \
-                                    re.search(rf'{tag["id"]}(\.\d)?\.(?P<count>\d+)',
-                                              previous_sibling_tag['id'], re.I):
-                                tag['id'] = f"{tag['id']}.{int(pervious_tag_id_num_match.group('count')) + 1}"
-                            else:
-                                tag['id'] = f"{tag['id']}.1"
+                                                                             re.search(tag['id'], tag.get('id', ''))):
+                        if pervious_tag_id_num_match := \
+                                re.search(rf'{tag["id"]}(\.\d)?\.(?P<count>\d+)',
+                                          previous_sibling_tag['id'], re.I):
+                            tag['id'] = f"{tag['id']}.{int(pervious_tag_id_num_match.group('count')) + 1}"
+                        else:
+                            tag['id'] = f"{tag['id']}.1"
             if tag.name in ['h3', 'h2']:
                 for value in notes_headers_dict.values():
                     value[1] = 0
@@ -645,6 +698,22 @@ class GAParseHtml(ParserBase):
         print('removed class names')
 
     def wrap_div_tags(self):
+        """
+            - for each h2 in html
+            - create new div and append h2 to that div
+            - find next tag, if next tag is h3
+                - create new div and append h3 to it
+                - append that new div to h2 div
+                - find next tag of h3, if next tag is h4
+                    - create new div and append h4 to that div
+                    - append that new div to h3 div
+                    - find next tag, if next tag is h5
+                        - create new div and append h5 to that div
+                        - append that new div to h4 div
+                    - if not h5 append that tag to h2 div and so on
+                - if not h4 append that tag to h2 div and so on
+            - if not h3 append that tag to h2 div and so on
+        """
         self.soup = BeautifulSoup(self.soup.prettify(formatter=None), features='lxml')
         for header in self.soup.findAll('h2'):
             new_chap_div = self.soup.new_tag('div')
@@ -717,6 +786,12 @@ class GAParseHtml(ParserBase):
         print('wrapped div tags')
 
     def add_anchor_tags(self):
+        """
+            - for each nav tag in html
+            - using the text of the tag build an id and a reference to a tag
+            - ie. 1-2-3 here 1 is title 2 is chapter number and 3 is section number
+            - add a property called 'aria-describedby' with value same as previously built reference link
+        """
         self.soup = BeautifulSoup(self.soup.prettify(formatter=None), features='lxml')
         for ul in self.soup.findAll('nav'):
             id_num = 0
@@ -791,6 +866,15 @@ class GAParseHtml(ParserBase):
         print('added anchor tags')
 
     def clean_html_and_add_cite(self):
+        """
+            - find all the tags in html which matches the pattern of section id(1-1-1)
+            - check if the section ids target present in same html
+            - if not build a link with proper path for that html using matched text
+            - add an anchor tag with reference to that html
+            - build a dict with all possible cite tags which are non GA code cites and its patterns
+            - find all the tags which matches the pattern
+            - replace each tag with new cite tag with same text
+        """
         reg_dict = {'ga_court': r'(\d+ (Ga\.) \d+)',
                     'ga_app_court': r'(\d+ Ga\.( App\.) \d+)',
                     'app_court': r'(\d+ S\.E\.(2d)? \d+)',
@@ -859,6 +943,11 @@ class GAParseHtml(ParserBase):
             tag_to_wrap = next_tag
 
     def write_soup_to_file(self):
+        """
+            - add the space before self closing meta tags
+            - convert html to str
+            - write html str to an output file
+        """
         soup_str = str(self.soup.prettify(formatter=None))
         for tag in self.meta_tags:
             cleansed_tag = re.sub(r'/>', ' />', str(tag))
@@ -866,10 +955,16 @@ class GAParseHtml(ParserBase):
         print("validating")
         # html5validate.validate(soup_str)
         with open(f"../transforms/ga/ocga/r{self.release_number}/{self.html_file_name}", "w") as file:
-
             file.write(soup_str)
 
     def replace_tag_names_constitution(self):
+        """
+            - create dictionary with class names as keys with associated tag name as its value
+            - find all the tags in html with specified class names from dict
+              and replace tag with associated tag name (p1 -> h1)
+            - based on tag name find or build id for that tag
+            - create watermark tag and append it with h1 to first nav tag
+        """
         tag_dict = {"h2": self.tag_type_dict['head2'],
                     "h3": self.tag_type_dict['head3'],
                     "h4": self.tag_type_dict['head4'], "li": self.tag_type_dict['ul']}
@@ -1025,8 +1120,8 @@ class GAParseHtml(ParserBase):
             elif re.search('^analysis', nav.get_text(), re.I):
                 for li in nav.ul.findAll('li'):
                     parent = nav.find_previous_sibling(lambda tag: tag.name in ['h3', 'h2'] or
-                                                         tag.has_attr('class') and
-                                                         tag['class'] in self.headers_class_dict.values())
+                                                                   tag.has_attr('class') and
+                                                                   tag['class'] in self.headers_class_dict.values())
                     id_text = re.sub(r"\s+|\'", '', li.get_text())
                     header_id = f'{parent["id"]}-{id_text}'
                     anchor = self.soup.new_tag('a', href=f'#{header_id}')
@@ -1035,6 +1130,11 @@ class GAParseHtml(ParserBase):
                     li.string.replace_with(anchor)
 
     def start_parse(self, input_file_name):
+        """
+             - set the values to instance variables
+             - check if the file is constitution file or title file
+             - based on file passed call the methods to parse the passed htmls
+         """
         self.release_label = f'Release-{self.release_number}'
         self.html_file_name = input_file_name
         print(input_file_name)
