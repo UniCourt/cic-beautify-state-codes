@@ -34,9 +34,9 @@ In subsequent months, we intend to add two more features:
 
 1. Create new folder named **transforms**
 
-2. Based on the state create a folder called *transforms/<state_name>*
+2. Based on the state create a folder called *transforms/{state_name}*
 
-3.Inside the above folder based on the release create a folder ocga/<release> which will contain raw files (raw files are textutil output files)
+3.Inside the above folder based on the release create a folder ocga/{release} which will contain raw files (raw files are textutil output files)
 
 4. Example folder structure:
 
