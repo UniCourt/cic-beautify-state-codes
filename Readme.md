@@ -2,6 +2,8 @@
 
 Welcome to the Code Improvement Commission
 
+This repository was created by UniCourt on behalf of [Public.Resource.Org](https://public.resource.org/). All this work is in the public domain and there are NO RIGHTS RESERVED.
+
 This repository contains software that transforms official codes from ugly .rtf files into nice-looking, accessible HTML. We use "textutil" on a Mac to go from .rtf to bad HTML. Then, the code in this repository does the heavy lifting.
 
 Currently this code supports GA  and current quarterly releases that are available include:
