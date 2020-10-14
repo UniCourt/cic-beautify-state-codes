@@ -8,7 +8,6 @@ from bs4 import BeautifulSoup, Doctype, element
 import re
 from datetime import datetime
 from parser_base import ParserBase
-import html
 
 
 class GAParseHtml(ParserBase):
@@ -19,7 +18,7 @@ class GAParseHtml(ParserBase):
         self.title = None
         self.previous = None
         self.style = """
-                    body {line-height: 19pt; font-family: Arial, Helvetica, sans-serif; margin: .5in 1in 1in 1in; font-size: 14pt; }
+                    body {line-height: 19pt; font-family: Arial, Helvetica, sans-serif; margin: .5in 5% 1in 5%; font-size: 14pt; }
                     h1 {margin-bottom:16px; margin-top:24px; margin-right:0px; text-indent:0px; direction:ltr; font-family: Arial, Helvetica, sans-serif; color: #900; line-height: 28pt; text-align: center; }
                     h2, h3, h5 {margin-bottom:16px; margin-top:24px; margin-right:0px; text-indent:0px; direction:ltr; font-family: Arial, Helvetica, sans-serif; color: #900; line-height: 32px; text-align: center;}
                     h3 {text-align: left;}
@@ -721,11 +720,6 @@ class GAParseHtml(ParserBase):
             header.wrap(new_chap_div)
             while True:
                 next_sec_tag = sec_header.find_next_sibling()
-                # print('===========================================================================\n')
-                # print(sec_header)
-                # print('\n')
-                # print(next_sec_tag)
-                # print('============================================================================\n')
                 if sec_header.name == 'h3':
                     new_sec_div = self.soup.new_tag('div')
                     tag_to_wrap = sec_header.find_next_sibling()
@@ -903,7 +897,7 @@ class GAParseHtml(ParserBase):
             text = str(tag)
             for match in set(
                     x[0] for x in re.findall(r'\b(\d{1,2}-\d(\w+)?-\d+(\.\d+)?(\s?(\(\w+\))+)?)', tag.get_text())):
-                inside_text = re.sub(r'<p\sclass="\w\d+">|</p>|<b>|</b>', '', text, re.DOTALL)
+                inside_text = re.sub(r'<p>|<p\sclass="\w\d+">|</p>|<b>|</b>', '', text, re.DOTALL)
                 tag.clear()
                 id_reg = re.search(r'(?P<title>\w+)-(?P<chap>\w+)-(?P<sec>\d+(\.\d+)?)', match.strip())
                 title = id_reg.group("title").strip()
@@ -953,9 +947,9 @@ class GAParseHtml(ParserBase):
             cleansed_tag = re.sub(r'/>', ' />', str(tag))
             soup_str = re.sub(rf'{tag}', rf'{cleansed_tag}', soup_str, re.I)
         print("validating")
-        # html5validate.validate(soup_str)
         with open(f"../transforms/ga/ocga/r{self.release_number}/{self.html_file_name}", "w") as file:
-            file.write(soup_str)
+
+            file.write(re.sub(r'<p>\W+<p>', '<p>', soup_str))
 
     def replace_tag_names_constitution(self):
         """
