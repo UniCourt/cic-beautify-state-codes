@@ -258,9 +258,10 @@ class GAParseHtml(ParserBase):
                     else:
                         p_tag.name = 'h5'
 
-            style_tag = self.soup.new_tag('style')
-            style_tag.string = self.style
-            self.soup.style.replace_with(style_tag)
+            stylesheet_link_tag = self.soup.new_tag('link')
+            stylesheet_link_tag.attrs = {'rel': 'stylesheet', 'type': 'text/css',
+                                         'href': 'https://unicourt.github.io/cic-code-ga/transforms/ga/stylesheet/ga_code_stylesheet.css'}
+            self.soup.style.replace_with(stylesheet_link_tag)
         if watermark_p:
             chap_nav = self.soup.find('nav')
             chap_nav.insert(0, watermark_p)
@@ -850,7 +851,6 @@ class GAParseHtml(ParserBase):
             - build a dict with all possible cite tags which are non GA code cites and its patterns
             - find all the tags which matches the pattern
             - replace each tag with new cite tag with same text
-
         """
         reg_dict = {'ga_court': r'(\d+ (Ga\.) \d+)',
                     'ga_app_court': r'(\d+ Ga\.( App\.) \d+)',
@@ -928,11 +928,10 @@ class GAParseHtml(ParserBase):
         soup_str = str(self.soup.prettify(formatter=None))
         for tag in self.meta_tags:
             cleansed_tag = re.sub(r'/>', ' />', str(tag))
-            soup_str = re.sub(rf'{tag}', rf'{cleansed_tag}', str(self.soup), re.I)
+            soup_str = re.sub(rf'{tag}', rf'{cleansed_tag}', soup_str, re.I)
         print("validating")
         # html5validate.validate(soup_str)
         with open(f"../transforms/ga/ocga/r{self.release_number}/{self.html_file_name}", "w") as file:
-
             file.write(soup_str)
 
     def replace_tag_names_constitution(self):
