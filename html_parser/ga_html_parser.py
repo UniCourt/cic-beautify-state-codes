@@ -8,7 +8,6 @@ from bs4 import BeautifulSoup, Doctype, element
 import re
 from datetime import datetime
 from parser_base import ParserBase
-import html
 
 
 class GAParseHtml(ParserBase):
@@ -18,24 +17,6 @@ class GAParseHtml(ParserBase):
         self.html_file_name = None
         self.title = None
         self.previous = None
-        self.style = """
-                    body {line-height: 19pt; font-family: Arial, Helvetica, sans-serif; margin: .5in 1in 1in 1in; font-size: 14pt; }
-                    h1 {margin-bottom:16px; margin-top:24px; margin-right:0px; text-indent:0px; direction:ltr; font-family: Arial, Helvetica, sans-serif; color: #900; line-height: 28pt; text-align: center; }
-                    h2, h3, h5 {margin-bottom:16px; margin-top:24px; margin-right:0px; text-indent:0px; direction:ltr; font-family: Arial, Helvetica, sans-serif; color: #900; line-height: 32px; text-align: center;}
-                    h3 {text-align: left;}
-                    h4 { text-align:center; margin-bottom:8px; margin-top:18px; margin-right:0px; text-indent:0px; direction:ltr; font-family: Arial, Helvetica, sans-serif; color: #000; }
-                    p { text-align:left; margin-bottom:0px; margin-top:0px; margin-right:0px; direction:ltr; padding-bottom: 12px; color: #000; }
-                    ol.alpha {list-style-type: lower-alpha;}
-                    ul.leaders {list-style: none;}
-                    ol.sub_ol {list-style: none;}
-                    a { font-weight:normal; color: #900;  text-decoration: none;}
-                    span.gnrlbreak, .headbreak  {white-space: pre-line; }
-                    p.transformation { color: blue ; font-style: italic; font-size: 11pt; text-align: center;}
-                    h5.lalign {text-align: left; font-size: 14pt; color: #000;}
-                    span.boldspan {font-weight: bold;}
-                    h1 {font-size: 2em;}
-
-                """
         self.junk_tag_class = ['Apple-converted-space', 'Apple-tab-span']
         self.tag_type_dict = {'head1': r'TITLE \d', 'head2': r'^CHAPTER \d|^ARTICLE \d', 'ul': r'^Chap\.|^Art\.|^Sec\.',
                               'head4': 'OPINIONS OF THE ATTORNEY GENERAL|RESEARCH REFERENCES',
@@ -277,9 +258,10 @@ class GAParseHtml(ParserBase):
                     else:
                         p_tag.name = 'h5'
 
-            style_tag = self.soup.new_tag('style')
-            style_tag.string = self.style
-            self.soup.style.replace_with(style_tag)
+            stylesheet_link_tag = self.soup.new_tag('link')
+            stylesheet_link_tag.attrs = {'rel': 'stylesheet', 'type': 'text/css',
+                                         'href': 'https://unicourt.github.io/cic-code-ga/transforms/ga/stylesheet/ga_code_stylesheet.css'}
+            self.soup.style.replace_with(stylesheet_link_tag)
         if watermark_p:
             chap_nav = self.soup.find('nav')
             chap_nav.insert(0, watermark_p)
@@ -721,11 +703,6 @@ class GAParseHtml(ParserBase):
             header.wrap(new_chap_div)
             while True:
                 next_sec_tag = sec_header.find_next_sibling()
-                # print('===========================================================================\n')
-                # print(sec_header)
-                # print('\n')
-                # print(next_sec_tag)
-                # print('============================================================================\n')
                 if sec_header.name == 'h3':
                     new_sec_div = self.soup.new_tag('div')
                     tag_to_wrap = sec_header.find_next_sibling()
@@ -1041,9 +1018,10 @@ class GAParseHtml(ParserBase):
                 if not re.search(r'\w+', p_tag.get_text()):
                     p_tag.decompose()
 
-        style_tag = self.soup.new_tag('style')
-        style_tag.string = self.style
-        self.soup.style.replace_with(style_tag)
+        stylesheet_link_tag = self.soup.new_tag('link')
+        stylesheet_link_tag.attrs = {'rel': 'stylesheet', 'type': 'text/css',
+                                     'href': 'https://unicourt.github.io/cic-code-ga/transforms/ga/stylesheet/ga_code_stylesheet.css'}
+        self.soup.style.replace_with(stylesheet_link_tag)
         h1_tag = self.soup.find(lambda tag: re.search('^CONSTITUTION OF THE', tag.get_text()))
         h1_tag.name = 'h1'
         watermark_p = self.soup.new_tag('p', Class='transformation')
