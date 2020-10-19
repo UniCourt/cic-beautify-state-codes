@@ -17,24 +17,6 @@ class GAParseHtml(ParserBase):
         self.html_file_name = None
         self.title = None
         self.previous = None
-        self.style = """
-                    body {line-height: 19pt; font-family: Arial, Helvetica, sans-serif; margin: .5in 5% 1in 5%; font-size: 14pt; }
-                    h1 {margin-bottom:16px; margin-top:24px; margin-right:0px; text-indent:0px; direction:ltr; font-family: Arial, Helvetica, sans-serif; color: #900; line-height: 28pt; text-align: center; }
-                    h2, h3, h5 {margin-bottom:16px; margin-top:24px; margin-right:0px; text-indent:0px; direction:ltr; font-family: Arial, Helvetica, sans-serif; color: #900; line-height: 32px; text-align: center;}
-                    h3 {text-align: left;}
-                    h4 { text-align:center; margin-bottom:8px; margin-top:18px; margin-right:0px; text-indent:0px; direction:ltr; font-family: Arial, Helvetica, sans-serif; color: #000; }
-                    p { text-align:left; margin-bottom:0px; margin-top:0px; margin-right:0px; direction:ltr; padding-bottom: 12px; color: #000; }
-                    ol.alpha {list-style-type: lower-alpha;}
-                    ul.leaders {list-style: none;}
-                    ol.sub_ol {list-style: none;}
-                    a { font-weight:normal; color: #900;  text-decoration: none;}
-                    span.gnrlbreak, .headbreak  {white-space: pre-line; }
-                    p.transformation { color: blue ; font-style: italic; font-size: 11pt; text-align: center;}
-                    h5.lalign {text-align: left; font-size: 14pt; color: #000;}
-                    span.boldspan {font-weight: bold;}
-                    h1 {font-size: 2em;}
-
-                """
         self.junk_tag_class = ['Apple-converted-space', 'Apple-tab-span']
         self.tag_type_dict = {'head1': r'TITLE \d', 'head2': r'^CHAPTER \d|^ARTICLE \d', 'ul': r'^Chap\.|^Art\.|^Sec\.',
                               'head4': 'OPINIONS OF THE ATTORNEY GENERAL|RESEARCH REFERENCES',
@@ -276,10 +258,9 @@ class GAParseHtml(ParserBase):
                     else:
                         p_tag.name = 'h5'
 
-            stylesheet_link_tag = self.soup.new_tag('link')
-            stylesheet_link_tag.attrs = {'rel': 'stylesheet', 'type': 'text/css',
-                                         'href': 'https://unicourt.github.io/cic-code-ga/transforms/ga/stylesheet/ga_code_stylesheet.css'}
-            self.soup.style.replace_with(stylesheet_link_tag)
+            style_tag = self.soup.new_tag('style')
+            style_tag.string = self.style
+            self.soup.style.replace_with(style_tag)
         if watermark_p:
             chap_nav = self.soup.find('nav')
             chap_nav.insert(0, watermark_p)
@@ -869,6 +850,7 @@ class GAParseHtml(ParserBase):
             - build a dict with all possible cite tags which are non GA code cites and its patterns
             - find all the tags which matches the pattern
             - replace each tag with new cite tag with same text
+
         """
         reg_dict = {'ga_court': r'(\d+ (Ga\.) \d+)',
                     'ga_app_court': r'(\d+ Ga\.( App\.) \d+)',
@@ -898,7 +880,7 @@ class GAParseHtml(ParserBase):
             text = str(tag)
             for match in set(
                     x[0] for x in re.findall(r'\b(\d{1,2}-\d(\w+)?-\d+(\.\d+)?(\s?(\(\w+\))+)?)', tag.get_text())):
-                inside_text = re.sub(r'<p>|<p\sclass="\w\d+">|</p>|<b>|</b>', '', text, re.DOTALL)
+                inside_text = re.sub(r'<p\sclass="\w\d+">|</p>|<b>|</b>', '', text, re.DOTALL)
                 tag.clear()
                 id_reg = re.search(r'(?P<title>\w+)-(?P<chap>\w+)-(?P<sec>\d+(\.\d+)?)', match.strip())
                 title = id_reg.group("title").strip()
@@ -946,11 +928,12 @@ class GAParseHtml(ParserBase):
         soup_str = str(self.soup.prettify(formatter=None))
         for tag in self.meta_tags:
             cleansed_tag = re.sub(r'/>', ' />', str(tag))
-            soup_str = re.sub(rf'{tag}', rf'{cleansed_tag}', soup_str, re.I)
+            soup_str = re.sub(rf'{tag}', rf'{cleansed_tag}', str(self.soup), re.I)
         print("validating")
+        # html5validate.validate(soup_str)
         with open(f"../transforms/ga/ocga/r{self.release_number}/{self.html_file_name}", "w") as file:
 
-            file.write(re.sub(r'<p>\W+<p>', '<p>', soup_str))
+            file.write(soup_str)
 
     def replace_tag_names_constitution(self):
         """
