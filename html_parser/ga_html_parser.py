@@ -276,9 +276,10 @@ class GAParseHtml(ParserBase):
                     else:
                         p_tag.name = 'h5'
 
-            style_tag = self.soup.new_tag('style')
-            style_tag.string = self.style
-            self.soup.style.replace_with(style_tag)
+            stylesheet_link_tag = self.soup.new_tag('link')
+            stylesheet_link_tag.attrs = {'rel': 'stylesheet', 'type': 'text/css',
+                                         'href': 'https://unicourt.github.io/cic-code-ga/transforms/ga/stylesheet/ga_code_stylesheet.css'}
+            self.soup.style.replace_with(stylesheet_link_tag)
         if watermark_p:
             chap_nav = self.soup.find('nav')
             chap_nav.insert(0, watermark_p)
@@ -1035,9 +1036,10 @@ class GAParseHtml(ParserBase):
                 if not re.search(r'\w+', p_tag.get_text()):
                     p_tag.decompose()
 
-        style_tag = self.soup.new_tag('style')
-        style_tag.string = self.style
-        self.soup.style.replace_with(style_tag)
+        stylesheet_link_tag = self.soup.new_tag('link')
+        stylesheet_link_tag.attrs = {'rel': 'stylesheet', 'type': 'text/css',
+                                     'href': 'https://unicourt.github.io/cic-code-ga/transforms/ga/stylesheet/ga_code_stylesheet.css'}
+        self.soup.style.replace_with(stylesheet_link_tag)
         h1_tag = self.soup.find(lambda tag: re.search('^CONSTITUTION OF THE', tag.get_text()))
         h1_tag.name = 'h1'
         watermark_p = self.soup.new_tag('p', Class='transformation')
