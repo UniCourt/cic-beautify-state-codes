@@ -17,7 +17,7 @@ Currently this code supports GA  and current quarterly releases that are availab
 * Release 76 dated 2020.06.12.
 * Release 77 dated 2020.08.10.
 
-Release are available here: https://github.com/UniCourt/cic-code-ga
+Releases are available here: https://github.com/UniCourt/cic-code-ga
 
 Original RTF files can be found here: https://archive.org/download/gov.ga.ocga.2018
 
