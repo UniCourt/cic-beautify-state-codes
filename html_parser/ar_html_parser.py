@@ -10,19 +10,18 @@ from datetime import datetime
 from parser_base import ParserBase
 
 
-class GAParseHtml(ParserBase):
-    def __init__(self):
+class ARParseHtml(ParserBase):
+    def __init__(self, input_file_name):
         super().__init__()
+        self.html_file_name = input_file_name
         self.soup = None
-        self.html_file_name = None
         self.title = None
         self.previous = None
         self.junk_tag_class = ['Apple-converted-space', 'Apple-tab-span']
-        self.tag_type_dict = {'head1': r'TITLE \d', 'head2': r'^CHAPTER \d|^ARTICLE \d', 'ul': r'^Chap\.|^Art\.|^Sec\.',
-                              'head4': 'OPINIONS OF THE ATTORNEY GENERAL|RESEARCH REFERENCES',
-                              'ol_p': r'^\([a-z]\)', 'junk1': '^Annotations$', 'normalp': '^Editor\'s note',
-                              'article': r'^Article \d$|^Part \d$'}
-        self.watermark_text = """Release {0} of the Official Code of Georgia Annotated released {1}. 
+        self.tag_type_dict = {'head1': r'TITLE \d', 'ul': r'^Subchapter 1 —',
+                              'head4': 'Research References',
+                              'ol_p': r'^\([a-z]\)', 'junk1': '^Annotations$', 'normalp': '^Publisher\'s Notes'}
+        self.watermark_text = """Release {0} of the Official Code of Arkansas Annotated released {1}. 
         Transformed and posted by Public.Resource.Org using rtf-parser.py version 1.0 on {2}. 
         This document is not subject to copyright and is in the public domain.
         """
@@ -31,6 +30,7 @@ class GAParseHtml(ParserBase):
         self.headers_class_dict = {'JUDICIAL DECISIONS': 'jdecisions',
                                    'OPINIONS OF THE ATTORNEY GENERAL': 'opinionofag',
                                    'RESEARCH REFERENCES': 'rreferences'}
+        self.start_parse()
 
     def create_page_soup(self):
         """
@@ -40,7 +40,7 @@ class GAParseHtml(ParserBase):
         - add attribute 'lang' to html tag with value 'en'
         :return:
         """
-        with open(f'../transforms/ga/ocga/r{self.release_number}/raw/{self.html_file_name}') as open_file:
+        with open(f'../transforms/ar/ocar/r{self.release_number}/raw/{self.html_file_name}') as open_file:
             html_data = open_file.read()
         self.soup = BeautifulSoup(html_data, features="lxml")
         self.soup.contents[0].replace_with(Doctype("html"))
@@ -69,18 +69,12 @@ class GAParseHtml(ParserBase):
                 0]
             self.tag_type_dict['head3'] = h3_class
 
-            if part_class := self.soup.find(lambda tag: tag.name == 'p' and re.search(
-                    '^PART', tag.get_text().strip()) and tag.get('class')[0] != self.tag_type_dict['article']):
-                if part_class['class'][0] not in self.tag_type_dict.values():
-                    self.tag_type_dict['part'] = part_class['class'][0]
+            h2_class = self.soup.find(lambda tag: tag.name == 'p' and re.search(
+                rf'^CHAPTER \d', tag.get_text().strip(), re.I) and tag.get('class')[0] != self.tag_type_dict['ul'])[
+                'class'][
+                0]
+            self.tag_type_dict['head2'] = h2_class
 
-            if h3_class_1 := self.soup.find(lambda tag: tag.name == 'p' and re.search(
-                    rf'^\d+-\d+-\d+\.', tag.get_text().strip(), re.I) and tag.get('class')[0]
-                                                        not in self.tag_type_dict.values()):
-                self.tag_type_dict['head3.1'] = h3_class_1['class'][0]
-
-        # self.junk_tag_class.append(
-        #     self.soup.find(lambda tag: tag.name == 'p' and tag.get_text().strip() == '')['class'][0])
         print('updated class dict')
 
     def remove_junk(self):
@@ -111,19 +105,12 @@ class GAParseHtml(ParserBase):
         print('junk removed')
 
     def replace_tags(self):
-        """
-            - create dictionary with class names as keys with associated tag name as its value
-            - find all the tags in html with specified class names from dict
-              and replace tag with associated tag name (p1 -> h1)
-            - based on tag name find or build id for that tag
-            - create watermark tag and append it with h1 to first nav tag
-        """
         watermark_p = None
         title_tag = None
         tag_dict = {self.tag_type_dict['head1']: "h1", self.tag_type_dict['head2']: "h2",
                     self.tag_type_dict.get('part', ''): "h4",
                     self.tag_type_dict['head3']: "h3", self.tag_type_dict['head4']: "h4",
-                    self.tag_type_dict['ul']: "li", self.tag_type_dict['article']: "h5",
+                    self.tag_type_dict['ul']: "li",
                     self.tag_type_dict.get('head3.1', ''): 'h3'
                     }
         for key, value in tag_dict.items():
@@ -174,6 +161,10 @@ class GAParseHtml(ParserBase):
                                     cleansed_chap = re.sub(r'\d+$', '', chap_id["id"])
                                     p_tag['id'] = f'{cleansed_chap}{chapter.zfill(2)}'
                                 p_tag['class'] = 'parth2'
+                            elif re.search('^subchapter', p_tag.get_text().strip(), re.I) and \
+                                    (chap_id := p_tag.findPrevious(lambda tag: tag.name == 'h2' and re.search('^Chapter', tag.get_text()))):
+                                p_tag['id'] = f'{chap_id["id"]}sc{chapter.zfill(2)}'
+                                p_tag['class'] = 'subchapterh2'
                             else:
                                 p_tag['id'] = f't{self.title.zfill(2)}c{chapter.zfill(2)}'
                         else:
@@ -773,17 +764,33 @@ class GAParseHtml(ParserBase):
         for ul in self.soup.findAll('nav'):
             id_num = 0
             li_num = 0
-            chap_header_tag = self.soup.find(
-                lambda tag: tag.name == 'h2' and re.search(rf'chapter|article', tag.get_text()
-                                                           .strip(), re.I))
-            chap_match = re.search(r'(chapter|article)\s(?P<num>\w+)(?P<name>.+)', chap_header_tag.get_text(),
-                                   re.DOTALL | re.I)
-            chap_reg = fr'{chap_match.group("num")}\.?\s{chap_match.group("name").strip()}'
-            if re.search(chap_reg, ul.get_text(), re.I) or ul.p and re.search('Chap|Art', ul.p.get_text()):
+            # chap_header_tag = self.soup.find(
+            #     lambda tag: tag.name == 'h2' and re.search(rf'chapter|article', tag.get_text()
+            #                                                .strip(), re.I))
+            # chap_match = re.search(r'(chapter|article)\s(?P<num>\w+)(?P<name>.+)', chap_header_tag.get_text(),
+            #                        re.DOTALL | re.I)
+            # chap_reg = fr'{chap_match.group("num")}\.?\s{chap_match.group("name").strip()}'
+            if re.search('^Chapter', ul.li.get_text().strip()):
                 for li in ul.findAll('li'):
                     li_num += 1
-                    chap_no = re.search('^\d+\w?', li.get_text().strip()).group()
-                    header_id = f'#t{self.title.zfill(2)}c{chap_no.zfill(2)}'
+                    if chap_no := re.search(r'^Chapter\s(?P<chap_num>\d+)', li.get_text().strip()):
+                        header_id = f'#t{self.title.zfill(2)}c{chap_no.group("chap_num").zfill(2)}'
+                        anchor = self.soup.new_tag('a', href=header_id)
+                        cleansed_header_id = header_id.strip("#")
+                        anchor.attrs['aria-describedby'] = cleansed_header_id
+                        li['id'] = f'{cleansed_header_id}-cnav{str(li_num).zfill(2)}'
+                        anchor.string = li.text
+                        if li.string:
+                            li.string.replace_with(anchor)
+                        else:
+                            li.contents = []
+                            li.append(anchor)
+            if re.search('^Subchapter', ul.get_text().strip()):
+                for li in ul.findAll('li'):
+                    li_num += 1
+                    chap_no = re.search(r'^Subchapter\s(?P<sub_chap_num>\d+)', li.get_text().strip()).group('sub_chap_num')
+                    previous_head = ul.find_previous(lambda tag: tag.name == 'h2' and re.search('^Chapter', tag.get_text().strip()))
+                    header_id = f'#{previous_head["id"]}sc{chap_no.zfill(2)}'
                     anchor = self.soup.new_tag('a', href=header_id)
                     cleansed_header_id = header_id.strip("#")
                     anchor.attrs['aria-describedby'] = cleansed_header_id
@@ -843,15 +850,6 @@ class GAParseHtml(ParserBase):
         print('added anchor tags')
 
     def clean_html_and_add_cite(self):
-        """
-            - find all the tags in html which matches the pattern of section id(1-1-1)
-            - check if the section ids target present in same html
-            - if not build a link with proper path for that html using matched text
-            - add an anchor tag with reference to that html
-            - build a dict with all possible cite tags which are non GA code cites and its patterns
-            - find all the tags which matches the pattern
-            - replace each tag with new cite tag with same text
-        """
         reg_dict = {'ga_court': r'(\d+ (Ga\.) \d+)',
                     'ga_app_court': r'(\d+ Ga\.( App\.) \d+)',
                     'app_court': r'(\d+ S\.E\.(2d)? \d+)',
@@ -931,7 +929,7 @@ class GAParseHtml(ParserBase):
             soup_str = re.sub(rf'{tag}', rf'{cleansed_tag}', soup_str, re.I)
         print("validating")
         # html5validate.validate(soup_str)
-        with open(f"../transforms/ga/ocga/r{self.release_number}/{self.html_file_name}", "w") as file:
+        with open(f"../transforms/ar/ocar/r{self.release_number}/{self.html_file_name}", "w") as file:
             file.write(soup_str)
 
     def replace_tag_names_constitution(self):
@@ -1107,30 +1105,31 @@ class GAParseHtml(ParserBase):
                     anchor.attrs['aria-describedby'] = header_id
                     li.string.replace_with(anchor)
 
-    def start_parse(self, input_file_name):
+    def start_parse(self):
         """
              - set the values to instance variables
              - check if the file is constitution file or title file
              - based on file passed call the methods to parse the passed htmls
          """
         self.release_label = f'Release-{self.release_number}'
-        self.html_file_name = input_file_name
-        print(input_file_name)
+        print(self.html_file_name)
         start_time = datetime.now()
         print(start_time)
         self.create_page_soup()
-        if re.search('constitution', self.html_file_name):
-            self.tag_type_dict = {'head1': r'^CONSTITUTION OF THE ', 'head2': r'^ARTICLE I', 'ul': r'^PREAMBLE',
-                                  'head4': '^JUDICIAL DECISIONS', 'ol_p': r'^\(\d\)', 'junk1': '^Annotations$',
-                                  'head3': r'^SECTION 1\.|^Paragraph I\.', 'normalp': '^Editor\'s note'}
-            self.get_class_name()
-            self.remove_junk()
-            self.replace_tag_names_constitution()
-            self.create_analysis_nav_tag()
-            self.remove_or_replace_class_names()
-            self.add_anchor_constitution()
-            self.wrap_div_tags()
-        else:
+        try:
+            # if re.search('constitution', self.html_file_name):
+            #     self.tag_type_dict = {'head1': r'^CONSTITUTION OF THE ', 'head2': r'^ARTICLE I', 'ul': r'^PREAMBLE',
+            #                           'head4': '^JUDICIAL DECISIONS', 'ol_p': r'^\(\d\)', 'junk1': '^Annotations$',
+            #                           'head3': r'^SECTION 1\.|^Paragraph I\.', 'normalp': '^Editor\'s note'}
+            #     self.get_class_name()
+            #     self.remove_junk()
+            #     self.replace_tag_names_constitution()
+            #     self.create_analysis_nav_tag()
+            #     self.remove_or_replace_class_names()
+            #     self.add_anchor_constitution()
+            #     self.wrap_div_tags()
+            # else:
+
             self.get_class_name()
             self.remove_junk()
             self.replace_tags()
@@ -1138,10 +1137,12 @@ class GAParseHtml(ParserBase):
             # self.convert_to_numeric_ol_tags()
             self.create_analysis_nav_tag()
             self.remove_or_replace_class_names()
-            self.wrap_div_tags()
             self.add_anchor_tags()
-            # except Exception:
-            #     pass
+            self.wrap_div_tags()
+        except Exception as e:
+            self.clean_html_and_add_cite()
+            self.write_soup_to_file()
+            raise e
         self.clean_html_and_add_cite()
         self.write_soup_to_file()
         print(datetime.now() - start_time)
