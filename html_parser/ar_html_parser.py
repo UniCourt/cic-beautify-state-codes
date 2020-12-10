@@ -600,22 +600,22 @@ class ARParseHtml(ParserBase):
                 previous_li = None
                 for headers_text in [s for s in case_notes_nav.get_text().splitlines() if s]:
                     new_li = self.soup.new_tag('li')
-                    header = case_notes_nav.find_next_sibling(lambda tag:
+                    if header := case_notes_nav.find_next_sibling(lambda tag:
                                                               re.search(rf'^{headers_text.strip()}$', tag.get_text().strip())
-                                                              and tag.name == 'h4')
-                    if previous_li and re.search(r'^—', headers_text.strip()):
-                        ul.insert(len(ul), new_li)
-                        previous_li.append(ul)
-                        header_id = f'#{previous_li.get("id")}{headers_text.strip()}'
-                    else:
-                        header_id = f'#{case_notes_tag.get("id")}{headers_text.strip()}'
-                        new_ul.insert(len(new_ul), new_li)
-                        previous_li = new_li
-                        ul = self.soup.new_tag("ul", Class="leaders")
-                    new_a = self.soup.new_tag('a', href=header_id)
-                    new_a.string = headers_text
-                    new_li.append(new_a)
-                    header['id'] = header_id.strip('#')
+                                                              and tag.name == 'h4'):
+                        if previous_li and re.search(r'^—|^-', headers_text.strip()):
+                            ul.insert(len(ul), new_li)
+                            previous_li.append(ul)
+                            header_id = re.sub(r'\s+', '', f'{previous_li.a.attrs.get("href")}{headers_text.strip()}')
+                        else:
+                            header_id = re.sub(r'\s+', '', f'#{case_notes_tag.get("id")}{headers_text.strip()}')
+                            new_ul.insert(len(new_ul), new_li)
+                            previous_li = new_li
+                            ul = self.soup.new_tag("ul", Class="leaders")
+                        new_a = self.soup.new_tag('a', href=header_id)
+                        new_a.string = headers_text
+                        new_li.append(new_a)
+                        header['id'] = header_id.strip('#')
                 nav_tag.append(new_ul)
                 case_notes_nav.replace_with(nav_tag)
         print('created analysis tag')
@@ -830,7 +830,7 @@ class ARParseHtml(ParserBase):
             if re.search('^Chapter', ul.li.get_text().strip()):
                 for li in ul.findAll('li'):
                     li_num += 1
-                    if chap_no := re.search(r'^Chapter\s(?P<chap_num>\d+)', li.get_text().strip()):
+                    if chap_no := re.search(r'^Chapter\s(?P<chap_num>\d+([a-z])?)', li.get_text().strip()):
                         header_id = f'#t{self.title.zfill(2)}c{chap_no.group("chap_num").zfill(2)}'
                         anchor = self.soup.new_tag('a', href=header_id)
                         cleansed_header_id = header_id.strip("#")
@@ -986,7 +986,7 @@ class ARParseHtml(ParserBase):
             soup_str = re.sub(rf'{tag}', rf'{cleansed_tag}', soup_str, re.I)
         print("validating")
         # html5validate.validate(soup_str)
-        with open(f"../transforms/ar/ocar/r{self.release_number}/{self.html_file_name}", "w") as file:
+        with open(f"/home/mis/PycharmProjects/cic-code-ar/transforms/ar/ocar/r{self.release_number}/{self.html_file_name}", "w") as file:
             file.write(soup_str)
 
     def replace_tag_names_constitution(self):
@@ -1205,12 +1205,7 @@ class ARParseHtml(ParserBase):
             self.create_analysis_nav_tag()
             self.remove_or_replace_class_names()
             self.add_anchor_tags()
-            try:
-                self.wrap_div_tags()
-            except Exception as e:
-                self.clean_html_and_add_cite()
-                self.write_soup_to_file()
-                raise e
+            self.wrap_div_tags()
         self.clean_html_and_add_cite()
         self.write_soup_to_file()
         print(datetime.now() - start_time)

@@ -64,7 +64,7 @@ class ParserBase:
             parser_obj(files_list)
         except Exception as e:
             exceptioon = f'{e}\n--------------------------------\n' \
-                         f'{self.html_file_name}'
+                         f'{files_list}'
             logger.error(exceptioon, traceback.format_exc())
 
     def start_parse(self):
