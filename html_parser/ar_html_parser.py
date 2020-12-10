@@ -197,13 +197,6 @@ class ARParseHtml(ParserBase):
                             else:
                                 p_tag['id'] = f"{p_tag['id']}.1"
                     elif section_match := re.search(r'^(?P<sec>\w+)\.', p_tag.get_text()):
-                        """
-                            title 34 has section_header with same class name as chapter header 
-                            and there was no proper section annotation 
-                            ex:CHAPTER 15
-                                RESERVED
-                             section : 2. Procedure to Elect Coverage, Reject Coverage or Revoke Exemption.
-                        """
                         p_tag.name = 'h3'
                         chap_tag = p_tag.find_previous(lambda tag: tag.name == 'h2'
                                                                    and re.search(r'chapter \w+', tag.get_text(), re.I))
@@ -311,8 +304,6 @@ class ARParseHtml(ParserBase):
         p_tag = self.soup.find('p', {'class': self.tag_type_dict['ol_p']})
         while p_tag:
             set_p_tag = True
-            if re.search('The salaries which are due the members and officers of the General Assembly shall be certified by the President', p_tag.get_text(), re.I):
-                print()
             if not re.search(r'\w+', p_tag.get_text()):
                 continue
             if chap_id := p_tag.findPrevious(lambda tag: tag.name in ['h2', 'h3']):
@@ -553,36 +544,7 @@ class ARParseHtml(ParserBase):
                 p_tag = p_tag.find_next_sibling(lambda tag: tag.name == 'p' and re.search('.+', tag.get_text()))
         print('ol tags added')
 
-    def convert_to_numeric_ol_tags(self):
-        new_ol_tag_for_p = self.soup.new_tag('ol')
-        new_tag = None
-        for ol_p_tag in self.soup.findAll('p', {'class': self.tag_type_dict['normalp']}):
-            if re.search("^Editor's notes", ol_p_tag.get_text()) and not ol_p_tag.findNext('p').b and \
-                    re.search(".+\(1\)", ol_p_tag.findNext('p').get_text().strip('"')):
-                new_tag = self.soup.new_tag('li', Class=self.tag_type_dict['normalp'])
-                new_string = re.search('\"\(1\)(?P<data>.+)', ol_p_tag.findNext('p').get_text(), re.DOTALL).group(
-                    'data')
-                new_tag.string = new_string
-                ol_p_tag.findNext('p').string = re.sub(rf'\"\(1\)\s?{new_string}', '',
-                                                       ol_p_tag.findNext('p').get_text())
-            if re.search(r'^\(\d+\)', ol_p_tag.text.strip().strip('"')):
-                if ol_p_tag.findPrevious().name != 'li':
-                    if not re.search(r'^\(1\)', ol_p_tag.text.strip().strip('"')) and not new_tag:
-                        continue
-                    elif new_tag:
-                        ol_p_tag.insert_before(new_tag)
-                        new_tag.wrap(new_ol_tag_for_p)
-                    ol_p_tag.wrap(new_ol_tag_for_p)
-                elif ol_p_tag.findPrevious().name == 'li':
-                    new_ol_tag_for_p.append(ol_p_tag)
-                ol_p_tag.name = 'li'
-                ol_p_tag.string = re.sub(r'^\"\(\d+\)', '', ol_p_tag.text)
-            if ol_p_tag.findNext('p') and ol_p_tag.findNext('p').b:
-                new_tag = None
-                new_ol_tag_for_p = self.soup.new_tag('ol')
-        print('converted numeric ol')
-
-    def create_analysis_nav_tag(self):
+    def create_case_notes_nav_tag(self):
         """
             - match and find analysis navigation tag
             - split the contents of tag by line break
@@ -1192,7 +1154,7 @@ class ARParseHtml(ParserBase):
             self.get_class_name()
             self.remove_junk()
             self.replace_tag_names_constitution()
-            self.create_analysis_nav_tag()
+            self.create_case_notes_nav_tag()
             self.remove_or_replace_class_names()
             self.add_anchor_constitution()
             self.wrap_div_tags()
@@ -1201,8 +1163,7 @@ class ARParseHtml(ParserBase):
             self.remove_junk()
             self.replace_tags()
             self.convert_paragraph_to_alphabetical_ol_tags()
-            # self.convert_to_numeric_ol_tags()
-            self.create_analysis_nav_tag()
+            self.create_case_notes_nav_tag()
             self.remove_or_replace_class_names()
             self.add_anchor_tags()
             self.wrap_div_tags()
