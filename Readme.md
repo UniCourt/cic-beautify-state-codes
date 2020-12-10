@@ -6,24 +6,27 @@ This repository was created by UniCourt on behalf of [Public.Resource.Org](https
 
 This repository contains software that transforms official codes from ugly .rtf files into nice-looking, accessible HTML. We use "textutil" on a Mac to go from .rtf to bad HTML. Then, the code in this repository does the heavy lifting.
 
-Currently this code supports GA  and current quarterly releases that are available include:
+Currently this code supports following states:
 
-* Release 70 dated 2018.12.01.
-* Release 71 dated 2019.03.05.
-* Release 72 dated 2019.05.01.
-* Release 73 dated 2019.08.21.
-* Release 74 dated 2020.01.15.
-* Release 75 dated 2020.04.20.
-* Release 76 dated 2020.06.12.
-* Release 77 dated 2020.08.10.
+1. ###Georgia (GA): 
+   **Code repo:** https://github.com/UniCourt/cic-code-ga
+   
+   **Code pages:** https://unicourt.github.io/cic-code-ga
 
-Releases are available here: https://github.com/UniCourt/cic-code-ga
+   **Original RTF:** https://archive.org/download/gov.ga.ocga.2018
 
-Original RTF files can be found here: https://archive.org/download/gov.ga.ocga.2018
+   
+
+2. ###Arkansas (AR):
+   **Code repo:** https://github.com/UniCourt/cic-code-ar
+   
+   **Code pages:** https://unicourt.github.io/cic-code-ar
+   
+   **Original RTF:** https://archive.org/download/gov.ar.code
 
 In subsequent months, we intend to add two more features:
 
-1. Extend the code to handle the official codes of Mississippi, Arkansas, Kentucky, and Colorado.
+1. Extend the code to handle the official codes of Mississippi, Kentucky, and Colorado.
 2. Add a "redline" capability to show diffs. 
 
 **REQUIREMENTS AND INSTALLATION**
