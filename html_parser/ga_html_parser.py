@@ -11,10 +11,10 @@ from parser_base import ParserBase
 
 
 class GAParseHtml(ParserBase):
-    def __init__(self):
+    def __init__(self, input_file_name):
         super().__init__()
+        self.html_file_name = input_file_name
         self.soup = None
-        self.html_file_name = None
         self.title = None
         self.previous = None
         self.junk_tag_class = ['Apple-converted-space', 'Apple-tab-span']
@@ -31,6 +31,7 @@ class GAParseHtml(ParserBase):
         self.headers_class_dict = {'JUDICIAL DECISIONS': 'jdecisions',
                                    'OPINIONS OF THE ATTORNEY GENERAL': 'opinionofag',
                                    'RESEARCH REFERENCES': 'rreferences'}
+        self.start_parse()
 
     def create_page_soup(self):
         """
@@ -1107,15 +1108,14 @@ class GAParseHtml(ParserBase):
                     anchor.attrs['aria-describedby'] = header_id
                     li.string.replace_with(anchor)
 
-    def start_parse(self, input_file_name):
+    def start_parse(self):
         """
              - set the values to instance variables
              - check if the file is constitution file or title file
              - based on file passed call the methods to parse the passed htmls
          """
         self.release_label = f'Release-{self.release_number}'
-        self.html_file_name = input_file_name
-        print(input_file_name)
+        print(self.html_file_name)
         start_time = datetime.now()
         print(start_time)
         self.create_page_soup()

@@ -25,8 +25,6 @@ class ParserBase:
                     - if the input_file_name args is passed to the program
                       then start_parse method of html_parser and pass pass the input file name
                 """
-            # from ga_html_parser import GAParseHtml
-            # ga_parser = GAParseHtml()
             script = f'{state_key.lower()}_html_parser'
             class_name = f'{state_key}ParseHtml'
             parser_obj = getattr(importlib.import_module(script), class_name)
