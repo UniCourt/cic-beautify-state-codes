@@ -104,7 +104,11 @@ class ARParseHtml(ParserBase):
                 meta.decompose()
         junk_p_tags = self.soup.find_all(class_=self.junk_tag_class)
         for junk_tag in junk_p_tags:
-            junk_tag.decompose()
+            if junk_tag.name and junk_tag.get('class')[0] == 'Apple-converted-space':
+                junk_tag.string = ' '
+                junk_tag.unwrap()
+            else:
+                junk_tag.decompose()
         if title := re.search(r'title\s(?P<title>\d+)',
                               self.soup.find('p', class_=self.tag_type_dict['head1']).get_text(), re.I):
 
