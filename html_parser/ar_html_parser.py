@@ -8,9 +8,10 @@ from bs4 import BeautifulSoup, Doctype, element
 import re
 from datetime import datetime
 from parser_base import ParserBase
+import roman
 
 
-class GAParseHtml(ParserBase):
+class ARParseHtml(ParserBase):
     def __init__(self, input_file_name):
         super().__init__()
         self.html_file_name = input_file_name
@@ -18,11 +19,10 @@ class GAParseHtml(ParserBase):
         self.title = None
         self.previous = None
         self.junk_tag_class = ['Apple-converted-space', 'Apple-tab-span']
-        self.tag_type_dict = {'head1': r'TITLE \d', 'head2': r'^CHAPTER \d|^ARTICLE \d', 'ul': r'^Chap\.|^Art\.|^Sec\.',
-                              'head4': 'OPINIONS OF THE ATTORNEY GENERAL|RESEARCH REFERENCES',
-                              'ol_p': r'^\([a-z]\)', 'junk1': '^Annotations$', 'normalp': '^Editor\'s note',
-                              'article': r'^Article \d$|^Part \d$'}
-        self.watermark_text = """Release {0} of the Official Code of Georgia Annotated released {1}. 
+        self.tag_type_dict = {'head1': r'TITLE \d', 'ul': r'^Subchapter 1 —',
+                              'head4': 'Research References',
+                              'ol_p': r'^\([a-z]\)', 'junk1': '^Annotations$', 'normalp': '^Publisher\'s Notes'}
+        self.watermark_text = """Release {0} of the Official Code of Arkansas Annotated released {1}. 
         Transformed and posted by Public.Resource.Org using rtf-parser.py version 1.0 on {2}. 
         This document is not subject to copyright and is in the public domain.
         """
@@ -41,7 +41,7 @@ class GAParseHtml(ParserBase):
         - add attribute 'lang' to html tag with value 'en'
         :return:
         """
-        with open(f'../transforms/ga/ocga/r{self.release_number}/raw/{self.html_file_name}') as open_file:
+        with open(f'../transforms/ar/ocar/r{self.release_number}/raw/{self.html_file_name}') as open_file:
             html_data = open_file.read()
         self.soup = BeautifulSoup(html_data, features="lxml")
         self.soup.contents[0].replace_with(Doctype("html"))
@@ -70,18 +70,28 @@ class GAParseHtml(ParserBase):
                 0]
             self.tag_type_dict['head3'] = h3_class
 
-            if part_class := self.soup.find(lambda tag: tag.name == 'p' and re.search(
-                    '^PART', tag.get_text().strip()) and tag.get('class')[0] != self.tag_type_dict['article']):
-                if part_class['class'][0] not in self.tag_type_dict.values():
-                    self.tag_type_dict['part'] = part_class['class'][0]
+            h2_class = self.soup.find(lambda tag: tag.name == 'p' and re.search(
+                rf'^CHAPTER \d', tag.get_text().strip(), re.I) and tag.get('class')[0] != self.tag_type_dict['ul'])[
+                'class'][
+                0]
+            self.tag_type_dict['head2'] = h2_class
+        else:
+            h2_class = self.soup.find(lambda tag: tag.name == 'p' and re.search(
+                rf'^Article \d', tag.get_text().strip(), re.I) and tag.get('class')[0] != self.tag_type_dict['ul'])[
+                'class'][
+                0]
+            self.tag_type_dict['head2'] = h2_class
+            h3_class = self.soup.find(lambda tag: tag.name == 'p' and re.search(
+                r'^§ \d', tag.get_text().strip(), re.I) and tag.get('class')[0] != self.tag_type_dict['ul'])[
+                'class'][
+                0]
+            self.tag_type_dict['head3'] = h3_class
 
-            if h3_class_1 := self.soup.find(lambda tag: tag.name == 'p' and re.search(
-                    rf'^\d+-\d+-\d+\.', tag.get_text().strip(), re.I) and tag.get('class')[0]
-                                                        not in self.tag_type_dict.values()):
-                self.tag_type_dict['head3.1'] = h3_class_1['class'][0]
+        if ol_p_2_tag := self.soup.find(lambda tag: tag.name == 'p' and re.search(
+                r'^Maximum Name of Fund', tag.get_text().strip(), re.I)
+                                                                  and tag.get('class')[0] not in self.tag_type_dict.values()):
+            self.tag_type_dict['ol_p'] = [self.tag_type_dict['ol_p'], ol_p_2_tag['class'][0]]
 
-        # self.junk_tag_class.append(
-        #     self.soup.find(lambda tag: tag.name == 'p' and tag.get_text().strip() == '')['class'][0])
         print('updated class dict')
 
     def remove_junk(self):
@@ -94,7 +104,11 @@ class GAParseHtml(ParserBase):
                 meta.decompose()
         junk_p_tags = self.soup.find_all(class_=self.junk_tag_class)
         for junk_tag in junk_p_tags:
-            junk_tag.decompose()
+            if junk_tag.name and junk_tag.get('class')[0] == 'Apple-converted-space':
+                junk_tag.string = ' '
+                junk_tag.unwrap()
+            else:
+                junk_tag.decompose()
         if title := re.search(r'title\s(?P<title>\d+)',
                               self.soup.find('p', class_=self.tag_type_dict['head1']).get_text(), re.I):
 
@@ -112,20 +126,12 @@ class GAParseHtml(ParserBase):
         print('junk removed')
 
     def replace_tags(self):
-        """
-            - create dictionary with class names as keys with associated tag name as its value
-            - find all the tags in html with specified class names from dict
-              and replace tag with associated tag name (p1 -> h1)
-            - based on tag name find or build id for that tag
-            - create watermark tag and append it with h1 to first nav tag
-        """
         watermark_p = None
         title_tag = None
         tag_dict = {self.tag_type_dict['head1']: "h1", self.tag_type_dict['head2']: "h2",
                     self.tag_type_dict.get('part', ''): "h4",
                     self.tag_type_dict['head3']: "h3", self.tag_type_dict['head4']: "h4",
-                    self.tag_type_dict['ul']: "li", self.tag_type_dict['article']: "h5",
-                    self.tag_type_dict.get('head3.1', ''): 'h3'
+                    self.tag_type_dict['ul']: "li",
                     }
         for key, value in tag_dict.items():
             ul = self.soup.new_tag("ul", Class="leaders")
@@ -175,6 +181,11 @@ class GAParseHtml(ParserBase):
                                     cleansed_chap = re.sub(r'\d+$', '', chap_id["id"])
                                     p_tag['id'] = f'{cleansed_chap}{chapter.zfill(2)}'
                                 p_tag['class'] = 'parth2'
+                            elif re.search('^subchapter', p_tag.get_text().strip(), re.I) and \
+                                    (chap_id := p_tag.findPrevious(lambda tag: tag.name == 'h2' and re.search('^Chapter', tag.get_text()))):
+                                p_tag.name = 'h3'
+                                p_tag['id'] = f'{chap_id["id"]}sc{chapter.zfill(2)}'
+                                p_tag['class'] = 'subchapterh3'
                             else:
                                 p_tag['id'] = f't{self.title.zfill(2)}c{chapter.zfill(2)}'
                         else:
@@ -190,13 +201,6 @@ class GAParseHtml(ParserBase):
                             else:
                                 p_tag['id'] = f"{p_tag['id']}.1"
                     elif section_match := re.search(r'^(?P<sec>\w+)\.', p_tag.get_text()):
-                        """
-                            title 34 has section_header with same class name as chapter header 
-                            and there was no proper section annotation 
-                            ex:CHAPTER 15
-                                RESERVED
-                             section : 2. Procedure to Elect Coverage, Reject Coverage or Revoke Exemption.
-                        """
                         p_tag.name = 'h3'
                         chap_tag = p_tag.find_previous(lambda tag: tag.name == 'h2'
                                                                    and re.search(r'chapter \w+', tag.get_text(), re.I))
@@ -258,6 +262,10 @@ class GAParseHtml(ParserBase):
                         title_tag = p_tag
                     else:
                         p_tag.name = 'h5'
+                if (st_reg := re.search(r'^Subtitle (?P<stnum>\d)', p_tag.get_text())) and p_tag.name == 'h5':
+                    p_tag['class'] = 'subtitleh2'
+                    p_tag.name = 'h2'
+                    p_tag['id'] = f't{self.title.zfill(2)}st{st_reg.group("stnum").zfill(2)}'
 
         stylesheet_link_tag = self.soup.new_tag('link')
         stylesheet_link_tag.attrs = {'rel': 'stylesheet', 'type': 'text/css',
@@ -278,12 +286,14 @@ class GAParseHtml(ParserBase):
         """
         main_sec_alpha = 'a'
         cap_alpha = 'A'
+        small_roman = 'i'
         ol_head = 1
         alpha_ol = self.soup.new_tag("ol", Class="alpha")
         cap_alpha_ol = self.soup.new_tag("ol", type="A")
         inner_ol = self.soup.new_tag("ol", type="i")
         roman_ol = self.soup.new_tag("ol", type="I")
         num_ol = self.soup.new_tag("ol")
+        small_letter_inner_ol = self.soup.new_tag("ol", Class="alpha")
         previous_alpha_li = None
         previous_num_li = None
         previous_inner_li = None
@@ -295,260 +305,250 @@ class GAParseHtml(ParserBase):
         sec_sub_li = None
         sub_alpha_ol = None
         prev_chap_id = None
-        for p_tag in self.soup.findAll('p', {'class': self.tag_type_dict['ol_p']}):
-            if not re.search('\w+', p_tag.get_text()):
+        p_tag = self.soup.find('p', {'class': self.tag_type_dict['ol_p']})
+        while p_tag:
+            set_p_tag = True
+            if not re.search(r'\w+', p_tag.get_text()):
                 continue
-            chap_id = p_tag.findPrevious(lambda tag: tag.name in ['h2', 'h3'])
-            sec_id = chap_id["id"]
-            if sec_id != prev_chap_id:
-                ol_count = 0
-            prev_chap_id = sec_id
-            set_string = True
-            data_str = p_tag.get_text()
-            p_tag.string = data_str
-            if re.search(rf'^\({main_sec_alpha}\)', data_str):
-                cap_alpha = 'A'
-                sec_sub_ol = None
-                p_tag.name = 'li'
-                previous_alpha_li = p_tag
-                if main_sec_alpha == 'a':
-                    ol_count += 1
-                    p_tag.wrap(alpha_ol)
-                else:
-                    alpha_ol.append(p_tag)
-                num_ol = self.soup.new_tag("ol")
-                previous_num_li = None
-                previous_inner_li = None
-                ol_head = 1
-                alpha_li_id = f'{sec_id}ol{ol_count}{main_sec_alpha}'
-                p_tag['id'] = alpha_li_id
-                main_sec_alpha = chr(ord(main_sec_alpha) + 1)
-                if re.search(r'^\(\w\)\s?\(\d\)', data_str):
-                    li_num = re.search(r'^\(\w\)\s?\((?P<num>\d)\)', data_str).group('num')
-                    p_tag.string = re.sub(r'^\(\w+\)', '', p_tag.text.strip())
-                    new_li = self.soup.new_tag('p')
-                    new_li.string = re.sub(r'^\(\w\)\s?\(\d\)', '', data_str)
-                    p_tag.string.replace_with(new_li)
-                    new_li.wrap(num_ol)
-                    new_li.name = 'li'
-                    previous_num_li = new_li
-                    cap_alpha_ol = self.soup.new_tag("ol", type="A")
-                    set_string = False
-                    ol_head += 1
-                    num_li_id = f'{alpha_li_id}{li_num}'
-                    new_li['id'] = num_li_id
-                    if re.search(r'^\(\w\)\s?\(\d\)\s?\(\w\)', data_str):
-                        li_alpha = re.search(r'^\(\w\)\s?\(\d\)\s?\((?P<alpha>\w)\)', data_str).group('alpha')
-                        new_li = self.soup.new_tag('p')
-                        new_li.string = re.sub(r'^\(\w+\)\s?\(\d\)\s?\(\w\)', '', data_str)
-                        previous_num_li.string.replace_with(new_li)
-                        new_li.wrap(cap_alpha_ol)
-                        new_li.name = 'li'
-                        previous_inner_li = new_li
-                        inner_ol = self.soup.new_tag("ol", type="i")
-                        new_li['id'] = f'{num_li_id}{li_alpha}'
-                        if cap_alpha == 'Z':
-                            cap_alpha = 'A'
-                        else:
-                            cap_alpha = chr(ord(cap_alpha) + 1)
-            elif re.search(r'^\(\w+(\.\d)?\)', p_tag.text.strip()):
-                if re.search(r'^\(\d+\.\d\)', p_tag.text.strip()):
-                    if previous_num_li:
-                        previous_num_li.append(p_tag)
-                    continue
-
-                if re.search(rf'^\({ol_head}\)', p_tag.text.strip()):
-                    cap_alpha = "A"
-                    incr_ol_count = False
-                    if previous_alpha_li:
-                        previous_alpha_li.append(p_tag)
-                    previous_num_li = p_tag
-                    p_tag.name = "li"
-                    if ol_head == 1:
-                        incr_ol_count = True
-                        p_tag.wrap(num_ol)
+            if chap_id := p_tag.findPrevious(lambda tag: tag.name in ['h2', 'h3']):
+                sec_id = chap_id["id"]
+                if sec_id != prev_chap_id:
+                    ol_count = 0
+                prev_chap_id = sec_id
+                set_string = True
+                data_str = p_tag.get_text()
+                p_tag.string = data_str
+                if re.search(rf'^\({main_sec_alpha}\)', data_str):
+                    cap_alpha = 'A'
+                    sec_sub_ol = None
+                    p_tag.name = 'li'
+                    previous_alpha_li = p_tag
+                    if main_sec_alpha == 'a':
+                        ol_count += 1
+                        p_tag.wrap(alpha_ol)
                     else:
-                        num_ol.append(p_tag)
-                    cap_alpha_ol = self.soup.new_tag("ol", type="A")
+                        alpha_ol.append(p_tag)
+                    num_ol = self.soup.new_tag("ol")
+                    previous_num_li = None
                     previous_inner_li = None
-                    if alpha_li_id:
-                        num_li_id = f'{alpha_li_id}{ol_head}'
-                    else:
-                        if incr_ol_count:
-                            ol_count += 1
-                        num_li_id = f'{sec_id}ol{ol_count}{ol_head}'
-                    p_tag['id'] = num_li_id
-                    ol_head += 1
-                    if re.search(r'^\(\d+\)\s?\(\w+\)', p_tag.text.strip()):
-                        li_alpha = re.search(r'^\(\d+\)\s?\((?P<alpha>\w+)\)', p_tag.text.strip()).group('alpha')
+                    ol_head = 1
+                    small_roman = 'i'
+                    alpha_li_id = f'{sec_id}ol{ol_count}{main_sec_alpha}'
+                    p_tag['id'] = alpha_li_id
+                    main_sec_alpha = chr(ord(main_sec_alpha) + 1)
+                    if re.search(r'^\(\w\)\s?\(\d\)', data_str):
+                        li_num = re.search(r'^\(\w\)\s?\((?P<num>\d)\)', data_str).group('num')
+                        p_tag.string = re.sub(r'^\(\w+\)', '', p_tag.text.strip())
                         new_li = self.soup.new_tag('p')
-                        new_li.string = re.sub(r'^\(\d+\)\s?\(\w+\)', '', p_tag.text.strip())
+                        new_li.string = re.sub(r'^\(\w\)\s?\(\d\)', '', data_str)
                         p_tag.string.replace_with(new_li)
-                        new_li.wrap(cap_alpha_ol)
+                        new_li.wrap(num_ol)
                         new_li.name = 'li'
-                        previous_inner_li = new_li
+                        previous_num_li = new_li
+                        cap_alpha_ol = self.soup.new_tag("ol", type="A")
                         set_string = False
-                        inner_ol = self.soup.new_tag("ol", type="i")
-                        cap_alpha_li_id = f'{num_li_id}{li_alpha}'
-                        new_li['id'] = f'{num_li_id}{li_alpha}'
-                        if cap_alpha == 'Z':
-                            cap_alpha = 'A'
-                        else:
-                            cap_alpha = chr(ord(cap_alpha) + 1)
-                        if re.search(r'^\(\d+\)\s?\([A-Z]\)\s?\(\w+\)', data_str):
-                            li_roman = re.search(r'^\(\d+\)\s?\([A-Z]\)\s?\((?P<roman>\w+)\)', data_str).group('roman')
+                        ol_head += 1
+                        num_li_id = f'{alpha_li_id}{li_num}'
+                        new_li['id'] = num_li_id
+                        if re.search(r'^\(\w\)\s?\(\d\)\s?\(\w\)', data_str):
+                            li_alpha = re.search(r'^\(\w\)\s?\(\d\)\s?\((?P<alpha>\w)\)', data_str).group('alpha')
                             new_li = self.soup.new_tag('p')
-                            new_li.string = re.sub(r'^\(\d+\)\s?\([A-Z]\)\s?\(\w+\)', '', data_str)
-                            p_tag.string.replace_with(new_li)
-                            new_li.wrap(inner_ol)
+                            new_li.string = re.sub(r'^\(\w+\)\s?\(\d\)\s?\(\w\)', '', data_str)
+                            previous_num_li.string.replace_with(new_li)
+                            new_li.wrap(cap_alpha_ol)
                             new_li.name = 'li'
-                            set_string = False
-                            small_roman_id = f'{cap_alpha_li_id}{li_roman}'
-                            new_li['id'] = small_roman_id
-                            previous_roman_li = new_li
-                elif re.search(r'^\(\d+\)', p_tag.text.strip()) and sec_sub_ol:
-                    digit = re.search(r'^\((?P<sec_digit>\d+)\)', data_str).group('sec_digit')
-                    sec_sub_li = self.soup.new_tag('li')
-                    sec_sub_li.string = re.sub(r'^\(\w+\)', '', p_tag.text.strip())
-                    sec_sub_li['id'] = f"{sub_ol_id}{digit}"
-                    sec_sub_ol.append(sec_sub_li)
-                    sub_alpha_ol = self.soup.new_tag('ol', type='A')
-                    sec_sub_li.append(sub_alpha_ol)
-                    p_tag.decompose()
-                    continue
-                elif previous_num_li:
-                    if cap_alpha_match := re.search(fr'^\({cap_alpha}+\)|(^\([A-Z]+(\.\d+)?\))', p_tag.text.strip()):
-                        li_alpha = re.search(r'^\((?P<alpha>\w+(\.\d+)?)\)', data_str).group('alpha')
-                        previous_num_li.append(p_tag)
-                        p_tag.name = 'li'
-                        previous_roman_li = None
-                        if sec_sub_ol:
-                            p_tag['id'] = f'{sec_sub_li["id"]}{li_alpha}'
-                            if re.search(r'\d+', cap_alpha_match.group(0)):
-                                p_tag.name = 'p'
-                                previous_inner_li.apend(p_tag)
+                            previous_inner_li = new_li
+                            inner_ol = self.soup.new_tag("ol", type="i")
+                            new_li['id'] = f'{num_li_id}{li_alpha}'
+                            if cap_alpha == 'Z':
+                                cap_alpha = 'A'
                             else:
-                                sub_alpha_ol.append(p_tag)
+                                cap_alpha = chr(ord(cap_alpha) + 1)
+                elif re.search(r'^\(\w+(\.\d)?\)', p_tag.text.strip()):
+                    if re.search(r'^\(\d+\.\d\)', p_tag.text.strip()):
+                        if previous_num_li:
+                            previous_num_li.append(p_tag)
+                        continue
+
+                    if re.search(rf'^\({ol_head}\)', p_tag.text.strip()):
+                        cap_alpha = "A"
+                        small_roman = 'i'
+                        incr_ol_count = False
+                        if previous_alpha_li:
+                            previous_alpha_li.append(p_tag)
+                        previous_num_li = p_tag
+                        p_tag.name = "li"
+                        if ol_head == 1:
+                            incr_ol_count = True
+                            p_tag.wrap(num_ol)
                         else:
-                            if re.search(r'\d+', cap_alpha_match.group(0)):
-                                p_tag.name = 'p'
-                                previous_inner_li.insert(len(previous_inner_li.contents), p_tag)
-                            else:
-                                p_tag.wrap(cap_alpha_ol)
-                                previous_inner_li = p_tag
+                            num_ol.append(p_tag)
+                        cap_alpha_ol = self.soup.new_tag("ol", type="A")
+                        previous_inner_li = None
+                        if alpha_li_id:
+                            num_li_id = f'{alpha_li_id}{ol_head}'
+                        else:
+                            if incr_ol_count:
+                                ol_count += 1
+                            num_li_id = f'{sec_id}ol{ol_count}{ol_head}'
+                        p_tag['id'] = num_li_id
+                        ol_head += 1
+                        if re.search(r'^\(\d+\)\s?\(\w+\)', p_tag.text.strip()):
+                            small_roman = 'i'
+                            li_alpha = re.search(r'^\(\d+\)\s?\((?P<alpha>\w+)\)', p_tag.text.strip()).group('alpha')
+                            new_li = self.soup.new_tag('p')
+                            new_li.string = re.sub(r'^\(\d+\)\s?\(\w+\)', '', p_tag.text.strip())
+                            p_tag.string.replace_with(new_li)
+                            new_li.wrap(cap_alpha_ol)
+                            new_li.name = 'li'
+                            previous_inner_li = new_li
+                            set_string = False
                             inner_ol = self.soup.new_tag("ol", type="i")
                             cap_alpha_li_id = f'{num_li_id}{li_alpha}'
-                            p_tag['id'] = cap_alpha_li_id
-                        if re.search(r'^\([A-Z]\)\s?\(\w+\)', p_tag.text.strip()):
-                            li_roman = re.search(r'^\([A-Z]\)\s?\((?P<roman>\w+)\)', data_str).group('roman')
-                            new_li = self.soup.new_tag('p')
-                            new_li.string = re.sub(r'^\([A-Z]\)\s?\(\w+\)', '', p_tag.text.strip())
-                            p_tag.string.replace_with(new_li)
-                            new_li.wrap(inner_ol)
-                            new_li.name = 'li'
-                            set_string = False
-                            small_roman_id = f'{cap_alpha_li_id}{li_roman}'
-                            p_tag['id'] = small_roman_id
-                            previous_roman_li = new_li
-                        if cap_alpha == 'Z':
-                            cap_alpha = 'A'
-                        elif not re.search(r'\d+', cap_alpha_match.group(0)):
-                            cap_alpha = chr(ord(cap_alpha) + 1)
-                    elif previous_inner_li:
-                        if re.search(r'^\([a-z]+\)', p_tag.text.strip()):
-                            li_roman = re.search(r'^\((?P<roman>\w+)\)', data_str).group('roman')
-                            previous_inner_li.append(p_tag)
+                            new_li['id'] = f'{num_li_id}{li_alpha}'
+                            if cap_alpha == 'Z':
+                                cap_alpha = 'A'
+                            else:
+                                cap_alpha = chr(ord(cap_alpha) + 1)
+                            if re.search(r'^\(\d+\)\s?\([A-Z]\)\s?\(\w+\)', data_str):
+                                li_roman = re.search(r'^\(\d+\)\s?\([A-Z]\)\s?\((?P<roman>\w+)\)', data_str).group('roman')
+                                new_li = self.soup.new_tag('p')
+                                new_li.string = re.sub(r'^\(\d+\)\s?\([A-Z]\)\s?\(\w+\)', '', data_str)
+                                p_tag.string.replace_with(new_li)
+                                new_li.wrap(inner_ol)
+                                new_li.name = 'li'
+                                set_string = False
+                                small_roman_id = f'{cap_alpha_li_id}{li_roman}'
+                                new_li['id'] = small_roman_id
+                                previous_roman_li = new_li
+                    elif re.search(r'^\(\d+\)', p_tag.text.strip()) and sec_sub_ol:
+                        digit = re.search(r'^\((?P<sec_digit>\d+)\)', data_str).group('sec_digit')
+                        sec_sub_li = self.soup.new_tag('li')
+                        sec_sub_li.string = re.sub(r'^\(\w+\)', '', p_tag.text.strip())
+                        sec_sub_li['id'] = f"{sub_ol_id}{digit}"
+                        sec_sub_ol.append(sec_sub_li)
+                        sub_alpha_ol = self.soup.new_tag('ol', type='A')
+                        sec_sub_li.append(sub_alpha_ol)
+                        p_tag.decompose()
+                        continue
+                    elif previous_num_li:
+                        if cap_alpha_match := re.search(fr'^\({cap_alpha}+\)|(^\([A-Z]+(\.\d+)?\))', p_tag.text.strip()):
+                            small_roman = 'i'
+                            li_alpha = re.search(r'^\((?P<alpha>\w+(\.\d+)?)\)', data_str).group('alpha')
+                            previous_num_li.append(p_tag)
                             p_tag.name = 'li'
-                            p_tag.wrap(inner_ol)
-                            roman_ol = self.soup.new_tag("ol", type="I")
-                            small_roman_id = f'{cap_alpha_li_id}{li_roman}'
-                            p_tag['id'] = small_roman_id
-                            previous_roman_li = p_tag
-                        elif sub_sec_match := re.search(r'^\(\w\.\d\)\s?\((?P<sec_digit>\d+)\)', p_tag.text.strip()):
-                            digit_match = re.search(r'^\(\w\.(?P<digit>\d+)\)\s?\((?P<sec_digit>\d+)\)',
-                                                    p_tag.text.strip())
-                            sub_ol = self.soup.new_tag('ol', Class="sub_ol")
-                            sub_ol_id = f"{cap_alpha_li_id}.{digit_match.group('digit')}"
-                            sub_li = self.soup.new_tag('li')
-                            sub_li.string = sub_sec_match.group()
-                            sub_li['id'] = sub_ol_id
-                            sub_ol.append(sub_li)
-                            sec_sub_ol = self.soup.new_tag('ol')
-                            sub_li.append(sec_sub_ol)
-                            sec_sub_li = self.soup.new_tag('li')
-                            sec_sub_li.string = re.sub(r'^\(\w\.\d+\)\s?\(\d+\)', '', data_str)
-                            sec_sub_li['id'] = f"{sub_ol_id}{digit_match.group('sec_digit')}"
-                            sec_sub_ol.append(sec_sub_li)
-                            sub_alpha_ol = self.soup.new_tag('ol', type='A')
-                            sec_sub_li.append(sub_alpha_ol)
-                            previous_alpha_li.insert(len(previous_alpha_li.contents), sub_ol)
-                            p_tag.decompose()
-                        elif previous_roman_li:
-                            if re.search(r'^\([A-Z]+\)', p_tag.text.strip()):
-                                li_roman = re.search(r'^\((?P<roman>\w+)\)', data_str).group('roman')
-                                previous_roman_li.append(p_tag)
-                                p_tag.name = 'li'
-                                p_tag.wrap(roman_ol)
-                                p_tag['id'] = f'{small_roman_id}{li_roman}'
-                        else:
-                            previous_inner_li.insert(len(previous_num_li.contents), p_tag)
+                            previous_roman_li = None
+                            if sec_sub_ol:
+                                p_tag['id'] = f'{sec_sub_li["id"]}{li_alpha}'
+                                if re.search(r'\d+', cap_alpha_match.group(0)):
+                                    p_tag.name = 'p'
+                                    previous_inner_li.apend(p_tag)
+                                else:
+                                    sub_alpha_ol.append(p_tag)
+                            else:
+                                if re.search(r'\d+', cap_alpha_match.group(0)):
+                                    p_tag.name = 'p'
+                                    previous_inner_li.insert(len(previous_inner_li.contents), p_tag)
+                                else:
+                                    p_tag.wrap(cap_alpha_ol)
+                                    previous_inner_li = p_tag
+                                inner_ol = self.soup.new_tag("ol", type="i")
+                                cap_alpha_li_id = f'{num_li_id}{li_alpha}'
+                                p_tag['id'] = cap_alpha_li_id
+                            if re.search(r'^\([A-Z]\)\s?\(\w+\)', p_tag.text.strip()):
+                                li_roman = re.search(r'^\([A-Z]\)\s?\((?P<roman>\w+)\)', data_str).group('roman')
+                                new_li = self.soup.new_tag('p')
+                                new_li.string = re.sub(r'^\([A-Z]\)\s?\(\w+\)', '', p_tag.text.strip())
+                                p_tag.string.replace_with(new_li)
+                                new_li.wrap(inner_ol)
+                                new_li.name = 'li'
+                                set_string = False
+                                small_roman_id = f'{cap_alpha_li_id}{li_roman}'
+                                p_tag['id'] = small_roman_id
+                                previous_roman_li = new_li
+                            if cap_alpha == 'Z':
+                                cap_alpha = 'A'
+                            elif not re.search(r'\d+', cap_alpha_match.group(0)):
+                                cap_alpha = chr(ord(cap_alpha) + 1)
+                        elif previous_inner_li:
+                            if alpha_match := re.search(r'^\((?P<alpha>[a-z])+\)', p_tag.text.strip()):
+                                li_roman = alpha_match.group('alpha')
+                                if li_roman.upper() == roman.toRoman(roman.fromRoman(small_roman.upper()) + 1):
+                                    small_roman = li_roman
+                                    previous_inner_li.append(p_tag)
+                                    p_tag.name = 'li'
+                                    p_tag.wrap(inner_ol)
+                                    roman_ol = self.soup.new_tag("ol", type="I")
+                                    small_roman_id = f'{cap_alpha_li_id}{li_roman}'
+                                    p_tag['id'] = small_roman_id
+                                    previous_roman_li = p_tag
+                                    small_letter_inner_ol = self.soup.new_tag("ol", type="a")
+                                elif previous_roman_li:
+                                    small_letter_inner_ol.append(p_tag)
+                                    p_tag.name = 'li'
+                                    p_tag.wrap(previous_roman_li)
+                                    p_tag['id'] = f'{small_roman_id}{li_roman}'
+                            elif sub_sec_match := re.search(r'^\(\w\.\d\)\s?\((?P<sec_digit>\d+)\)', p_tag.text.strip()):
+                                digit_match = re.search(r'^\(\w\.(?P<digit>\d+)\)\s?\((?P<sec_digit>\d+)\)',
+                                                        p_tag.text.strip())
+                                sub_ol = self.soup.new_tag('ol', Class="sub_ol")
+                                sub_ol_id = f"{cap_alpha_li_id}.{digit_match.group('digit')}"
+                                sub_li = self.soup.new_tag('li')
+                                sub_li.string = sub_sec_match.group()
+                                sub_li['id'] = sub_ol_id
+                                sub_ol.append(sub_li)
+                                sec_sub_ol = self.soup.new_tag('ol')
+                                sub_li.append(sec_sub_ol)
+                                sec_sub_li = self.soup.new_tag('li')
+                                sec_sub_li.string = re.sub(r'^\(\w\.\d+\)\s?\(\d+\)', '', data_str)
+                                sec_sub_li['id'] = f"{sub_ol_id}{digit_match.group('sec_digit')}"
+                                sec_sub_ol.append(sec_sub_li)
+                                sub_alpha_ol = self.soup.new_tag('ol', type='A')
+                                sec_sub_li.append(sub_alpha_ol)
+                                previous_alpha_li.insert(len(previous_alpha_li.contents), sub_ol)
+                                p_tag.decompose()
+                            elif previous_roman_li:
+                                if re.search(r'^\([A-Z]+\)', p_tag.text.strip()):
+                                    li_roman = re.search(r'^\((?P<roman>\w+)\)', data_str).group('roman')
+                                    previous_roman_li.append(p_tag)
+                                    p_tag.name = 'li'
+                                    p_tag.wrap(roman_ol)
+                                    p_tag['id'] = f'{small_roman_id}{li_roman}'
+                            else:
+                                previous_inner_li.insert(len(previous_num_li.contents), p_tag)
 
-            elif re.search(r'^\([^\)]{6,}\)', p_tag.get_text(), re.I) or \
-                    re.search(r'^\d+-\d+-\d+', p_tag.find_previous_sibling().get_text()) or \
-                    re.search(r'Section \d+\.\s', p_tag.get_text()):
-                ol_head = 1
-                main_sec_alpha = 'a'
-                cap_alpha = "A"
-                previous_alpha_li = None
-                previous_num_li = None
-                previous_inner_li = None
-                alpha_li_id = None
-                previous_roman_li = None
-                sec_sub_ol = None
-                alpha_ol = self.soup.new_tag("ol", Class="alpha")
-                num_ol = self.soup.new_tag("ol")
+                elif re.search(r'^History\.', p_tag.get_text(), re.I) or \
+                        re.search(r'^\d+-\d+-\d+', p_tag.find_previous_sibling().get_text()):
+                    p_tag = p_tag.find_next_sibling(lambda tag: tag.name == 'p' and
+                                                                tag.get('class')[0] in self.tag_type_dict['ol_p'])
+                    set_p_tag = False
+                    ol_head = 1
+                    main_sec_alpha = 'a'
+                    cap_alpha = "A"
+                    small_roman = 'i'
+                    previous_alpha_li = None
+                    previous_num_li = None
+                    previous_inner_li = None
+                    alpha_li_id = None
+                    previous_roman_li = None
+                    sec_sub_ol = None
+                    alpha_ol = self.soup.new_tag("ol", Class="alpha")
+                    num_ol = self.soup.new_tag("ol")
 
-            else:
-                if previous_inner_li:
-                    previous_inner_li.append(p_tag)
-                elif previous_num_li:
-                    previous_num_li.append(p_tag)
-                elif previous_alpha_li:
-                    previous_alpha_li.append(p_tag)
-            if set_string:
-                p_tag.string = re.sub(r'^\(\w+\)', '', p_tag.text.strip())
+                else:
+                    if previous_inner_li:
+                        previous_inner_li.append(p_tag)
+                    elif previous_num_li:
+                        previous_num_li.append(p_tag)
+                    elif previous_alpha_li:
+                        previous_alpha_li.append(p_tag)
+                if set_string:
+                    p_tag.string = re.sub(r'^\(\w+\)', '', p_tag.text.strip())
+            if set_p_tag:
+                p_tag = p_tag.find_next_sibling(lambda tag: tag.name == 'p' and re.search('.+', tag.get_text()))
         print('ol tags added')
 
-    def convert_to_numeric_ol_tags(self):
-        new_ol_tag_for_p = self.soup.new_tag('ol')
-        new_tag = None
-        for ol_p_tag in self.soup.findAll('p', {'class': self.tag_type_dict['normalp']}):
-            if re.search("^Editor's notes", ol_p_tag.get_text()) and not ol_p_tag.findNext('p').b and \
-                    re.search(".+\(1\)", ol_p_tag.findNext('p').get_text().strip('"')):
-                new_tag = self.soup.new_tag('li', Class=self.tag_type_dict['normalp'])
-                new_string = re.search('\"\(1\)(?P<data>.+)', ol_p_tag.findNext('p').get_text(), re.DOTALL).group(
-                    'data')
-                new_tag.string = new_string
-                ol_p_tag.findNext('p').string = re.sub(rf'\"\(1\)\s?{new_string}', '',
-                                                       ol_p_tag.findNext('p').get_text())
-            if re.search(r'^\(\d+\)', ol_p_tag.text.strip().strip('"')):
-                if ol_p_tag.findPrevious().name != 'li':
-                    if not re.search(r'^\(1\)', ol_p_tag.text.strip().strip('"')) and not new_tag:
-                        continue
-                    elif new_tag:
-                        ol_p_tag.insert_before(new_tag)
-                        new_tag.wrap(new_ol_tag_for_p)
-                    ol_p_tag.wrap(new_ol_tag_for_p)
-                elif ol_p_tag.findPrevious().name == 'li':
-                    new_ol_tag_for_p.append(ol_p_tag)
-                ol_p_tag.name = 'li'
-                ol_p_tag.string = re.sub(r'^\"\(\d+\)', '', ol_p_tag.text)
-            if ol_p_tag.findNext('p') and ol_p_tag.findNext('p').b:
-                new_tag = None
-                new_ol_tag_for_p = self.soup.new_tag('ol')
-        print('converted numeric ol')
-
-    def create_analysis_nav_tag(self):
+    def create_case_notes_nav_tag(self):
         """
             - match and find analysis navigation tag
             - split the contents of tag by line break
@@ -556,40 +556,34 @@ class GAParseHtml(ParserBase):
             - create new nav tag and ul tag
             - append each created li to new ul tag
         """
-        for analysis_p_tag in self.soup.findAll('p', {'class': self.tag_type_dict['normalp']}):
-            if re.search(r'^Editor\'s notes.+ANALYSIS', analysis_p_tag.get_text(), re.DOTALL):
-                parent_id = analysis_p_tag.find_previous(lambda tag: tag.name in ['h2', 'h2', 'h3'])['id']
-                editors_tag = self.soup.new_tag('p')
-                editors_header = self.soup.new_tag('h5', Class='ednotes lalign')
-                editors_header.string = "Editor's notes."
-                editors_header['id'] = f'{parent_id}-ednotes01'
-                editors_text = re.search(r'^Editor\'s notes\.(?P<text>.+)ANALYSIS',
-                                         analysis_p_tag.get_text(), re.DOTALL).group('text')
-                editors_tag.string = editors_text
-                analysis_p_tag.insert_before(editors_header)
-                editors_header.insert_after(editors_tag)
-            if re.search('<b>ANALYSIS', str(analysis_p_tag)):
-                p_tag = self.soup.new_tag('p')
-                p_tag.string = 'ANALYSIS'
-                p_tag['class'] = 'analysis_nav_header'
+        for case_notes_tag in self.soup.findAll(lambda tag: tag.name == 'h4'
+                                                            and re.search('Case Notes', tag.get_text().strip())):
+            if not case_notes_tag.find_next_sibling().b:
+                case_notes_nav = case_notes_tag.find_next_sibling()
                 nav_tag = self.soup.new_tag('nav')
-                nav_tag.append(p_tag)
                 new_ul = self.soup.new_tag("ul", Class="leaders")
-                ol = self.soup.new_tag("ol")
+                ul = self.soup.new_tag("ul", Class="leaders")
                 previous_li = None
-                for headers_text in analysis_p_tag.get_text().splitlines():
-                    if not re.search('ANALYSIS|Editor\'s notes', headers_text.strip()) and headers_text.strip():
-                        new_li = self.soup.new_tag('li')
-                        new_li.string = headers_text
-                        if previous_li and re.search(r'^\d', headers_text.strip()):
-                            previous_li.append(new_li)
-                            ol.insert(len(ol), new_li)
+                for headers_text in [s for s in case_notes_nav.get_text().splitlines() if s]:
+                    new_li = self.soup.new_tag('li')
+                    if header := case_notes_nav.find_next_sibling(lambda tag:
+                                                              re.search(rf'^{headers_text.strip()}$', tag.get_text().strip())
+                                                              and tag.name == 'h4'):
+                        if previous_li and re.search(r'^—|^-', headers_text.strip()):
+                            ul.insert(len(ul), new_li)
+                            previous_li.append(ul)
+                            header_id = re.sub(r'\s+', '', f'{previous_li.a.attrs.get("href")}{headers_text.strip()}')
                         else:
+                            header_id = re.sub(r'\s+', '', f'#{case_notes_tag.get("id")}{headers_text.strip()}')
                             new_ul.insert(len(new_ul), new_li)
                             previous_li = new_li
-                            ol = self.soup.new_tag("ol")
+                            ul = self.soup.new_tag("ul", Class="leaders")
+                        new_a = self.soup.new_tag('a', href=header_id)
+                        new_a.string = headers_text
+                        new_li.append(new_a)
+                        header['id'] = header_id.strip('#')
                 nav_tag.append(new_ul)
-                analysis_p_tag.replace_with(nav_tag)
+                case_notes_nav.replace_with(nav_tag)
         print('created analysis tag')
 
     def remove_or_replace_class_names(self):
@@ -602,7 +596,7 @@ class GAParseHtml(ParserBase):
             - if tag only contains § and nothing, unwrap the tag
             - if tag doesnt contain any alpha numeric characters delete the tag
             - if tags value is present in 'notes_headers_dict' change tags name and add class name and id accordingly
-"""
+        """
         notes_headers_dict = {'Code Commission notes.': ['ccnotes', 0],
                               "Editor's notes.": ['ednotes', 0],
                               'Cross references.': ['crnotes', 0],
@@ -661,18 +655,18 @@ class GAParseHtml(ParserBase):
                         new_h5.append(tag.b)
                         new_h5['class'] = 'lalign'
                         tag.insert_before(new_h5)
-                if section_header_match := re.search(r'^\d+-\d+-\d+', tag.get_text().strip(), re.I):
-                    tag.name = 'h3'
-                    chap_tag = tag.find_previous(lambda tag: tag.name == 'h2')
-                    tag['id'] = f'{chap_tag["id"]}{section_header_match.group()}'
-                    if previous_sibling_tag := tag.find_previous(lambda tag: tag.name == 'h3' and
-                                                                             re.search(tag['id'], tag.get('id', ''))):
-                        if pervious_tag_id_num_match := \
-                                re.search(rf'{tag["id"]}(\.\d)?\.(?P<count>\d+)',
-                                          previous_sibling_tag['id'], re.I):
-                            tag['id'] = f"{tag['id']}.{int(pervious_tag_id_num_match.group('count')) + 1}"
-                        else:
-                            tag['id'] = f"{tag['id']}.1"
+                # if section_header_match := re.search(r'^\d+-\d+-\d+', tag.get_text().strip(), re.I):
+                #     tag.name = 'h3'
+                #     chap_tag = tag.find_previous(lambda tag: tag.name == 'h2')
+                #     tag['id'] = f'{chap_tag["id"]}{section_header_match.group()}'
+                #     if previous_sibling_tag := tag.find_previous(lambda tag: tag.name == 'h3' and
+                #                                                              re.search(tag['id'], tag.get('id', ''))):
+                #         if pervious_tag_id_num_match := \
+                #                 re.search(rf'{tag["id"]}(\.\d)?\.(?P<count>\d+)',
+                #                           previous_sibling_tag['id'], re.I):
+                #             tag['id'] = f"{tag['id']}.{int(pervious_tag_id_num_match.group('count')) + 1}"
+                #         else:
+                #             tag['id'] = f"{tag['id']}.1"
             if tag.name in ['h3', 'h2']:
                 for value in notes_headers_dict.values():
                     value[1] = 0
@@ -701,6 +695,8 @@ class GAParseHtml(ParserBase):
         for header in self.soup.findAll('h2'):
             new_chap_div = self.soup.new_tag('div')
             sec_header = header.find_next_sibling()
+            if not sec_header:
+                print()
             header.wrap(new_chap_div)
             while True:
                 next_sec_tag = sec_header.find_next_sibling()
@@ -732,7 +728,7 @@ class GAParseHtml(ParserBase):
                                 new_sub_sec_div.append(inner_tag)
                                 next_tag = inner_next_tag
                                 if not inner_next_tag or inner_next_tag.name in ['h3',
-                                                                                 'h2'] or inner_next_tag.name == 'h4' \
+                                                                                   'h2'] or inner_next_tag.name == 'h4' \
                                         and inner_next_tag.get('class'):
                                     break
                                 inner_tag = inner_next_tag
@@ -760,6 +756,8 @@ class GAParseHtml(ParserBase):
                 if not next_sec_tag or next_sec_tag.name == 'h2':
                     break
                 sec_header = next_sec_tag
+                if not sec_header:
+                    print()
 
         print('wrapped div tags')
 
@@ -774,27 +772,58 @@ class GAParseHtml(ParserBase):
         for ul in self.soup.findAll('nav'):
             id_num = 0
             li_num = 0
-            chap_header_tag = self.soup.find(
-                lambda tag: tag.name == 'h2' and re.search(rf'chapter|article', tag.get_text()
-                                                           .strip(), re.I))
-            chap_match = re.search(r'(chapter|article)\s(?P<num>\w+)(?P<name>.+)', chap_header_tag.get_text(),
-                                   re.DOTALL | re.I)
-            chap_reg = fr'{chap_match.group("num")}\.?\s{chap_match.group("name").strip()}'
-            if re.search(chap_reg, ul.get_text(), re.I) or ul.p and re.search('Chap|Art', ul.p.get_text()):
+            # chap_header_tag = self.soup.find(
+            #     lambda tag: tag.name == 'h2' and re.search(rf'chapter|article', tag.get_text()
+            #                                                .strip(), re.I))
+            # chap_match = re.search(r'(chapter|article)\s(?P<num>\w+)(?P<name>.+)', chap_header_tag.get_text(),
+            #                        re.DOTALL | re.I)
+            # chap_reg = fr'{chap_match.group("num")}\.?\s{chap_match.group("name").strip()}'
+            if re.search(r'^Subtitle \d', ul.li.get_text().strip()):
                 for li in ul.findAll('li'):
                     li_num += 1
-                    chap_no = re.search('^\d+\w?', li.get_text().strip()).group()
-                    header_id = f'#t{self.title.zfill(2)}c{chap_no.zfill(2)}'
-                    anchor = self.soup.new_tag('a', href=header_id)
-                    cleansed_header_id = header_id.strip("#")
-                    anchor.attrs['aria-describedby'] = cleansed_header_id
-                    li['id'] = f'{cleansed_header_id}-cnav{str(li_num).zfill(2)}'
-                    anchor.string = li.text
-                    if li.string:
-                        li.string.replace_with(anchor)
-                    else:
-                        li.contents = []
-                        li.append(anchor)
+                    if st_num_reg := re.search(r'^Subtitle\s(?P<st_num>\d+)', li.get_text().strip()):
+                        header_id = f'#t{self.title.zfill(2)}st{st_num_reg.group("st_num").zfill(2)}'
+                        anchor = self.soup.new_tag('a', href=header_id)
+                        cleansed_header_id = header_id.strip("#")
+                        anchor.attrs['aria-describedby'] = cleansed_header_id
+                        li['id'] = f'{cleansed_header_id}-cnav{str(li_num).zfill(2)}'
+                        anchor.string = li.text
+                        if li.string:
+                            li.string.replace_with(anchor)
+                        else:
+                            li.contents = []
+                            li.append(anchor)
+            if re.search('^Chapter', ul.li.get_text().strip()):
+                for li in ul.findAll('li'):
+                    li_num += 1
+                    if chap_no := re.search(r'^Chapter\s(?P<chap_num>\d+([a-z])?)', li.get_text().strip()):
+                        header_id = f'#t{self.title.zfill(2)}c{chap_no.group("chap_num").zfill(2)}'
+                        anchor = self.soup.new_tag('a', href=header_id)
+                        cleansed_header_id = header_id.strip("#")
+                        anchor.attrs['aria-describedby'] = cleansed_header_id
+                        li['id'] = f'{cleansed_header_id}-cnav{str(li_num).zfill(2)}'
+                        anchor.string = li.text
+                        if li.string:
+                            li.string.replace_with(anchor)
+                        else:
+                            li.contents = []
+                            li.append(anchor)
+            if re.search('^Subchapter \d', ul.get_text().strip()):
+                for li in ul.findAll('li'):
+                    li_num += 1
+                    if chap_no := re.search(r'^Subchapter\s(?P<sub_chap_num>\d+)', li.get_text().strip()):
+                        previous_head = ul.find_previous(lambda tag: tag.name == 'h2' and re.search('^Chapter', tag.get_text().strip()))
+                        header_id = f'#{previous_head["id"]}sc{chap_no.group("sub_chap_num").zfill(2)}'
+                        anchor = self.soup.new_tag('a', href=header_id)
+                        cleansed_header_id = header_id.strip("#")
+                        anchor.attrs['aria-describedby'] = cleansed_header_id
+                        li['id'] = f'{cleansed_header_id}-cnav{str(li_num).zfill(2)}'
+                        anchor.string = li.text
+                        if li.string:
+                            li.string.replace_with(anchor)
+                        else:
+                            li.contents = []
+                            li.append(anchor)
             elif re.search(r'Sec|^\d+-\w+-\d+(\.\d+)?', ul.find().get_text().strip()):
                 for li in ul.findAll('li'):
                     if sec_id_reg := re.search(r'^(?P<sec>\d{1,2}-\d(\w+)?-\d+(\.\d+)?)', li.get_text().strip()):
@@ -844,15 +873,6 @@ class GAParseHtml(ParserBase):
         print('added anchor tags')
 
     def clean_html_and_add_cite(self):
-        """
-            - find all the tags in html which matches the pattern of section id(1-1-1)
-            - check if the section ids target present in same html
-            - if not build a link with proper path for that html using matched text
-            - add an anchor tag with reference to that html
-            - build a dict with all possible cite tags which are non GA code cites and its patterns
-            - find all the tags which matches the pattern
-            - replace each tag with new cite tag with same text
-        """
         reg_dict = {'ga_court': r'(\d+ (Ga\.) \d+)',
                     'ga_app_court': r'(\d+ Ga\.( App\.) \d+)',
                     'app_court': r'(\d+ S\.E\.(2d)? \d+)',
@@ -888,7 +908,7 @@ class GAParseHtml(ParserBase):
                 section = re.sub(r'(\(\w+\))+', '', match).strip()
                 target = "_self"
                 if title.strip() != self.title:
-                    a_id = f'gov.ga.ocga.title.{title.zfill(2)}.html#t{title.zfill(2)}c{id_reg.group("chap").zfill(2)}s{section}'
+                    a_id = f'gov.ar.code.title.{title.zfill(2)}.html#t{title.zfill(2)}c{id_reg.group("chap").zfill(2)}s{section}'
                     target = "_blank"
                 else:
                     a_id = f'#t{title.zfill(2)}c{id_reg.group("chap").zfill(2)}s{section}'
@@ -896,7 +916,7 @@ class GAParseHtml(ParserBase):
                     ol_num = re.sub(r'\(|\)', '', ol_reg.group())
                     a_id = f'{a_id}ol1{ol_num}'
                 text = re.sub(fr'\s{re.escape(match)}',
-                              f'<cite class="ocga"><a href="{a_id}" target="{target}">{match}</a></cite>', inside_text,
+                              f'<cite class="ocar"><a href="{a_id}" target="{target}">{match}</a></cite>', inside_text,
                               re.I)
                 tag.append(text)
 
@@ -932,7 +952,7 @@ class GAParseHtml(ParserBase):
             soup_str = re.sub(rf'{tag}', rf'{cleansed_tag}', soup_str, re.I)
         print("validating")
         # html5validate.validate(soup_str)
-        with open(f"../transforms/ga/ocga/r{self.release_number}/{self.html_file_name}", "w") as file:
+        with open(f"/home/mis/PycharmProjects/cic-code-ar/transforms/ar/ocar/r{self.release_number}/{self.html_file_name}", "w") as file:
             file.write(soup_str)
 
     def replace_tag_names_constitution(self):
@@ -967,19 +987,17 @@ class GAParseHtml(ParserBase):
                         ul.wrap(new_nav)
                         ul = self.soup.new_tag("ul", Class="leaders")
                 if key == 'h2':
-                    if chap_section_regex := re.search(r'^(ARTICLE|section)\s(?P<chap>\w+)\.',
+                    if chap_section_regex := re.search(r'^(ARTICLE|AMEND(MENT)?(\.)?)\s(?P<chap>\w+)',
                                                        p_tag.get_text().strip(), re.I):
-                        if re.search('^section', p_tag.get_text().strip(), re.I):
-                            p_tag.name = 'h3'
-                            parent = p_tag.find_previous_sibling(lambda tag: tag.name == 'h2')
-                            p_tag['id'] = f"{parent['id']}s{chap_section_regex.group('chap')}"
+                        if re.search('^AMEND', p_tag.get_text().strip(), re.I):
+                            p_tag['id'] = f"{self.title}-am{chap_section_regex.group('chap').zfill(2)}"
                         else:
-                            p_tag['id'] = f"{self.title}-a{chap_section_regex.group('chap')}"
+                            p_tag['id'] = f"{self.title}-a{chap_section_regex.group('chap').zfill(2)}"
                     elif re.search('amendments', p_tag.get_text().strip(), re.I):
                         amendment_num += 1
                         p_tag['id'] = f"{self.title}-amendment{str(amendment_num).zfill(2)}"
                 elif key == 'h3':
-                    if chap_section_regex := re.search(r'(Paragraph|Section)\s(?P<sec>\w+(-\w+)?)\.',
+                    if chap_section_regex := re.search(r'^§\s(?P<sec>\w+(-\w+)?)\.',
                                                        p_tag.get_text().strip(), re.I):
                         if re.search('paragraph', p_tag.get_text().strip(), re.I):
                             p_tag['class'] = 'paragraph_head'
@@ -987,15 +1005,15 @@ class GAParseHtml(ParserBase):
                                                                              and not re.search('paragraph',
                                                                                                tag.get_text().strip()
                                                                                                , re.I))
-                            p_tag['id'] = f"{parent['id']}p{chap_section_regex.group('sec')}"
+                            p_tag['id'] = f"{parent['id']}p{chap_section_regex.group('sec').zfill(2)}"
                         else:
-                            parent = p_tag.find_previous_sibling(lambda tag: tag.name == 'h2')
-                            p_tag['id'] = f"{parent['id']}s{chap_section_regex.group('sec')}"
-                    elif amendment_num_reg := re.search(r'Amendment\s(?P<amend>\w+)]',
+                            parent = p_tag.find_previous_sibling(lambda tag: tag.name == 'h2' and tag.get('id'))
+                            p_tag['id'] = f"{parent['id']}s{chap_section_regex.group('sec').zfill(2)}"
+                    elif amendment_num_reg := re.search(r'Amend\s\.(?P<amend>\w+)',
                                                         p_tag.get_text().strip(), re.I):
                         p_tag['class'] = 'amendment_head'
                         parent = p_tag.find_previous_sibling(lambda tag: tag.name in 'h2'
-                                                                         and re.search('^Amendments',
+                                                                         and re.search('^Amend',
                                                                                        tag.get_text().strip(), re.I))
                         p_tag['id'] = f"{parent['id']}am{amendment_num_reg.group('amend')}"
                 elif key == 'h4':
@@ -1023,7 +1041,7 @@ class GAParseHtml(ParserBase):
         stylesheet_link_tag.attrs = {'rel': 'stylesheet', 'type': 'text/css',
                                      'href': 'https://unicourt.github.io/cic-code-ga/transforms/ga/stylesheet/ga_code_stylesheet.css'}
         self.soup.style.replace_with(stylesheet_link_tag)
-        h1_tag = self.soup.find(lambda tag: re.search('^CONSTITUTION OF THE', tag.get_text()))
+        h1_tag = self.soup.find(lambda tag: re.search('^Constitution', tag.get_text(), re.I))
         h1_tag.name = 'h1'
         watermark_p = self.soup.new_tag('p', Class='transformation')
         watermark_p.string = self.watermark_text.format(self.release_number, self.release_date,
@@ -1039,74 +1057,88 @@ class GAParseHtml(ParserBase):
     def add_anchor_constitution(self):
         for nav in self.soup.findAll('nav'):
             new_p = self.soup.new_tag('p')
-            if not re.search('^analysis', nav.get_text(), re.I):
+            if not re.search(r'^§ \d|^AMEND', nav.get_text(), re.I):
                 new_p.string = nav.find('li').get_text()
                 if nav.h1:
                     nav.h1.insert_after(new_p)
                 else:
                     nav.insert(0, new_p)
                 nav.find('li').decompose()
-            if re.search('article', new_p.get_text(), re.I):
+            if re.search('preamble', new_p.get_text(), re.I):
                 amendment_num = 0
                 for li in nav.ul.findAll('li'):
-                    if roman_match := re.search(r'^(\S+)\.', li.get_text()):
+                    if roman_match := re.search(r'^Article (\d+)', li.get_text()):
                         article_num = roman_match.group(1)
-                        header_id = f'{self.title}-a{article_num}'
+                        header_id = f'{self.title}-a{article_num.zfill(2)}'
                         anchor = self.soup.new_tag('a', href=f'#{header_id}')
-                        anchor.string = li.string
+                        anchor.string = li.get_text()
                         anchor.attrs['aria-describedby'] = header_id
-                        li.string.replace_with(anchor)
+                        if li.string:
+                            li.string.replace_with(anchor)
+                        else:
+                            li.contents = []
+                            li.append(anchor)
                     elif re.search('AMENDMENT|APPENDIX', li.get_text(), re.I):
                         amendment_num += 1
                         header_id = f'{self.title}-amendment{str(amendment_num).zfill(2)}'
                         anchor = self.soup.new_tag('a', href=f'#{header_id}')
-                        anchor.string = li.string
+                        anchor.string = li.get_text()
                         anchor.attrs['aria-describedby'] = header_id
-                        li.string.replace_with(anchor)
-            elif re.search(r'section|sec\.', new_p.get_text(), re.I):
+                        if li.string:
+                            li.string.replace_with(anchor)
+                        else:
+                            li.contents = []
+                            li.append(anchor)
+            elif re.search(r'§ \d+\.', nav.get_text(), re.I):
                 for li in nav.ul.findAll('li'):
-                    if roman_match := re.search(r'^(\S+)\.', li.get_text()):
+                    if roman_match := re.search(r'^§ (\d+)\.', li.get_text()):
                         section_num = roman_match.group(1)
-                        parent = nav.find_previous_sibling(lambda tag: tag.name == 'h2')
-                        header_id = f'{parent["id"]}s{section_num}'
+                        parent = nav.find_previous_sibling(lambda tag: tag.name == 'h2' and tag.get('id'))
+                        header_id = f'{parent["id"]}s{section_num.zfill(2)}'
                         anchor = self.soup.new_tag('a', href=f'#{header_id}')
-                        anchor.string = li.string
+                        anchor.string = li.get_text()
                         anchor.attrs['aria-describedby'] = header_id
-                        li.string.replace_with(anchor)
-            elif re.search('paragraph', new_p.get_text(), re.I):
+                        if li.string:
+                            li.string.replace_with(anchor)
+                        else:
+                            li.contents = []
+                            li.append(anchor)
+            # elif re.search('paragraph', new_p.get_text(), re.I):
+            #     for li in nav.ul.findAll('li'):
+            #         if roman_match := re.search(r'^(\S+)\.', li.get_text()):
+            #             paragraph_num = roman_match.group(1)
+            #             parent = nav.find_previous_sibling(lambda tag: tag.name in ['h2', 'h3'] and
+            #                                                            re.search('^article|^section', tag.get_text(),
+            #                                                                      re.I))
+            #             header_id = f'{parent["id"]}p{paragraph_num}'
+            #             anchor = self.soup.new_tag('a', href=f'#{header_id}')
+            #             anchor.string = li.string
+            #             anchor.attrs['aria-describedby'] = header_id
+            #             li.string.replace_with(anchor)
+            elif re.search(r'^amend(ment)?(\.)?', nav.get_text(), re.I):
                 for li in nav.ul.findAll('li'):
-                    if roman_match := re.search(r'^(\S+)\.', li.get_text()):
-                        paragraph_num = roman_match.group(1)
-                        parent = nav.find_previous_sibling(lambda tag: tag.name in ['h2', 'h3'] and
-                                                                       re.search('^article|^section', tag.get_text(),
-                                                                                 re.I))
-                        header_id = f'{parent["id"]}p{paragraph_num}'
+                    if roman_match := re.search(r'^AMEND(MENT)?(\.)? (?P<amnum>\d+)', li.get_text()):
+                        article_num = roman_match.group('amnum')
+                        header_id = f'{self.title}-am{article_num.zfill(2)}'
                         anchor = self.soup.new_tag('a', href=f'#{header_id}')
-                        anchor.string = li.string
+                        anchor.string = li.get_text()
                         anchor.attrs['aria-describedby'] = header_id
-                        li.string.replace_with(anchor)
-            elif re.search(r'amend\.', new_p.get_text(), re.I):
-                for li in nav.ul.findAll('li'):
-                    if roman_match := re.search(r'^(\S+)\.', li.get_text()):
-                        paragraph_num = roman_match.group(1)
-                        parent = nav.find_previous_sibling(lambda tag: tag.name == 'h2' and
-                                                                       re.search('^amendments', tag.get_text(), re.I))
-                        header_id = f'{parent["id"]}am{paragraph_num}'
-                        anchor = self.soup.new_tag('a', href=f'#{header_id}')
-                        anchor.string = li.string
-                        anchor.attrs['aria-describedby'] = header_id
-                        li.string.replace_with(anchor)
-            elif re.search('^analysis', nav.get_text(), re.I):
-                for li in nav.ul.findAll('li'):
-                    parent = nav.find_previous_sibling(lambda tag: tag.name in ['h3', 'h2'] or
-                                                                   tag.has_attr('class') and
-                                                                   tag['class'] in self.headers_class_dict.values())
-                    id_text = re.sub(r"\s+|\'", '', li.get_text())
-                    header_id = f'{parent["id"]}-{id_text}'
-                    anchor = self.soup.new_tag('a', href=f'#{header_id}')
-                    anchor.string = li.string
-                    anchor.attrs['aria-describedby'] = header_id
-                    li.string.replace_with(anchor)
+                        if li.string:
+                            li.string.replace_with(anchor)
+                        else:
+                            li.contents = []
+                            li.append(anchor)
+            # elif re.search('^analysis', nav.get_text(), re.I):
+            #     for li in nav.ul.findAll('li'):
+            #         parent = nav.find_previous_sibling(lambda tag: tag.name in ['h3', 'h2'] or
+            #                                                        tag.has_attr('class') and
+            #                                                        tag['class'] in self.headers_class_dict.values())
+            #         id_text = re.sub(r"\s+|\'", '', li.get_text())
+            #         header_id = f'{parent["id"]}-{id_text}'
+            #         anchor = self.soup.new_tag('a', href=f'#{header_id}')
+            #         anchor.string = li.string
+            #         anchor.attrs['aria-describedby'] = header_id
+            #         li.string.replace_with(anchor)
 
     def start_parse(self):
         """
@@ -1120,13 +1152,13 @@ class GAParseHtml(ParserBase):
         print(start_time)
         self.create_page_soup()
         if re.search('constitution', self.html_file_name):
-            self.tag_type_dict = {'head1': r'^CONSTITUTION OF THE ', 'head2': r'^ARTICLE I', 'ul': r'^PREAMBLE',
-                                  'head4': '^JUDICIAL DECISIONS', 'ol_p': r'^\(\d\)', 'junk1': '^Annotations$',
-                                  'head3': r'^SECTION 1\.|^Paragraph I\.', 'normalp': '^Editor\'s note'}
+            self.tag_type_dict = {'head1': r'^Constitution\s+Of\s+The', 'ul': r'^PREAMBLE',
+                                  'head4': '^Case Notes', 'ol_p': r'^\(\d\)', 'junk1': '^Annotations$',
+                                  'head3': r'^§ \d', 'normalp': '^Editor\'s note'}
             self.get_class_name()
             self.remove_junk()
             self.replace_tag_names_constitution()
-            self.create_analysis_nav_tag()
+            self.create_case_notes_nav_tag()
             self.remove_or_replace_class_names()
             self.add_anchor_constitution()
             self.wrap_div_tags()
@@ -1135,13 +1167,10 @@ class GAParseHtml(ParserBase):
             self.remove_junk()
             self.replace_tags()
             self.convert_paragraph_to_alphabetical_ol_tags()
-            # self.convert_to_numeric_ol_tags()
-            self.create_analysis_nav_tag()
+            self.create_case_notes_nav_tag()
             self.remove_or_replace_class_names()
-            self.wrap_div_tags()
             self.add_anchor_tags()
-            # except Exception:
-            #     pass
+            self.wrap_div_tags()
         self.clean_html_and_add_cite()
         self.write_soup_to_file()
         print(datetime.now() - start_time)
