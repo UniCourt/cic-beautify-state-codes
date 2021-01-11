@@ -13,7 +13,7 @@ class HtmlParseRunner:
     def start_parser(state_key):
         from parser_base import ParserBase
         parser_base = ParserBase()
-        parser_base.start(state_key.lower())
+        parser_base.start(state_key)
 
 
 if __name__ == '__main__':
@@ -31,4 +31,4 @@ if __name__ == '__main__':
     os.environ.setdefault('input_file_name', args.input_file_name if args.input_file_name else '')
     os.environ.setdefault('release_number', args.release_number)
     os.environ.setdefault('release_date', args.release_date)
-    HtmlParseRunner.start_parser(args.state_key.lower())
+    HtmlParseRunner.start_parser(args.state_key)
