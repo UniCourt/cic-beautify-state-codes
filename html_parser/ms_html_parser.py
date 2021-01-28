@@ -745,8 +745,12 @@ class MSParseHtml(ParserBase):
                 for li in ul.findAll('li'):
                     li_num += 1
                     if sub_art_no := re.search(r'^Part\s(?P<sub_art_num>\d+)', li.get_text().strip()):
-                        previous_head = ul.find_previous(lambda tag: tag.name == 'h2' and re.search('^Subarticle', tag.get_text().strip()))
-                        header_id = f'#{previous_head["id"]}p{str(sub_art_no.group("sub_art_num")).zfill(2)}'
+                        if previous_head := ul.find_previous(
+                                lambda tag: tag.name == 'h2' and tag.get('class') == 'subarth2' and tag.get('id')):
+                            previous_head_id = previous_head.get('id')
+                        else:
+                            previous_head_id = ul.find_previous(lambda tag: tag.name == 'h2' and tag.get('id')).get('id')
+                        header_id = f'#{previous_head_id}p{str(sub_art_no.group("sub_art_num")).zfill(2)}'
                         anchor = self.soup.new_tag('a', href=header_id)
                         cleansed_header_id = header_id.strip("#")
                         anchor.attrs['aria-describedby'] = cleansed_header_id
