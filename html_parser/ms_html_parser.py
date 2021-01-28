@@ -138,16 +138,23 @@ class MSParseHtml(ParserBase):
                 if value in ['h2', 'h3']:
                     if chap_section_regex := re.search(
                             r'^§+ (?P<title>\d+)-(?P<chapter>\d+([a-z])?)-(?P<section>\d+(\.\d+)?)'
-                            r'|(chapter|(sub)?article|part)\s(?P<chap>\w+([a-z])?)',
+                            r'|(chapter|(sub)?article|(sub)?part)\s(?P<chap>\w+([a-z])?)',
                             p_tag.get_text().strip(), re.I):
                         if chapter := chap_section_regex.group('chap'):
-                            if re.search('^part \d+', p_tag.get_text().strip(), re.I):
+                            if re.search(r'^part \d+', p_tag.get_text().strip(), re.I):
                                 if subart_tag := p_tag.find_previous(lambda tag: tag.name == 'h2' and tag.get('class') == 'subarth2' and tag.get('id')):
                                     subart_id = subart_tag.get('id')
                                 else:
-                                    subart_id = p_tag.find_previous(lambda tag: tag.name == 'h2' and tag.get('id')).get('id')
+                                    subart_id = p_tag.find_previous(lambda tag: tag.name == 'h2' and tag.get('id')
+                                                                            and tag.get('class') != 'parth2').get('id')
                                 p_tag['id'] = f'{subart_id}p{chapter.zfill(2)}'
                                 p_tag['class'] = 'parth2'
+
+                            elif re.search(r'^subpart \d+', p_tag.get_text().strip(), re.I):
+                                if subpart_tag := p_tag.find_previous(lambda tag: tag.name == 'h2' and tag.get('class') == 'parth2' and tag.get('id')):
+                                    subpart_id = subpart_tag.get('id')
+                                    p_tag['id'] = f'{subpart_id}sp{chapter.zfill(2)}'
+                                    p_tag['class'] = 'parth2'
                             elif re.search('^article', p_tag.get_text().strip(), re.I) and \
                                     (chap_id := p_tag.findPrevious(lambda tag: tag.name == 'h2'
                                                                                and not re.search('^(sub)?article|^part',
@@ -155,9 +162,6 @@ class MSParseHtml(ParserBase):
                                                                                                  re.I) and tag.get('id'))):
                                 if re.search(r'chapter \d', chap_id.get_text(), re.I):
                                     p_tag['id'] = f'{chap_id["id"]}a{chapter.zfill(2)}'
-                                else:
-                                    cleansed_chap = re.sub(r'\d+$', '', chap_id["id"])
-                                    p_tag['id'] = f'{cleansed_chap}{chapter.zfill(2)}'
                                 p_tag['class'] = 'articleh2'
                             elif re.search('^subarticle', p_tag.get_text().strip(), re.I) and \
                                     (chap_id := p_tag.findPrevious(lambda tag: tag.name == 'h2' and not re.search('^subarticle|^part',
@@ -169,7 +173,7 @@ class MSParseHtml(ParserBase):
                                     cleansed_chap = re.sub(r'\d+$', '', chap_id["id"])
                                     p_tag['id'] = f'{cleansed_chap}{chapter.zfill(2)}'
                                 p_tag['class'] = 'subarth2'
-                            else:
+                            elif re.search(r'^chapter \d', p_tag.get_text(), re.I):
                                 p_tag['id'] = f't{self.title.zfill(2)}c{chapter.zfill(2)}'
                         else:
                             chapter = chap_section_regex.group("chapter")
@@ -749,7 +753,8 @@ class MSParseHtml(ParserBase):
                                 lambda tag: tag.name == 'h2' and tag.get('class') == 'subarth2' and tag.get('id')):
                             previous_head_id = previous_head.get('id')
                         else:
-                            previous_head_id = ul.find_previous(lambda tag: tag.name == 'h2' and tag.get('id')).get('id')
+                            previous_head_id = ul.find_previous(lambda tag: tag.name == 'h2' and tag.get('id') and not
+                            tag.get('class') == 'parth2').get('id')
                         header_id = f'#{previous_head_id}p{str(sub_art_no.group("sub_art_num")).zfill(2)}'
                         anchor = self.soup.new_tag('a', href=header_id)
                         cleansed_header_id = header_id.strip("#")
