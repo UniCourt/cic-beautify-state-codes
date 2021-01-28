@@ -34,7 +34,7 @@ class MSParseHtml(ParserBase):
         try:
             self.start_parse()
         except Exception as e:
-            with open(f'{self.release_number}.log', 'w') as file:
+            with open(f'{self.release_number}.log', 'w+') as file:
                 exceptioon = f'{e}\n--------------------------------\n' \
                              f'{input_file_name}'
                 file.write(exceptioon)
