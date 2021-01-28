@@ -142,8 +142,11 @@ class MSParseHtml(ParserBase):
                             p_tag.get_text().strip(), re.I):
                         if chapter := chap_section_regex.group('chap'):
                             if re.search('^part \d+', p_tag.get_text().strip(), re.I):
-                                subart_id = p_tag.find_previous(lambda tag: tag.name == 'h2' and tag.get('class') == 'subarth2' and tag.get('id'))
-                                p_tag['id'] = f'{subart_id["id"]}p{chapter.zfill(2)}'
+                                if subart_tag := p_tag.find_previous(lambda tag: tag.name == 'h2' and tag.get('class') == 'subarth2' and tag.get('id')):
+                                    subart_id = subart_tag.get('id')
+                                else:
+                                    subart_id = p_tag.find_previous(lambda tag: tag.name == 'h2' and tag.get('id')).get('id')
+                                p_tag['id'] = f'{subart_id}p{chapter.zfill(2)}'
                                 p_tag['class'] = 'parth2'
                             elif re.search('^article', p_tag.get_text().strip(), re.I) and \
                                     (chap_id := p_tag.findPrevious(lambda tag: tag.name == 'h2'
