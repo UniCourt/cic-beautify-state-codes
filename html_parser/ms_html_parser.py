@@ -894,7 +894,7 @@ class MSParseHtml(ParserBase):
             soup_str = re.sub(rf'{tag}', rf'{cleansed_tag}', soup_str, re.I)
         print("validating")
         # html5validate.validate(soup_str)
-        with open(f"../transforms/ms/ocms/r{self.release_number}/{self.html_file_name}", "w") as file:
+        with open(f"../../cic-code-ms/transforms/ms/ocms/r{self.release_number}/{self.html_file_name}", "w") as file:
             file.write(soup_str)
 
     def replace_tag_names_constitution(self):
