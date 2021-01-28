@@ -31,13 +31,7 @@ class MSParseHtml(ParserBase):
         self.headers_class_dict = {'JUDICIAL DECISIONS': 'jdecisions',
                                    'OPINIONS OF THE ATTORNEY GENERAL': 'opinionofag',
                                    'RESEARCH REFERENCES': 'rreferences'}
-        try:
-            self.start_parse()
-        except Exception as e:
-            with open(f'{self.release_number}.log', 'w+') as file:
-                exceptioon = f'{e}\n--------------------------------\n' \
-                             f'{input_file_name}'
-                file.write(exceptioon)
+        self.start_parse()
 
     def create_page_soup(self):
         """
@@ -148,7 +142,7 @@ class MSParseHtml(ParserBase):
                             p_tag.get_text().strip(), re.I):
                         if chapter := chap_section_regex.group('chap'):
                             if re.search('^part \d+', p_tag.get_text().strip(), re.I):
-                                subart_id = p_tag.find_previous(lambda tag: tag.name == 'h2' and tag.get('class') == 'subarth2')
+                                subart_id = p_tag.find_previous(lambda tag: tag.name == 'h2' and tag.get('class') == 'subarth2' and tag.get('id'))
                                 p_tag['id'] = f'{subart_id["id"]}p{chapter.zfill(2)}'
                                 p_tag['class'] = 'parth2'
                             elif re.search('^article', p_tag.get_text().strip(), re.I) and \
@@ -791,8 +785,8 @@ class MSParseHtml(ParserBase):
                     li['id'] = f'{cleansed_header_id}-schap{str(schap_num).zfill(2)}'
 
                     if header_tag := ul.findNext(lambda tag: tag.name == 'h2' and
-                                                         re.search(li.get_text().strip().strip('[Repealed]'),
-                                                         tag.get_text(), re.I) and not tag.get('id')):
+                                                     re.search(re.search(r'(?P<data>[^\[]+)', li.get_text()).group().strip(),
+                                                     tag.get_text(), re.I) and not tag.get('id')):
                         header_tag['id'] = cleansed_header_id
                         header_tag['class'] = 'subchaph2'
 
