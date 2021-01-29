@@ -1060,7 +1060,10 @@ class MSParseHtml(ParserBase):
             self.convert_paragraph_to_alphabetical_ol_tags()
             self.remove_or_replace_class_names()
             self.add_anchor_tags()
-            self.wrap_div_tags()
+            try:
+                self.wrap_div_tags()
+            except Exception:
+                pass
         self.clean_html_and_add_cite()
         self.write_soup_to_file()
         print(datetime.now() - start_time)
