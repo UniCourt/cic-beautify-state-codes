@@ -132,7 +132,7 @@ class MSParseHtml(ParserBase):
                 p_tag.name = value
 
                 if key == self.tag_type_dict['ul']:
-                    if p_tag.findPrevious().name != 'li' and re.search(r'\w+', p_tag.findPrevious().get_text().strip()):
+                    if p_tag.findPrevious().name != 'li':
                         p_tag.wrap(ul)
                     elif p_tag.findPrevious().name == 'li':
                         ul.append(p_tag)
