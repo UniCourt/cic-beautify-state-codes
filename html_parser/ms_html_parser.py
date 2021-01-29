@@ -69,6 +69,17 @@ class MSParseHtml(ParserBase):
                 'class'][
                 0]
             self.tag_type_dict['head3'] = h3_class
+        else:
+            h2_class = self.soup.find(lambda tag: tag.name == 'p' and re.search(
+                rf'^Article \w', tag.get_text().strip(), re.I) and tag.get('class')[0] != self.tag_type_dict['ul'])[
+                'class'][
+                0]
+            self.tag_type_dict['head2'] = h2_class
+            h3_class = self.soup.find(lambda tag: tag.name == 'p' and re.search(
+                r'^§ \d', tag.get_text().strip(), re.I) and tag.get('class')[0] != self.tag_type_dict['ul'])[
+                'class'][
+                0]
+            self.tag_type_dict['head3'] = h3_class
         print('updated class dict')
 
     def remove_junk(self):
@@ -451,50 +462,6 @@ class MSParseHtml(ParserBase):
                     p_tag.string = re.sub(r'^\(\w+\)', '', p_tag.text.strip())
         print('ol tags added')
 
-    def create_analysis_nav_tag(self):
-        """
-            - match and find analysis navigation tag
-            - split the contents of tag by line break
-            - convert each line to a li
-            - create new nav tag and ul tag
-            - append each created li to new ul tag
-        """
-        for analysis_p_tag in self.soup.findAll('p', {'class': self.tag_type_dict['normalp']}):
-            if re.search(r'^Editor\'s notes.+ANALYSIS', analysis_p_tag.get_text(), re.DOTALL):
-                parent_id = analysis_p_tag.find_previous(lambda tag: tag.name in ['h2', 'h2', 'h3'])['id']
-                editors_tag = self.soup.new_tag('p')
-                editors_header = self.soup.new_tag('h5', Class='ednotes lalign')
-                editors_header.string = "Editor's notes."
-                editors_header['id'] = f'{parent_id}-ednotes01'
-                editors_text = re.search(r'^Editor\'s notes\.(?P<text>.+)ANALYSIS',
-                                         analysis_p_tag.get_text(), re.DOTALL).group('text')
-                editors_tag.string = editors_text
-                analysis_p_tag.insert_before(editors_header)
-                editors_header.insert_after(editors_tag)
-            if re.search('<b>ANALYSIS', str(analysis_p_tag)):
-                p_tag = self.soup.new_tag('p')
-                p_tag.string = 'ANALYSIS'
-                p_tag['class'] = 'analysis_nav_header'
-                nav_tag = self.soup.new_tag('nav')
-                nav_tag.append(p_tag)
-                new_ul = self.soup.new_tag("ul", Class="leaders")
-                ol = self.soup.new_tag("ol")
-                previous_li = None
-                for headers_text in analysis_p_tag.get_text().splitlines():
-                    if not re.search('ANALYSIS|Editor\'s notes', headers_text.strip()) and headers_text.strip():
-                        new_li = self.soup.new_tag('li')
-                        new_li.string = headers_text
-                        if previous_li and re.search(r'^\d', headers_text.strip()):
-                            previous_li.append(new_li)
-                            ol.insert(len(ol), new_li)
-                        else:
-                            new_ul.insert(len(new_ul), new_li)
-                            previous_li = new_li
-                            ol = self.soup.new_tag("ol")
-                nav_tag.append(new_ul)
-                analysis_p_tag.replace_with(nav_tag)
-        print('created analysis tag')
-
     def remove_or_replace_class_names(self):
         """
             - create dictionary with h4 tags values as key
@@ -711,7 +678,7 @@ class MSParseHtml(ParserBase):
                         li_num += 1
                         chap_no = chap_no_match.group('chap')
                         header_id = f'#t{self.title.zfill(2)}c{chap_no.zfill(2)}s{sec_id}'
-                        if li.find_previous_sibling(lambda tag: tag.name == 'li' and
+                        if li.find_previous_sibling(lambda tag: tag.name == 'li' and tag.a and
                                                                 re.search(header_id, str(tag.a.attrs.get('href')))):
                             id_num += 1
                             header_id = f"{header_id}.1"
@@ -935,19 +902,17 @@ class MSParseHtml(ParserBase):
                         ul.wrap(new_nav)
                         ul = self.soup.new_tag("ul", Class="leaders")
                 if key == 'h2':
-                    if chap_section_regex := re.search(r'^(ARTICLE|section)\s(?P<chap>\w+)\.',
+                    if chap_section_regex := re.search(r'^(ARTICLE|AMEND(MENT)?(\.)?)\s(?P<chap>\w+)',
                                                        p_tag.get_text().strip(), re.I):
-                        if re.search('^section', p_tag.get_text().strip(), re.I):
-                            p_tag.name = 'h3'
-                            parent = p_tag.find_previous_sibling(lambda tag: tag.name == 'h2')
-                            p_tag['id'] = f"{parent['id']}s{chap_section_regex.group('chap')}"
+                        if re.search('^AMEND', p_tag.get_text().strip(), re.I):
+                            p_tag['id'] = f"{self.title}-am{chap_section_regex.group('chap').zfill(2)}"
                         else:
-                            p_tag['id'] = f"{self.title}-a{chap_section_regex.group('chap')}"
+                            p_tag['id'] = f"{self.title}-a{chap_section_regex.group('chap').zfill(2)}"
                     elif re.search('amendments', p_tag.get_text().strip(), re.I):
                         amendment_num += 1
                         p_tag['id'] = f"{self.title}-amendment{str(amendment_num).zfill(2)}"
                 elif key == 'h3':
-                    if chap_section_regex := re.search(r'(Paragraph|Section)\s(?P<sec>\w+(-\w+)?)\.',
+                    if chap_section_regex := re.search(r'^§\s(?P<sec>\w+(-\w+)?)\.',
                                                        p_tag.get_text().strip(), re.I):
                         if re.search('paragraph', p_tag.get_text().strip(), re.I):
                             p_tag['class'] = 'paragraph_head'
@@ -955,15 +920,15 @@ class MSParseHtml(ParserBase):
                                                                              and not re.search('paragraph',
                                                                                                tag.get_text().strip()
                                                                                                , re.I))
-                            p_tag['id'] = f"{parent['id']}p{chap_section_regex.group('sec')}"
+                            p_tag['id'] = f"{parent['id']}p{chap_section_regex.group('sec').zfill(2)}"
                         else:
-                            parent = p_tag.find_previous_sibling(lambda tag: tag.name == 'h2')
-                            p_tag['id'] = f"{parent['id']}s{chap_section_regex.group('sec')}"
-                    elif amendment_num_reg := re.search(r'Amendment\s(?P<amend>\w+)]',
+                            parent = p_tag.find_previous_sibling(lambda tag: tag.name == 'h2' and tag.get('id'))
+                            p_tag['id'] = f"{parent['id']}s{chap_section_regex.group('sec').zfill(2)}"
+                    elif amendment_num_reg := re.search(r'Amend\s\.(?P<amend>\w+)',
                                                         p_tag.get_text().strip(), re.I):
                         p_tag['class'] = 'amendment_head'
                         parent = p_tag.find_previous_sibling(lambda tag: tag.name in 'h2'
-                                                                         and re.search('^Amendments',
+                                                                         and re.search('^Amend',
                                                                                        tag.get_text().strip(), re.I))
                         p_tag['id'] = f"{parent['id']}am{amendment_num_reg.group('amend')}"
                 elif key == 'h4':
@@ -991,7 +956,7 @@ class MSParseHtml(ParserBase):
         stylesheet_link_tag.attrs = {'rel': 'stylesheet', 'type': 'text/css',
                                      'href': 'https://unicourt.github.io/cic-code-ga/transforms/ga/stylesheet/ga_code_stylesheet.css'}
         self.soup.style.replace_with(stylesheet_link_tag)
-        h1_tag = self.soup.find(lambda tag: re.search('^CONSTITUTION OF THE', tag.get_text()))
+        h1_tag = self.soup.find(lambda tag: re.search('^The Constitution of the', tag.get_text(), re.I))
         h1_tag.name = 'h1'
         watermark_p = self.soup.new_tag('p', Class='transformation')
         watermark_p.string = self.watermark_text.format(self.release_number, self.release_date,
@@ -1007,74 +972,65 @@ class MSParseHtml(ParserBase):
     def add_anchor_constitution(self):
         for nav in self.soup.findAll('nav'):
             new_p = self.soup.new_tag('p')
-            if not re.search('^analysis', nav.get_text(), re.I):
+            if not re.search(r'^§ \d|^AMEND', nav.get_text(), re.I):
                 new_p.string = nav.find('li').get_text()
                 if nav.h1:
                     nav.h1.insert_after(new_p)
                 else:
                     nav.insert(0, new_p)
                 nav.find('li').decompose()
-            if re.search('article', new_p.get_text(), re.I):
+            if re.search('preamble', new_p.get_text(), re.I):
                 amendment_num = 0
                 for li in nav.ul.findAll('li'):
-                    if roman_match := re.search(r'^(\S+)\.', li.get_text()):
+                    if roman_match := re.search(r'^Article (\w+)', li.get_text()):
                         article_num = roman_match.group(1)
-                        header_id = f'{self.title}-a{article_num}'
+                        header_id = f'{self.title}-a{article_num.zfill(2)}'
                         anchor = self.soup.new_tag('a', href=f'#{header_id}')
-                        anchor.string = li.string
+                        anchor.string = li.get_text()
                         anchor.attrs['aria-describedby'] = header_id
-                        li.string.replace_with(anchor)
+                        if li.string:
+                            li.string.replace_with(anchor)
+                        else:
+                            li.contents = []
+                            li.append(anchor)
                     elif re.search('AMENDMENT|APPENDIX', li.get_text(), re.I):
                         amendment_num += 1
                         header_id = f'{self.title}-amendment{str(amendment_num).zfill(2)}'
                         anchor = self.soup.new_tag('a', href=f'#{header_id}')
-                        anchor.string = li.string
+                        anchor.string = li.get_text()
                         anchor.attrs['aria-describedby'] = header_id
-                        li.string.replace_with(anchor)
-            elif re.search(r'section|sec\.', new_p.get_text(), re.I):
+                        if li.string:
+                            li.string.replace_with(anchor)
+                        else:
+                            li.contents = []
+                            li.append(anchor)
+            elif re.search(r'§ \d+\.', nav.get_text(), re.I):
                 for li in nav.ul.findAll('li'):
-                    if roman_match := re.search(r'^(\S+)\.', li.get_text()):
+                    if roman_match := re.search(r'^§ (\d+)\.', li.get_text()):
                         section_num = roman_match.group(1)
-                        parent = nav.find_previous_sibling(lambda tag: tag.name == 'h2')
-                        header_id = f'{parent["id"]}s{section_num}'
+                        parent = nav.findPrevious(lambda tag: tag.name == 'h2' and tag.get('id'))
+                        header_id = f'{parent["id"]}s{section_num.zfill(2)}'
                         anchor = self.soup.new_tag('a', href=f'#{header_id}')
-                        anchor.string = li.string
+                        anchor.string = li.get_text()
                         anchor.attrs['aria-describedby'] = header_id
-                        li.string.replace_with(anchor)
-            elif re.search('paragraph', new_p.get_text(), re.I):
+                        if li.string:
+                            li.string.replace_with(anchor)
+                        else:
+                            li.contents = []
+                            li.append(anchor)
+            elif re.search(r'^amend(ment)?(\.)?', nav.get_text(), re.I):
                 for li in nav.ul.findAll('li'):
-                    if roman_match := re.search(r'^(\S+)\.', li.get_text()):
-                        paragraph_num = roman_match.group(1)
-                        parent = nav.find_previous_sibling(lambda tag: tag.name in ['h2', 'h3'] and
-                                                                       re.search('^article|^section', tag.get_text(),
-                                                                                 re.I))
-                        header_id = f'{parent["id"]}p{paragraph_num}'
+                    if roman_match := re.search(r'^AMEND(MENT)?(\.)? (?P<amnum>\d+)', li.get_text()):
+                        article_num = roman_match.group('amnum')
+                        header_id = f'{self.title}-am{article_num.zfill(2)}'
                         anchor = self.soup.new_tag('a', href=f'#{header_id}')
-                        anchor.string = li.string
+                        anchor.string = li.get_text()
                         anchor.attrs['aria-describedby'] = header_id
-                        li.string.replace_with(anchor)
-            elif re.search(r'amend\.', new_p.get_text(), re.I):
-                for li in nav.ul.findAll('li'):
-                    if roman_match := re.search(r'^(\S+)\.', li.get_text()):
-                        paragraph_num = roman_match.group(1)
-                        parent = nav.find_previous_sibling(lambda tag: tag.name == 'h2' and
-                                                                       re.search('^amendments', tag.get_text(), re.I))
-                        header_id = f'{parent["id"]}am{paragraph_num}'
-                        anchor = self.soup.new_tag('a', href=f'#{header_id}')
-                        anchor.string = li.string
-                        anchor.attrs['aria-describedby'] = header_id
-                        li.string.replace_with(anchor)
-            elif re.search('^analysis', nav.get_text(), re.I):
-                for li in nav.ul.findAll('li'):
-                    parent = nav.find_previous_sibling(lambda tag: tag.name in ['h3', 'h2'] or
-                                                                   tag.has_attr('class') and
-                                                                   tag['class'] in self.headers_class_dict.values())
-                    id_text = re.sub(r"\s+|\'", '', li.get_text())
-                    header_id = f'{parent["id"]}-{id_text}'
-                    anchor = self.soup.new_tag('a', href=f'#{header_id}')
-                    anchor.string = li.string
-                    anchor.attrs['aria-describedby'] = header_id
-                    li.string.replace_with(anchor)
+                        if li.string:
+                            li.string.replace_with(anchor)
+                        else:
+                            li.contents = []
+                            li.append(anchor)
 
     def start_parse(self):
         """
@@ -1088,13 +1044,12 @@ class MSParseHtml(ParserBase):
         print(start_time)
         self.create_page_soup()
         if re.search('constitution', self.html_file_name):
-            self.tag_type_dict = {'head1': r'^CONSTITUTION OF THE ', 'head2': r'^ARTICLE I', 'ul': r'^PREAMBLE',
-                                  'head4': '^JUDICIAL DECISIONS', 'ol_p': r'^\(\d\)', 'junk1': '^Annotations$',
-                                  'head3': r'^SECTION 1\.|^Paragraph I\.', 'normalp': '^Editor\'s note'}
+            self.tag_type_dict = {'head1': r'^THE CONSTITUTION OF THE', 'ul': r'^PREAMBLE',
+                                  'head4': '^Case Notes|^JUDICIAL DECISIONS', 'ol_p': r'^\(\d\)', 'junk1': '^Annotations$',
+                                  'head3': r'^§ \d', 'normalp': '^Editor\'s note'}
             self.get_class_name()
             self.remove_junk()
             self.replace_tag_names_constitution()
-            self.create_analysis_nav_tag()
             self.remove_or_replace_class_names()
             self.add_anchor_constitution()
             self.wrap_div_tags()
@@ -1103,7 +1058,6 @@ class MSParseHtml(ParserBase):
             self.remove_junk()
             self.replace_tags()
             self.convert_paragraph_to_alphabetical_ol_tags()
-            self.create_analysis_nav_tag()
             self.remove_or_replace_class_names()
             self.add_anchor_tags()
             self.wrap_div_tags()
