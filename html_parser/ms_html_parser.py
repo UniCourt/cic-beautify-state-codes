@@ -132,7 +132,7 @@ class MSParseHtml(ParserBase):
                 p_tag.name = value
 
                 if key == self.tag_type_dict['ul']:
-                    if p_tag.findPrevious().name != 'li':
+                    if p_tag.findPrevious().name != 'li' and re.search(r'\w+', p_tag.findPrevious().get_text().strip()):
                         p_tag.wrap(ul)
                     elif p_tag.findPrevious().name == 'li':
                         ul.append(p_tag)
@@ -650,7 +650,7 @@ class MSParseHtml(ParserBase):
             chap_match = re.search(r'(chapter|article)\s(?P<num>\w+)(?P<name>.+)', chap_header_tag.get_text(),
                                    re.DOTALL | re.I)
             chap_reg = fr'{chap_match.group("num")}\.?\s{chap_match.group("name").strip()}'
-            if re.search(r'Chapter \d\.', ul.get_text()):
+            if re.search(r'Chapter \d+\.', ul.get_text()):
                 for li in ul.findAll('li'):
                     li_num += 1
                     chap_no = re.search(r'\d+\w?', li.get_text().strip()).group()
