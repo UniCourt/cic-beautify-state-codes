@@ -22,7 +22,7 @@ class MSParseHtml(ParserBase):
                               'head4': 'RESEARCH REFERENCES',
                               'ol_p': r'^\(\d\)', 'junk1': '^Annotations$', 'normalp': '^Editor\'s note',
                               'article': r'^Article \d$|^Part \d$'}
-        self.watermark_text = """Release {0} of the Official Code of Georgia Annotated released {1}. 
+        self.watermark_text = """Release {0} of the Official Code of Mississippi Annotated released {1}. 
         Transformed and posted by Public.Resource.Org using rtf-parser.py version 1.0 on {2}. 
         This document is not subject to copyright and is in the public domain.
         """
@@ -912,7 +912,10 @@ class MSParseHtml(ParserBase):
                         amendment_num += 1
                         p_tag['id'] = f"{self.title}-amendment{str(amendment_num).zfill(2)}"
                 elif key == 'h3':
-                    if chap_section_regex := re.search(r'^§\s(?P<sec>\w+(-\w+)?)\.',
+                    if chap_section_regex := re.search(r'^AMEND(MENT)?(\.)?\s(?P<chap>\w+)',
+                                                       p_tag.get_text().strip(), re.I):
+                        p_tag['id'] = f"{self.title}-am{chap_section_regex.group('chap')}"
+                    elif chap_section_regex := re.search(r'^§\s(?P<sec>\w+(-\w+)?)\.',
                                                        p_tag.get_text().strip(), re.I):
                         if re.search('paragraph', p_tag.get_text().strip(), re.I):
                             p_tag['class'] = 'paragraph_head'
@@ -1018,11 +1021,11 @@ class MSParseHtml(ParserBase):
                         else:
                             li.contents = []
                             li.append(anchor)
-            elif re.search(r'^amend(ment)?(\.)?', nav.get_text(), re.I):
+            elif re.search(r'^amend(ment)?(\.)?', nav.get_text().strip(), re.I):
                 for li in nav.ul.findAll('li'):
-                    if roman_match := re.search(r'^AMEND(MENT)?(\.)? (?P<amnum>\d+)', li.get_text()):
+                    if roman_match := re.search(r'^AMEND(MENT)?(\.)? (?P<amnum>\w+)', li.get_text(), re.I):
                         article_num = roman_match.group('amnum')
-                        header_id = f'{self.title}-am{article_num.zfill(2)}'
+                        header_id = f'{self.title}-am{article_num}'
                         anchor = self.soup.new_tag('a', href=f'#{header_id}')
                         anchor.string = li.get_text()
                         anchor.attrs['aria-describedby'] = header_id
