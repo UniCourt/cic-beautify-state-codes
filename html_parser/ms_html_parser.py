@@ -756,16 +756,16 @@ class MSParseHtml(ParserBase):
                 for li in ul.findAll('li'):
                     schap_num += 1
                     li_num += 1
-                    id_text = re.sub(r'\s|"|\'', '', li.get_text())
-                    header_id = f'#{sec_id}-{id_text}'
+                    id_text = re.search(r'(?P<data>[^\[]+)', li.get_text().strip()).group().strip()
+                    cleansed_id = re.sub(r'\s|"|\'', "", id_text)
+                    header_id = f'#{sec_id}-{cleansed_id}'
                     anchor = self.soup.new_tag('a', href=header_id)
                     cleansed_header_id = header_id.strip("#").strip()
                     anchor.attrs['aria-describedby'] = cleansed_header_id
                     li['id'] = f'{cleansed_header_id}-schap{str(schap_num).zfill(2)}'
 
                     if header_tag := ul.findNext(lambda tag: tag.name == 'h2' and
-                                                     re.search(re.search(r'(?P<data>[^\[]+)', li.get_text()).group().strip(),
-                                                     tag.get_text(), re.I) and not tag.get('id')):
+                                                     re.search(id_text, tag.get_text(), re.I) and not tag.get('id')):
                         header_tag['id'] = cleansed_header_id
                         header_tag['class'] = 'subchaph2'
 
