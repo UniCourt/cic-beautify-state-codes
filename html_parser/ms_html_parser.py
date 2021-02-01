@@ -361,7 +361,7 @@ class MSParseHtml(ParserBase):
                         p_tag.decompose()
                         continue
                     elif previous_num_li:
-                        if alpha_match := re.search(fr'^\({alpha}+\)|(^\([A-Z]+(\.\d+)?\))', p_tag.text.strip()):
+                        if alpha_match := re.search(fr'^\({alpha}+\)', p_tag.text.strip()):
                             li_alpha = re.search(r'^\((?P<alpha>\w+(\.\d+)?)\)', data_str).group('alpha')
                             previous_num_li.append(p_tag)
                             p_tag.name = 'li'
@@ -383,10 +383,10 @@ class MSParseHtml(ParserBase):
                                 inner_ol = self.soup.new_tag("ol", type="i")
                                 alpha_li_id = f'{num_li_id}{li_alpha}'
                                 p_tag['id'] = alpha_li_id
-                            if re.search(r'^\([A-Z]\)\s?\(\w+\)', p_tag.text.strip()):
-                                li_roman = re.search(r'^\([A-Z]\)\s?\((?P<roman>\w+)\)', data_str).group('roman')
+                            if re.search(r'^\([a-z]+\)\s?\(\w+\)', p_tag.text.strip()):
+                                li_roman = re.search(r'^\([a-z]+\)\s?\((?P<roman>\w+)\)', data_str).group('roman')
                                 new_li = self.soup.new_tag('p')
-                                new_li.string = re.sub(r'^\([A-Z]\)\s?\(\w+\)', '', p_tag.text.strip())
+                                new_li.string = re.sub(r'^\([a-z]+\)\s?\(\w+\)', '', p_tag.text.strip())
                                 p_tag.string.replace_with(new_li)
                                 new_li.wrap(inner_ol)
                                 new_li.name = 'li'
@@ -394,8 +394,8 @@ class MSParseHtml(ParserBase):
                                 small_roman_id = f'{alpha_li_id}{li_roman}'
                                 p_tag['id'] = small_roman_id
                                 previous_roman_li = new_li
-                            if alpha == 'Z':
-                                alpha = 'A'
+                            if alpha == 'z':
+                                alpha = 'a'
                             elif not re.search(r'\d+', alpha_match.group(0)):
                                 alpha = chr(ord(alpha) + 1)
                         elif previous_inner_li:
@@ -1069,4 +1069,5 @@ class MSParseHtml(ParserBase):
                 pass
         self.clean_html_and_add_cite()
         self.write_soup_to_file()
+        print(f'finished {self.html_file_name}')
         print(datetime.now() - start_time)
