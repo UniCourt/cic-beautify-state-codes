@@ -192,7 +192,7 @@ class MSParseHtml(ParserBase):
                             p_tag[
                                 'id'] = f't{self.title.zfill(2)}c{chapter.zfill(2)}s{section}'
                         if previous_sibling_tag := p_tag.find_previous(
-                                lambda tag: tag.name == 'h3' and re.search(p_tag['id'], tag.get('id', ''))):
+                                lambda tag: tag.name == 'h3' and p_tag.get('id') and re.search(p_tag['id'], tag.get('id', ''))):
                             if pervious_tag_id_num_match := re.search(rf'{p_tag["id"]}(\.\d)?\.(?P<count>\d+)',
                                                                       previous_sibling_tag['id'], re.I):
                                 p_tag['id'] = f"{p_tag['id']}.{int(pervious_tag_id_num_match.group('count')) + 1}"
