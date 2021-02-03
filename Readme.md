@@ -9,6 +9,7 @@ This repository contains software that transforms official codes from ugly .rtf 
 Currently this code supports following states:
 
 1. ###Georgia (GA): 
+   
    **Code repo:** https://github.com/UniCourt/cic-code-ga
    
    **Code pages:** https://unicourt.github.io/cic-code-ga
@@ -18,15 +19,25 @@ Currently this code supports following states:
    
 
 2. ###Arkansas (AR):
+   
    **Code repo:** https://github.com/UniCourt/cic-code-ar
    
    **Code pages:** https://unicourt.github.io/cic-code-ar
    
    **Original RTF:** https://archive.org/download/gov.ar.code
 
+
+2. ###Mississippi (MS):
+   
+   **Code repo:** https://github.com/UniCourt/cic-code-ms
+   
+   **Code pages:** https://unicourt.github.io/cic-code-ms
+   
+   **Original RTF:** https://archive.org/download/gov.ms.code.ann.2018
+
 In subsequent months, we intend to add two more features:
 
-1. Extend the code to handle the official codes of Mississippi, Kentucky, and Colorado.
+1. Extend the code to handle the official codes Tennessee, Kentucky, and Colorado.
 2. Add a "redline" capability to show diffs. 
 
 **REQUIREMENTS AND INSTALLATION**
