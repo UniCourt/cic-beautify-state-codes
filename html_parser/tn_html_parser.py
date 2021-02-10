@@ -907,3 +907,4 @@ class TNParseHtml(ParserBase):
         self.write_soup_to_file()
         print(f'finished {self.html_file_name}')
         print(datetime.now() - start_time)
+
