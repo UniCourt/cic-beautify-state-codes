@@ -299,9 +299,7 @@ class TNParseHtml(ParserBase):
         p_tag = self.soup.find('p', {'class': self.tag_type_dict['ol_p']})
         new_li = None
         previous_p = None
-        while p_tag:
-            if re.search('except as otherwise provided in this subdivisio', p_tag.get_text().strip(), re.I):
-                print()
+        for p_tag in self.soup.find_all(lambda tag: tag.name == 'p' and re.search('\w+', tag.get_text())):
             set_p_tag = True
             if not re.search(r'\w+', p_tag.get_text()):
                 continue
@@ -313,7 +311,9 @@ class TNParseHtml(ParserBase):
                 set_string = True
                 data_str = p_tag.get_text()
                 p_tag.string = data_str
-                if re.search(rf'^\({main_sec_alpha}\)', data_str) and not previous_roman_inner_alpha_li:
+                if re.search('Except as otherwise provided in this subdivision', data_str, re.I):
+                    print()
+                if re.search(rf'^\({main_sec_alpha}\)', data_str) and not (previous_roman_li and previous_roman_inner_alpha_li):
                     cap_alpha = 'A'
                     small_roman_inner_alpha = 'a'
                     small_roman_inner_alpha_num = 1
@@ -336,7 +336,7 @@ class TNParseHtml(ParserBase):
                     alpha_li_id = f'{sec_id}ol{ol_count}{main_sec_alpha}'
                     p_tag['id'] = alpha_li_id
                     main_sec_alpha = chr(ord(main_sec_alpha) + 1)
-                    if re.search(r'^\(\w\)\s?\(\d\)', data_str):
+                    if re.search(r'^\(\w\)(\s+)?\(\d\)', data_str):
                         small_roman = 'i'
                         small_roman_inner_alpha = 'a'
                         small_roman_inner_alpha_num = 1
@@ -369,21 +369,19 @@ class TNParseHtml(ParserBase):
                             new_li.name = 'li'
                             previous_inner_li = new_li
                             inner_ol = self.soup.new_tag("ol", type="i")
-                            new_li['id'] = f'{num_li_id}{li_alpha}'
+                            cap_alpha_li_id = f'{num_li_id}{li_alpha}'
+                            new_li['id'] = cap_alpha_li_id
                             if cap_alpha == 'Z':
                                 cap_alpha = 'A'
                             else:
                                 cap_alpha = chr(ord(cap_alpha) + 1)
-                    if new_li:
-                        p_tag = new_li
-                        new_li = None
                 elif re.search(r'^\(\w+(\.\d)?\)', p_tag.text.strip()):
                     if re.search(r'^\(\d+\.\d\)', p_tag.text.strip()):
                         if previous_num_li:
                             previous_num_li.append(p_tag)
                         continue
 
-                    if re.search(rf'^\({ol_head}\)', p_tag.text.strip()) and not previous_roman_inner_alpha_num_li:
+                    if re.search(rf'^\({ol_head}\)', p_tag.text.strip()) and not (previous_roman_inner_alpha_li and previous_roman_inner_alpha_num_li):
                         cap_alpha = "A"
                         small_roman = 'i'
                         small_roman_inner_alpha = 'a'
@@ -433,13 +431,13 @@ class TNParseHtml(ParserBase):
                                 cap_alpha = 'A'
                             else:
                                 cap_alpha = chr(ord(cap_alpha) + 1)
-                            if re.search(r'^\(\d+\)\s?\([A-Z]\)\s?\(\w+\)', data_str):
+                            if re.search(r'^\(\d+\)\s?\([A-Z]+\)\s?\(\w+\)', data_str):
                                 previous_roman_inner_alpha_li = None
                                 previous_roman_inner_alpha_num_li = None
                                 small_roman_inner_alpha = 'a'
-                                li_roman = re.search(r'^\(\d+\)\s?\([A-Z]\)\s?\((?P<roman>\w+)\)', data_str).group('roman')
+                                li_roman = re.search(r'^\(\d+\)\s?\([A-Z]+\)\s?\((?P<roman>\w+)\)', data_str).group('roman')
                                 new_li = self.soup.new_tag('p')
-                                new_li.string = re.sub(r'^\(\d+\)\s?\([A-Z]\)\s?\(\w+\)', '', data_str)
+                                new_li.string = re.sub(r'^\(\d+\)\s?\([A-Z]+\)\s?\(\w+\)', '', data_str)
                                 p_tag.string.replace_with(new_li)
                                 new_li.wrap(inner_ol)
                                 new_li.name = 'li'
@@ -447,6 +445,7 @@ class TNParseHtml(ParserBase):
                                 small_roman_id = f'{cap_alpha_li_id}{li_roman}'
                                 new_li['id'] = small_roman_id
                                 previous_roman_li = new_li
+                                small_roman = roman.toRoman(roman.fromRoman(small_roman.upper()) + 1)
                     elif re.search(r'^\(\d+\)', p_tag.text.strip()) and sec_sub_ol:
                         previous_roman_inner_alpha_num_li = None
                         previous_roman_inner_alpha_li = None
@@ -487,14 +486,14 @@ class TNParseHtml(ParserBase):
                                 inner_ol = self.soup.new_tag("ol", type="i")
                                 cap_alpha_li_id = f'{num_li_id}{li_alpha}'
                                 p_tag['id'] = cap_alpha_li_id
-                            if re.search(r'^\([A-Z]\)\s?\(\w+\)', p_tag.text.strip()):
+                            if re.search(r'^\([A-Z]+\)\s?\(\w+\)', p_tag.text.strip()):
                                 small_roman_inner_alpha = 'a'
                                 small_roman_inner_alpha_num = 1
                                 previous_roman_inner_alpha_li = None
                                 previous_roman_inner_alpha_num_li = None
-                                li_roman = re.search(r'^\([A-Z]\)\s?\((?P<roman>\w+)\)', data_str).group('roman')
+                                li_roman = re.search(r'^\([A-Z]+\)\s?\((?P<roman>\w+)\)', data_str).group('roman')
                                 new_li = self.soup.new_tag('p')
-                                new_li.string = re.sub(r'^\([A-Z]\)\s?\(\w+\)', '', p_tag.text.strip())
+                                new_li.string = re.sub(r'^\([A-Z]+\)\s?\(\w+\)', '', p_tag.text.strip())
                                 p_tag.string.replace_with(new_li)
                                 new_li.wrap(inner_ol)
                                 new_li.name = 'li'
@@ -502,13 +501,13 @@ class TNParseHtml(ParserBase):
                                 small_roman_id = f'{cap_alpha_li_id}{li_roman}'
                                 new_li['id'] = small_roman_id
                                 previous_roman_li = new_li
-                                small_roman = li_roman
+                                small_roman = roman.toRoman(roman.fromRoman(small_roman.upper()) + 1)
                             if cap_alpha == 'Z':
                                 cap_alpha = 'A'
                             elif not re.search(r'\d+', cap_alpha_match.group(0)):
                                 cap_alpha = chr(ord(cap_alpha) + 1)
                         elif previous_inner_li:
-                            if alpha_match := re.search(r'^\((?P<alpha>[a-z])+\)', p_tag.text.strip()):
+                            if alpha_match := re.search(r'^\((?P<alpha>[a-z]+)\)', p_tag.text.strip()):
                                 li_roman = alpha_match.group('alpha')
                                 if li_roman.upper() == roman.toRoman(roman.fromRoman(small_roman.upper())):
                                     small_roman_inner_alpha = 'a'
@@ -547,13 +546,16 @@ class TNParseHtml(ParserBase):
                                     previous_roman_inner_alpha_li = p_tag
                                     small_roman_inner_alpha = chr(ord(small_roman_inner_alpha) + 1)
                             elif re.search(f'^\({small_roman_inner_alpha_num}\)', p_tag.get_text().strip()):
-                                previous_roman_inner_alpha_li.append(p_tag)
-                                p_tag.wrap(roman_inner_alpha_num_ol)
-                                p_tag.name = 'li'
-                                small_roman_inner_alpha_num_id = f'{small_roman_inner_alpha_id}{small_roman_inner_alpha_num}'
-                                p_tag['id'] = small_roman_inner_alpha_num_id
-                                small_roman_inner_alpha_num += 1
-                                previous_roman_inner_alpha_num_li = p_tag
+                                if previous_roman_inner_alpha_li:
+                                    previous_roman_inner_alpha_li.append(p_tag)
+                                    p_tag.wrap(roman_inner_alpha_num_ol)
+                                    p_tag.name = 'li'
+                                    small_roman_inner_alpha_num_id = f'{small_roman_inner_alpha_id}{small_roman_inner_alpha_num}'
+                                    p_tag['id'] = small_roman_inner_alpha_num_id
+                                    small_roman_inner_alpha_num += 1
+                                    previous_roman_inner_alpha_num_li = p_tag
+                                else:
+                                    previous_inner_li.append(p_tag)
 
                             elif previous_roman_li:
                                 if re.search(r'^\([a-z]+\)', p_tag.text.strip()):
@@ -564,9 +566,9 @@ class TNParseHtml(ParserBase):
                                     p_tag['id'] = f'{small_roman_id}{li_roman}'
                             else:
                                 previous_inner_li.insert(len(previous_num_li.contents), p_tag)
-                    if new_li:
-                        p_tag = new_li
-                        new_li = None
+                    # if new_li:
+                    #     p_tag = new_li
+                    #     new_li = None
                 elif re.search(r'^Acts\s|^Code\s|^T\.C\.A|^Article\s', p_tag.get_text().strip(), re.I) or (p_tag.find_previous_sibling()
                        and re.search(r'^\d+-\d+-\d+', p_tag.find_previous_sibling().get_text())):
                     # p_tag = p_tag.findNext(lambda tag: tag.name == 'p' and
@@ -604,8 +606,8 @@ class TNParseHtml(ParserBase):
                         previous_alpha_li.append(p_tag)
                 if set_string:
                     p_tag.string = re.sub(r'^\(\w+\)', '', p_tag.text.strip())
-            if set_p_tag:
-                p_tag = p_tag.findNext(lambda tag: tag.name == 'p' and re.search('.+', tag.get_text()))
+            # if set_p_tag:
+            #     p_tag = p_tag.findNext(lambda tag: tag.name == 'p' and re.search('.+', tag.get_text()))
         print('ol tags added')
 
     def remove_or_replace_class_names(self):
@@ -684,6 +686,13 @@ class TNParseHtml(ParserBase):
                 tag.unwrap()
         print('removed class names')
 
+    # def create_notes_decision_to_nav(self):
+    #     for notes_head in self.soup.find_all(lambda tag: tag.name == 'h4' and re.search('NOTESTODECISIONS', tag.get('id', ''))):
+    #         if notes_head.find_next_sibling('p') and re.search('^\d\.', notes_head.find_next_sibling('p').get_text().strip()):
+
+
+
+
     def add_anchor_tags(self):
         """
             - for each nav tag in html
@@ -711,7 +720,7 @@ class TNParseHtml(ParserBase):
                         else:
                             li.contents = []
                             li.append(anchor)
-            if re.search('^Chapter', ul.li.get_text().strip()):
+            elif re.search('^Chapter', ul.li.get_text().strip()):
                 for li in ul.findAll('li'):
                     li_num += 1
                     if chap_no := re.search(r'^Chapter\s(?P<chap_num>\d+([a-z])?)', li.get_text().strip()):
@@ -726,7 +735,7 @@ class TNParseHtml(ParserBase):
                         else:
                             li.contents = []
                             li.append(anchor)
-            if re.search('^Subchapter \d', ul.get_text().strip()):
+            elif re.search('^Subchapter \d', ul.get_text().strip()):
                 for li in ul.findAll('li'):
                     li_num += 1
                     if chap_no := re.search(r'^Subchapter\s(?P<sub_chap_num>\d+)', li.get_text().strip()):
@@ -764,6 +773,22 @@ class TNParseHtml(ParserBase):
                         cleansed_header_id = header_id.strip("#")
                         anchor.attrs['aria-describedby'] = cleansed_header_id
                         li['id'] = f'{cleansed_header_id}-snav{str(li_num).zfill(2)}'
+                        anchor.string = li.text
+                        if li.string:
+                            li.string.replace_with(anchor)
+                        else:
+                            li.contents = []
+                            li.append(anchor)
+            elif re.search('^Part \d', ul.get_text().strip()):
+                for li in ul.findAll('li'):
+                    li_num += 1
+                    if chap_no := re.search(r'^Part\s(?P<sub_chap_num>\d+)', li.get_text().strip()):
+                        previous_head = ul.find_previous(lambda tag: tag.name == 'h2' and re.search('^Chapter', tag.get_text().strip()))
+                        header_id = f'#{previous_head["id"]}p{chap_no.group("sub_chap_num").zfill(2)}'
+                        anchor = self.soup.new_tag('a', href=header_id)
+                        cleansed_header_id = header_id.strip("#")
+                        anchor.attrs['aria-describedby'] = cleansed_header_id
+                        li['id'] = f'{cleansed_header_id}-cnav{str(li_num).zfill(2)}'
                         anchor.string = li.text
                         if li.string:
                             li.string.replace_with(anchor)
