@@ -24,7 +24,7 @@ class TNParseHtml(ParserBase):
                               'ol_p': r'^\(\d\)', 'junk1': '^Annotations$', 'normalp': r'^Law Reviews\.',
                               'article': r'^Article \d$|^Part \d$'}
         self.watermark_text = """Release {0} of the Official Code of Tennessee Annotated released {1}. 
-        Transformed and posted by Public.Resource.Org using tn_html_parser.py version 1.0 on {2}. 
+        Transformed and posted by Public.Resource.Org using cic-beautify-state-codes version v1.3 on {2}. 
         This document is not subject to copyright and is in the public domain.
         """
         self.meta_tags = []
@@ -78,7 +78,7 @@ class TNParseHtml(ParserBase):
                 0]
             self.tag_type_dict['head2'] = h2_class
             h3_class = self.soup.find(lambda tag: tag.name == 'p' and re.search(
-                r'^§ \d', tag.get_text().strip(), re.I) and tag.get('class')[0] != self.tag_type_dict['ul'])[
+                r'^§ \d|^sec\.', tag.get_text().strip(), re.I) and tag.get('class')[0] != self.tag_type_dict['ul'])[
                 'class'][
                 0]
             self.tag_type_dict['head3'] = h3_class
@@ -94,6 +94,8 @@ class TNParseHtml(ParserBase):
                 meta.decompose()
         junk_p_tags = self.soup.find_all(class_=self.junk_tag_class)
         for junk_tag in junk_p_tags:
+            if junk_tag.get('class')[0] == 'Apple-converted-space':
+                junk_tag.unwrap()
             junk_tag.decompose()
         if title := re.search(r'title\s(?P<title>\d+)',
                               self.soup.find('p', class_=self.tag_type_dict['head1']).get_text(), re.I):
@@ -296,7 +298,7 @@ class TNParseHtml(ParserBase):
         sec_sub_li = None
         sub_alpha_ol = None
         prev_chap_id = None
-        for p_tag in self.soup.find_all(lambda tag: tag.name == 'p' and re.search('\w+', tag.get_text())):
+        for p_tag in self.soup.find_all(lambda tag: tag.name == 'p' and re.search(r'\w+', tag.get_text())):
             if not re.search(r'\w+', p_tag.get_text()):
                 continue
             if chap_id := p_tag.findPrevious(lambda tag: tag.name in ['h2', 'h3']):
@@ -305,7 +307,7 @@ class TNParseHtml(ParserBase):
                     ol_count = 0
                 prev_chap_id = sec_id
                 set_string = True
-                data_str = p_tag.get_text()
+                data_str = p_tag.get_text().strip()
                 p_tag.string = data_str
                 if re.search('Except as otherwise provided in this subdivision', data_str, re.I):
                     print()
@@ -332,16 +334,16 @@ class TNParseHtml(ParserBase):
                     alpha_li_id = f'{sec_id}ol{ol_count}{main_sec_alpha}'
                     p_tag['id'] = alpha_li_id
                     main_sec_alpha = chr(ord(main_sec_alpha) + 1)
-                    if re.search(r'^\(\w\)(\s+)?\(\d\)', data_str):
+                    if re.search(r'^\(\w\)\s*\(\d\)', data_str):
                         small_roman = 'i'
                         small_roman_inner_alpha = 'a'
                         small_roman_inner_alpha_num = 1
                         previous_roman_li = None
                         previous_roman_inner_alpha_li = None
-                        li_num = re.search(r'^\(\w\)\s?\((?P<num>\d)\)', data_str).group('num')
+                        li_num = re.search(r'^\(\w\)\s*\((?P<num>\d)\)', data_str).group('num')
                         p_tag.string = re.sub(r'^\(\w+\)', '', p_tag.text.strip())
                         new_li = self.soup.new_tag('p')
-                        new_li.string = re.sub(r'^\(\w\)\s?\(\d\)', '', data_str)
+                        new_li.string = re.sub(r'^\(\w\)\s*\(\d\)', '', data_str)
                         p_tag.string.replace_with(new_li)
                         new_li.wrap(num_ol)
                         new_li.name = 'li'
@@ -351,15 +353,15 @@ class TNParseHtml(ParserBase):
                         ol_head += 1
                         num_li_id = f'{alpha_li_id}{li_num}'
                         new_li['id'] = num_li_id
-                        if re.search(r'^\(\w\)\s?\(\d\)\s?\(\w\)', data_str):
+                        if re.search(r'^\(\w\)\s*\(\d\)\s*\(\w\)', data_str):
                             small_roman = 'i'
                             small_roman_inner_alpha = 'a'
                             small_roman_inner_alpha_num = 1
                             previous_roman_li = None
                             previous_roman_inner_alpha_li = None
-                            li_alpha = re.search(r'^\(\w\)\s?\(\d\)\s?\((?P<alpha>\w)\)', data_str).group('alpha')
+                            li_alpha = re.search(r'^\(\w\)\s*\(\d\)\s*\((?P<alpha>\w)\)', data_str).group('alpha')
                             new_li = self.soup.new_tag('p')
-                            new_li.string = re.sub(r'^\(\w+\)\s?\(\d\)\s?\(\w\)', '', data_str)
+                            new_li.string = re.sub(r'^\(\w+\)\s*\(\d\)\s*\(\w\)', '', data_str)
                             previous_num_li.string.replace_with(new_li)
                             new_li.wrap(cap_alpha_ol)
                             new_li.name = 'li'
@@ -371,14 +373,14 @@ class TNParseHtml(ParserBase):
                                 cap_alpha = 'A'
                             else:
                                 cap_alpha = chr(ord(cap_alpha) + 1)
-                            if re.search(r'^\(\w\)\s?\(\d\)\s?\(\w\)\s?\(\w+\)', data_str):
+                            if re.search(r'^\(\w\)\s*\(\d\)\s*\(\w\)\s*\(\w+\)', data_str):
                                 previous_roman_inner_alpha_li = None
                                 previous_roman_inner_alpha_num_li = None
                                 small_roman_inner_alpha = 'a'
-                                li_roman = re.search(r'^\(\w\)\s?\(\d+\)\s?\([A-Z]+\)\s?\((?P<roman>\w+)\)', data_str).group(
+                                li_roman = re.search(r'^\(\w\)\s*\(\d+\)\s*\([A-Z]+\)\s*\((?P<roman>\w+)\)', data_str).group(
                                     'roman')
                                 new_li = self.soup.new_tag('p')
-                                new_li.string = re.sub(r'^\(\w\)\s?\(\d+\)\s?\([A-Z]+\)\s?\(\w+\)', '', data_str)
+                                new_li.string = re.sub(r'^\(\w\)\s*\(\d+\)\s*\([A-Z]+\)\s*\(\w+\)', '', data_str)
                                 previous_inner_li.string.replace_with(new_li)
                                 new_li.wrap(inner_ol)
                                 new_li.name = 'li'
@@ -421,16 +423,16 @@ class TNParseHtml(ParserBase):
                             num_li_id = f'{sec_id}ol{ol_count}{ol_head}'
                         p_tag['id'] = num_li_id
                         ol_head += 1
-                        if re.search(r'^\(\d+\)\s?\(\w+\)', p_tag.text.strip()):
+                        if re.search(r'^\(\d+\)\s*\(\w+\)', p_tag.text.strip()):
                             small_roman = 'i'
                             small_roman_inner_alpha = 'a'
                             small_roman_inner_alpha_num = 1
                             previous_roman_li = None
                             previous_roman_inner_alpha_li = None
                             previous_roman_inner_alpha_num_li = None
-                            li_alpha = re.search(r'^\(\d+\)\s?\((?P<alpha>\w+)\)', p_tag.text.strip()).group('alpha')
+                            li_alpha = re.search(r'^\(\d+\)\s*\((?P<alpha>\w+)\)', p_tag.text.strip()).group('alpha')
                             new_li = self.soup.new_tag('p')
-                            new_li.string = re.sub(r'^\(\d+\)\s?\(\w+\)', '', p_tag.text.strip())
+                            new_li.string = re.sub(r'^\(\d+\)\s*\(\w+\)', '', p_tag.text.strip())
                             p_tag.string.replace_with(new_li)
                             new_li.wrap(cap_alpha_ol)
                             new_li.name = 'li'
@@ -443,13 +445,13 @@ class TNParseHtml(ParserBase):
                                 cap_alpha = 'A'
                             else:
                                 cap_alpha = chr(ord(cap_alpha) + 1)
-                            if re.search(r'^\(\d+\)\s?\([A-Z]+\)\s?\(\w+\)', data_str):
+                            if re.search(r'^\(\d+\)\s*\([A-Z]+\)\s*\(\w+\)', data_str):
                                 previous_roman_inner_alpha_li = None
                                 previous_roman_inner_alpha_num_li = None
                                 small_roman_inner_alpha = 'a'
-                                li_roman = re.search(r'^\(\d+\)\s?\([A-Z]+\)\s?\((?P<roman>\w+)\)', data_str).group('roman')
+                                li_roman = re.search(r'^\(\d+\)\s*\([A-Z]+\)\s*\((?P<roman>\w+)\)', data_str).group('roman')
                                 new_li = self.soup.new_tag('p')
-                                new_li.string = re.sub(r'^\(\d+\)\s?\([A-Z]+\)\s?\(\w+\)', '', data_str)
+                                new_li.string = re.sub(r'^\(\d+\)\s*\([A-Z]+\)\s*\(\w+\)', '', data_str)
                                 p_tag.string.replace_with(new_li)
                                 new_li.wrap(inner_ol)
                                 new_li.name = 'li'
@@ -498,14 +500,14 @@ class TNParseHtml(ParserBase):
                                 inner_ol = self.soup.new_tag("ol", type="i")
                                 cap_alpha_li_id = f'{num_li_id}{li_alpha}'
                                 p_tag['id'] = cap_alpha_li_id
-                            if re.search(r'^\([A-Z]+\)\s?\(\w+\)', p_tag.text.strip()):
+                            if re.search(r'^\([A-Z]+\)\s*\(\w+\)', p_tag.text.strip()):
                                 small_roman_inner_alpha = 'a'
                                 small_roman_inner_alpha_num = 1
                                 previous_roman_inner_alpha_li = None
                                 previous_roman_inner_alpha_num_li = None
-                                li_roman = re.search(r'^\([A-Z]+\)\s?\((?P<roman>\w+)\)', data_str).group('roman')
+                                li_roman = re.search(r'^\([A-Z]+\)\s*\((?P<roman>\w+)\)', data_str).group('roman')
                                 new_li = self.soup.new_tag('p')
-                                new_li.string = re.sub(r'^\([A-Z]+\)\s?\(\w+\)', '', p_tag.text.strip())
+                                new_li.string = re.sub(r'^\([A-Z]+\)\s*\(\w+\)', '', p_tag.text.strip())
                                 p_tag.string.replace_with(new_li)
                                 new_li.wrap(inner_ol)
                                 new_li.name = 'li'
@@ -535,11 +537,11 @@ class TNParseHtml(ParserBase):
                                     p_tag['id'] = small_roman_id
                                     previous_roman_li = p_tag
                                     small_letter_inner_ol = self.soup.new_tag("ol", type="a")
-                                    if re.search(f'^\([a-z]+\)(\s+)?\({small_roman_inner_alpha}\)', p_tag.get_text().strip()):
+                                    if re.search(f'^\([a-z]+\)\s*\({small_roman_inner_alpha}\)', p_tag.get_text().strip()):
                                         small_roman_inner_alpha_num = 1
                                         previous_roman_inner_alpha_num_li = None
                                         new_li = self.soup.new_tag('p')
-                                        new_li.string = re.sub(r'^\([A-Z]\)\s?\(\w+\)', '', p_tag.text.strip())
+                                        new_li.string = re.sub(r'^\([A-Z]\)\s*\(\w+\)', '', p_tag.text.strip())
                                         new_li.name = 'li'
                                         new_li['id'] = f'{small_roman_id}{small_roman_inner_alpha}'
                                         p_tag.string.replace_with(new_li)
@@ -549,11 +551,7 @@ class TNParseHtml(ParserBase):
                                         roman_inner_alpha_num_ol = self.soup.new_tag("ol")
                                 elif re.search(f'^\({small_roman_inner_alpha}\)', p_tag.get_text().strip()):
                                     small_roman_inner_alpha_num = 1
-                                    try:
-                                        previous_roman_li.append(p_tag)
-                                    except Exception as e:
-                                        print(p_tag)
-                                        raise e
+                                    previous_roman_li.append(p_tag)
                                     p_tag.wrap(small_letter_inner_ol)
                                     p_tag.name = 'li'
                                     roman_inner_alpha_num_ol = self.soup.new_tag("ol")
@@ -676,7 +674,7 @@ class TNParseHtml(ParserBase):
                     if tag.contents[-1].name == 'br':
                         tag.contents.pop()
 
-                if tag.b and re.search(r'.+/b>[^\w]+\s?-', str(tag), re.I):
+                if tag.b and re.search(r'.+/b>[^\w]+\s*-', str(tag), re.I):
                     if re.search(r'Sodomy statute not changed', tag.b.get_text(), re.I):
                         catch_line_span = self.soup.new_tag('span', Class='catchline boldspan')
                         tag.b.insert_before(catch_line_span)
@@ -924,7 +922,7 @@ class TNParseHtml(ParserBase):
             cite_p_tags.append(tag)
             text = str(tag)
             for match in set(
-                    x[0] for x in re.findall(r'\b(\d{1,2}-\d(\w+)?-\d+(\.\d+)?(\s?(\(\w+\))+)?)', tag.get_text())):
+                    x[0] for x in re.findall(r'\b(\d{1,2}-\d(\w+)?-\d+(\.\d+)?(\s*(\(\w+\))+)?)', tag.get_text())):
                 inside_text = re.sub(r'<p\sclass="\w\d+">|</p>|<b>|</b>', '', text, re.DOTALL)
                 tag.clear()
                 id_reg = re.search(r'(?P<title>\w+)-(?P<chap>\w+)-(?P<sec>\d+(\.\d+)?)', match.strip())
@@ -979,6 +977,177 @@ class TNParseHtml(ParserBase):
         with open(f"../transforms/tn/octn/r{self.release_number}/{self.html_file_name}", "w") as file:
             file.write(soup_str)
 
+    def replace_tag_names_constitution(self):
+        """
+            - create dictionary with class names as keys with associated tag name as its value
+            - find all the tags in html with specified class names from dict
+              and replace tag with associated tag name (p1 -> h1)
+            - based on tag name find or build id for that tag
+            - create watermark tag and append it with h1 to first nav tag
+        """
+        tag_dict = {"h2": self.tag_type_dict['head2'],
+                    "h3": self.tag_type_dict['head3'],
+                    "h4": self.tag_type_dict['head4'], "li": self.tag_type_dict['ul']}
+
+        for key, value in tag_dict.items():
+            amendment_num = 0
+            ul = self.soup.new_tag("ul", Class="leaders")
+            while True:
+                p_tag = self.soup.find('p', {"class": value})
+                if not p_tag:
+                    break
+                p_tag.name = key
+
+                if value == self.tag_type_dict['ul']:
+                    if p_tag.findPrevious().name != 'li':
+                        p_tag.wrap(ul)
+                    elif p_tag.findPrevious().name == 'li':
+                        ul.append(p_tag)
+                    if p_tag.findNext().has_attr('class') and \
+                            p_tag.findNext()['class'][0] != self.tag_type_dict['ul']:
+                        new_nav = self.soup.new_tag('nav')
+                        ul.wrap(new_nav)
+                        ul = self.soup.new_tag("ul", Class="leaders")
+                if key == 'h2':
+                    if chap_section_regex := re.search(r'^(ARTICLE|AMEND(MENT)?(\.)?)\s(?P<chap>\w+)',
+                                                       p_tag.get_text().strip(), re.I):
+                        if re.search('^AMEND', p_tag.get_text().strip(), re.I):
+                            p_tag['id'] = f"{self.title}-am{chap_section_regex.group('chap').zfill(2)}"
+                        else:
+                            p_tag['id'] = f"{self.title}-a{chap_section_regex.group('chap').zfill(2)}"
+                    elif re.search('amendments', p_tag.get_text().strip(), re.I):
+                        amendment_num += 1
+                        p_tag['id'] = f"{self.title}-amendment{str(amendment_num).zfill(2)}"
+                    else:
+                        tag_text = re.sub(r'\W+', '', p_tag.get_text())
+                        p_tag['id'] = f"{self.title}-{tag_text}"
+                elif key == 'h3':
+                    if chap_section_regex := re.search(r'^(§|sec\.)\s(?P<sec>\w+(-\w+)?)\.',
+                                                       p_tag.get_text().strip(), re.I):
+                        if re.search('paragraph', p_tag.get_text().strip(), re.I):
+                            p_tag['class'] = 'paragraph_head'
+                            parent = p_tag.find_previous_sibling(lambda tag: tag.name in 'h3'
+                                                                             and not re.search('paragraph',
+                                                                                               tag.get_text().strip()
+                                                                                               , re.I))
+                            p_tag['id'] = f"{parent['id']}p{chap_section_regex.group('sec').zfill(2)}"
+                        else:
+                            parent = p_tag.find_previous_sibling(lambda tag: tag.name == 'h2' and tag.get('id'))
+                            p_tag['id'] = f"{parent['id']}s{chap_section_regex.group('sec').zfill(2)}"
+                    elif amendment_num_reg := re.search(r'Amend\s\.(?P<amend>\w+)',
+                                                        p_tag.get_text().strip(), re.I):
+                        p_tag['class'] = 'amendment_head'
+                        parent = p_tag.find_previous_sibling(lambda tag: tag.name in 'h2'
+                                                                         and re.search('^Amend',
+                                                                                       tag.get_text().strip(), re.I))
+                        p_tag['id'] = f"{parent['id']}am{amendment_num_reg.group('amend')}"
+                    else:
+                        tag_text = re.sub(r'\W+', '', p_tag.get_text())
+                        p_tag['id'] = f"{self.title}-{tag_text}"
+                elif key == 'h4':
+                    if self.headers_class_dict.get(p_tag.get_text()):
+                        p_tag['class'] = self.headers_class_dict.get(p_tag.get_text())
+                    p_tag['id'] = re.sub(r'\s+|\'', '', f'{self.title.zfill(2)}-{p_tag.get_text()}')
+                    if re.search(r'^\d', p_tag.get_text()):
+                        chap_id = p_tag.find_previous_sibling(lambda tag: re.search('^[a-zA-Z]', tag.get_text())
+                                                                          and tag.name != 'h5' and re.search(r'h\d',
+                                                                                                             tag.name))
+                    elif not p_tag.has_attr('class') or p_tag['class'] not in self.headers_class_dict.values():
+                        chap_id = p_tag.find_previous(lambda tag: tag.name in ['h2', 'h3'] or tag.has_attr('class') and
+                                                                  tag['class'] in self.headers_class_dict.values())
+                    else:
+                        chap_id = p_tag.findPrevious(lambda tag: tag.name != 'h4' and re.search(r'h\d', tag.name))
+                    if chap_id and chap_id.has_attr('id'):
+                        id_text = re.sub(r'\s|"|\'', '', p_tag.get_text())
+                        p_tag['id'] = f'{chap_id["id"]}-{id_text}'
+                    if p_tag.find_previous(lambda tag: p_tag['id'] == tag.get('id', '')):
+                        p_tag['id'] = f"{p_tag['id']}.1"
+                if not re.search(r'\w+', p_tag.get_text()):
+                    p_tag.decompose()
+
+        stylesheet_link_tag = self.soup.new_tag('link')
+        stylesheet_link_tag.attrs = {'rel': 'stylesheet', 'type': 'text/css',
+                                     'href': 'https://unicourt.github.io/cic-code-ga/transforms/ga/stylesheet/ga_code_stylesheet.css'}
+        self.soup.style.replace_with(stylesheet_link_tag)
+        h1_tag = self.soup.find(lambda tag: re.search('^Constitution', tag.get_text(), re.I))
+        h1_tag.name = 'h1'
+        watermark_p = self.soup.new_tag('p', Class='transformation')
+        watermark_p.string = self.watermark_text.format(self.release_number, self.release_date,
+                                                        datetime.now().date())
+        h1_tag.insert_before(watermark_p)
+        title_tag = h1_tag
+        chap_nav = self.soup.find('nav')
+        chap_nav.insert(0, watermark_p)
+        chap_nav.insert(1, title_tag)
+        for tag in self.soup.findAll('span'):
+            tag.unwrap()
+
+    def add_anchor_constitution(self):
+        for nav in self.soup.findAll('nav'):
+            if re.search('^PREAMBLE', nav.ul.get_text(), re.I):
+                amendment_num = 0
+                for li in nav.ul.findAll('li'):
+                    if roman_match := re.search(r'^Article (\w+)', li.get_text(), re.I):
+                        article_num = roman_match.group(1)
+                        header_id = f'{self.title}-a{article_num.zfill(2)}'
+                        anchor = self.soup.new_tag('a', href=f'#{header_id}')
+                        anchor.string = li.get_text()
+                        anchor.attrs['aria-describedby'] = header_id
+                        if li.string:
+                            li.string.replace_with(anchor)
+                        else:
+                            li.contents = []
+                            li.append(anchor)
+                    elif re.search('^AMENDMENT|^APPENDIX', li.get_text(), re.I):
+                        amendment_num += 1
+                        header_id = f'{self.title}-amendment{str(amendment_num).zfill(2)}'
+                        anchor = self.soup.new_tag('a', href=f'#{header_id}')
+                        anchor.string = li.get_text()
+                        anchor.attrs['aria-describedby'] = header_id
+                        if li.string:
+                            li.string.replace_with(anchor)
+                        else:
+                            li.contents = []
+                            li.append(anchor)
+                    else:
+                        tag_text = re.sub(r'\W+', '', li.get_text())
+                        header_id = f'{self.title}-{tag_text}'
+                        anchor = self.soup.new_tag('a', href=f'#{header_id}')
+                        anchor.string = li.get_text()
+                        anchor.attrs['aria-describedby'] = header_id
+                        if li.string:
+                            li.string.replace_with(anchor)
+                        else:
+                            li.contents = []
+                            li.append(anchor)
+            elif re.search(r'^§ \d+\.|^sec\.', nav.get_text(), re.I):
+                for li in nav.ul.findAll('li'):
+                    if roman_match := re.search(r'^§ (?P<sec_num1>\w+)\.|^Sec\.\s*(?P<sec_num>\w+)', li.get_text(), re.I):
+                        section_num = roman_match.group('sec_num') if roman_match.group('sec_num') else roman_match.group('sec_num1')
+                        parent = nav.find_previous_sibling(lambda tag: tag.name == 'h2' and tag.get('id'))
+                        header_id = f'{parent["id"]}s{section_num.zfill(2)}'
+                        anchor = self.soup.new_tag('a', href=f'#{header_id}')
+                        anchor.string = li.get_text()
+                        anchor.attrs['aria-describedby'] = header_id
+                        if li.string:
+                            li.string.replace_with(anchor)
+                        else:
+                            li.contents = []
+                            li.append(anchor)
+            elif re.search(r'^amend(ment)?(\.)?', nav.get_text(), re.I):
+                for li in nav.ul.findAll('li'):
+                    if roman_match := re.search(r'^AMEND(MENT)?(\.)? (?P<amnum>\d+)', li.get_text()):
+                        article_num = roman_match.group('amnum')
+                        header_id = f'{self.title}-am{article_num.zfill(2)}'
+                        anchor = self.soup.new_tag('a', href=f'#{header_id}')
+                        anchor.string = li.get_text()
+                        anchor.attrs['aria-describedby'] = header_id
+                        if li.string:
+                            li.string.replace_with(anchor)
+                        else:
+                            li.contents = []
+                            li.append(anchor)
+
     def start_parse(self):
         """
              - set the values to instance variables
@@ -990,15 +1159,26 @@ class TNParseHtml(ParserBase):
         start_time = datetime.now()
         print(start_time)
         self.create_page_soup()
-
-        self.get_class_name()
-        self.remove_junk()
-        self.replace_tags()
-        self.convert_paragraph_to_alphabetical_ol_tags()
-        self.create_notes_decision_to_nav()
-        self.remove_or_replace_class_names()
-        self.add_anchor_tags()
-        self.wrap_div_tags()
+        if re.search('constitution', self.html_file_name):
+            self.tag_type_dict = {'head1': r'^Constitution\s+Of\s+The', 'ul': r'^PREAMBLE',
+                                  'head4': '^NOTES TO DECISIONS', 'ol_p': r'^\(\d\)', 'junk1': '^Annotations$',
+                                  'head3': r'^§ \d|^sec\.', 'normalp': '^Law Reviews\.'}
+            self.get_class_name()
+            self.remove_junk()
+            self.replace_tag_names_constitution()
+            self.create_notes_decision_to_nav()
+            self.remove_or_replace_class_names()
+            self.add_anchor_constitution()
+            self.wrap_div_tags()
+        else:
+            self.get_class_name()
+            self.remove_junk()
+            self.replace_tags()
+            self.convert_paragraph_to_alphabetical_ol_tags()
+            self.create_notes_decision_to_nav()
+            self.remove_or_replace_class_names()
+            self.add_anchor_tags()
+            self.wrap_div_tags()
 
         self.clean_html_and_add_cite()
         self.write_soup_to_file()
