@@ -296,11 +296,7 @@ class TNParseHtml(ParserBase):
         sec_sub_li = None
         sub_alpha_ol = None
         prev_chap_id = None
-        p_tag = self.soup.find('p', {'class': self.tag_type_dict['ol_p']})
-        new_li = None
-        previous_p = None
         for p_tag in self.soup.find_all(lambda tag: tag.name == 'p' and re.search('\w+', tag.get_text())):
-            set_p_tag = True
             if not re.search(r'\w+', p_tag.get_text()):
                 continue
             if chap_id := p_tag.findPrevious(lambda tag: tag.name in ['h2', 'h3']):
@@ -586,15 +582,9 @@ class TNParseHtml(ParserBase):
                                     p_tag['id'] = f'{small_roman_id}{li_roman}'
                             else:
                                 previous_inner_li.insert(len(previous_num_li.contents), p_tag)
-                    # if new_li:
-                    #     p_tag = new_li
-                    #     new_li = None
+
                 elif re.search(r'^Acts\s|^Code\s|^T\.C\.A|^Article\s', p_tag.get_text().strip(), re.I) or (p_tag.find_previous_sibling()
                        and re.search(r'^\d+-\d+-\d+', p_tag.find_previous_sibling().get_text())):
-                    # p_tag = p_tag.findNext(lambda tag: tag.name == 'p' and
-                    #                                             tag.get('class')[0] in self.tag_type_dict['ol_p'])
-                    # set_p_tag = False
-                    new_li = None
                     set_string = False
                     ol_head = 1
                     main_sec_alpha = 'a'
@@ -626,8 +616,6 @@ class TNParseHtml(ParserBase):
                         previous_alpha_li.append(p_tag)
                 if set_string:
                     p_tag.string = re.sub(r'^\(\w+\)', '', p_tag.text.strip())
-            # if set_p_tag:
-            #     p_tag = p_tag.findNext(lambda tag: tag.name == 'p' and re.search('.+', tag.get_text()))
         print('ol tags added')
 
     def remove_or_replace_class_names(self):
@@ -706,12 +694,20 @@ class TNParseHtml(ParserBase):
                 tag.unwrap()
         print('removed class names')
 
-    # def create_notes_decision_to_nav(self):
-    #     for notes_head in self.soup.find_all(lambda tag: tag.name == 'h4' and re.search('NOTESTODECISIONS', tag.get('id', ''))):
-    #         if notes_head.find_next_sibling('p') and re.search('^\d\.', notes_head.find_next_sibling('p').get_text().strip()):
-
-
-
+    def create_notes_decision_to_nav(self):
+        for notes_head in self.soup.find_all(lambda tag: tag.name == 'h4' and re.search('NOTESTODECISIONS', tag.get('id', ''))):
+            if notes_head.find_next_sibling('p') and re.search('^\d\.', notes_head.find_next_sibling('p').get_text().strip()):
+                nav_tag = self.soup.new_tag('nav')
+                new_ul = self.soup.new_tag("ul", Class="leaders")
+                for headers_text in [s for s in notes_head.find_next_sibling('p').get_text().splitlines() if re.search('^\d', s)]:
+                    new_li = self.soup.new_tag('li')
+                    header_id = re.sub(r'\s+', '', f'#{notes_head.get("id")}-{headers_text.strip()}')
+                    new_ul.append(new_li)
+                    new_a = self.soup.new_tag('a', href=header_id)
+                    new_a.string = headers_text
+                    new_li.append(new_a)
+                nav_tag.append(new_ul)
+                notes_head.find_next_sibling('p').replace_with(nav_tag)
 
     def add_anchor_tags(self):
         """
@@ -999,6 +995,7 @@ class TNParseHtml(ParserBase):
         self.remove_junk()
         self.replace_tags()
         self.convert_paragraph_to_alphabetical_ol_tags()
+        self.create_notes_decision_to_nav()
         self.remove_or_replace_class_names()
         self.add_anchor_tags()
         self.wrap_div_tags()
