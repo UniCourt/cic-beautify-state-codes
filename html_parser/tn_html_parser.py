@@ -375,6 +375,22 @@ class TNParseHtml(ParserBase):
                                 cap_alpha = 'A'
                             else:
                                 cap_alpha = chr(ord(cap_alpha) + 1)
+                            if re.search(r'^\(\w\)\s?\(\d\)\s?\(\w\)\s?\(\w+\)', data_str):
+                                previous_roman_inner_alpha_li = None
+                                previous_roman_inner_alpha_num_li = None
+                                small_roman_inner_alpha = 'a'
+                                li_roman = re.search(r'^\(\w\)\s?\(\d+\)\s?\([A-Z]+\)\s?\((?P<roman>\w+)\)', data_str).group(
+                                    'roman')
+                                new_li = self.soup.new_tag('p')
+                                new_li.string = re.sub(r'^\(\w\)\s?\(\d+\)\s?\([A-Z]+\)\s?\(\w+\)', '', data_str)
+                                previous_inner_li.string.replace_with(new_li)
+                                new_li.wrap(inner_ol)
+                                new_li.name = 'li'
+                                set_string = False
+                                small_roman_id = f'{cap_alpha_li_id}{li_roman}'
+                                new_li['id'] = small_roman_id
+                                previous_roman_li = new_li
+                                small_roman = roman.toRoman(roman.fromRoman(small_roman.upper()) + 1)
                 elif re.search(r'^\(\w+(\.\d)?\)', p_tag.text.strip()):
                     if re.search(r'^\(\d+\.\d\)', p_tag.text.strip()):
                         if previous_num_li:
@@ -537,7 +553,11 @@ class TNParseHtml(ParserBase):
                                         roman_inner_alpha_num_ol = self.soup.new_tag("ol")
                                 elif re.search(f'^\({small_roman_inner_alpha}\)', p_tag.get_text().strip()):
                                     small_roman_inner_alpha_num = 1
-                                    previous_roman_li.append(p_tag)
+                                    try:
+                                        previous_roman_li.append(p_tag)
+                                    except Exception as e:
+                                        print(p_tag)
+                                        raise e
                                     p_tag.wrap(small_letter_inner_ol)
                                     p_tag.name = 'li'
                                     roman_inner_alpha_num_ol = self.soup.new_tag("ol")
