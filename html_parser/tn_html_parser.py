@@ -974,7 +974,7 @@ class TNParseHtml(ParserBase):
             cleansed_tag = re.sub(r'/>', ' />', str(tag))
             soup_str = re.sub(rf'{tag}', rf'{cleansed_tag}', soup_str, re.I)
         print("validating")
-        with open(f"../transforms/tn/octn/r{self.release_number}/{self.html_file_name}", "w") as file:
+        with open(f"../../cic-code-tn/transforms/tn/octn/r{self.release_number}/{self.html_file_name}", "w") as file:
             file.write(soup_str)
 
     def replace_tag_names_constitution(self):
