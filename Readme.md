@@ -35,9 +35,18 @@ Currently this code supports following states:
    
    **Original RTF:** https://archive.org/download/gov.ms.code.ann.2018
 
+
+2. ###Tennessee (TN):
+   
+   **Code repo:** https://github.com/UniCourt/cic-code-tn
+   
+   **Code pages:** https://unicourt.github.io/cic-code-tn
+   
+   **Original RTF:** https://archive.org/details/gov.tn.tca
+
 In subsequent months, we intend to add two more features:
 
-1. Extend the code to handle the official codes Tennessee, Kentucky, and Colorado.
+1. Extend the code to handle the official codes Kentucky, and Colorado.
 2. Add a "redline" capability to show diffs. 
 
 **REQUIREMENTS AND INSTALLATION**
