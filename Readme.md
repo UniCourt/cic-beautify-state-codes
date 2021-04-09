@@ -27,7 +27,7 @@ Currently this code supports following states:
    **Original RTF:** https://archive.org/download/gov.ar.code
 
 
-2. ###Mississippi (MS):
+3. ###Mississippi (MS):
    
    **Code repo:** https://github.com/UniCourt/cic-code-ms
    
@@ -36,7 +36,7 @@ Currently this code supports following states:
    **Original RTF:** https://archive.org/download/gov.ms.code.ann.2018
 
 
-2. ###Tennessee (TN):
+4. ###Tennessee (TN):
    
    **Code repo:** https://github.com/UniCourt/cic-code-tn
    
@@ -44,9 +44,18 @@ Currently this code supports following states:
    
    **Original RTF:** https://archive.org/details/gov.tn.tca
 
+5. ###Kentucky (KY):
+   
+   **Code repo:** https://github.com/UniCourt/cic-code-ky
+   
+   **Code pages:** https://unicourt.github.io/cic-code-ky
+   
+   **Original RTF:** https://archive.org/details/gov.ky.code
+
+
 In subsequent months, we intend to add two more features:
 
-1. Extend the code to handle the official codes Kentucky, and Colorado.
+1. Extend the code to handle the official codes Colorado and Idaho.
 2. Add a "redline" capability to show diffs. 
 
 **REQUIREMENTS AND INSTALLATION**
