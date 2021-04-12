@@ -17,9 +17,9 @@ import roman
 class KYParseHtml(ParserBase):
     def __init__(self, input_file_name):
         super().__init__()
-        self.class_regex = {'ul': '^CHAPTER', 'head2': '^CHAPTER', 'title': '^(TITLE)|^(CONSTITUTION OF KENTUCKY)',
-                            'sec_head': r'^([^\s]+[^\D]+)',
-                            'junk': '^(Text)', 'ol': r'^(\(1\))', 'head4': '^(NOTES TO DECISIONS)'}
+        self.class_regex = {'ul': '^CHAPTER', 'head2': '^CHAPTER', 'title': '^TITLE|^CONSTITUTION OF KENTUCKY',
+                            'sec_head': r'^[^\s]+[^\D]+',
+                            'junk': '^Text', 'ol': r'^\(1\)', 'head4': '^(NOTES TO DECISIONS)', 'nd_nav': r'^1\.'}
         self.title_id = None
         self.soup = None
         self.junk_tag_class = ['Apple-converted-space', 'Apple-tab-span']
@@ -57,22 +57,25 @@ class KYParseHtml(ParserBase):
         """
         nd_nav = None
         for key, value in self.class_regex.items():
-
-
             tag_class = self.soup.find(
                 lambda tag: tag.name == 'p' and re.search(self.class_regex.get(key), tag.get_text().strip()) and
                             tag.attrs["class"][0] not in self.class_regex.values())
+
             if tag_class:
                 self.class_regex[key] = tag_class.get('class')[0]
-                if re.search('^(NOTES TO DECISIONS)', tag_class.get_text(), re.I) and not nd_nav:
-                    self.class_regex['nd_nav'] = tag_class.next.get
 
         print(self.class_regex)
         print('updated class dict')
 
 
-
     def remove_junk(self):
+
+        """
+             - Delete the junk tags (empty tags,span tags and unwanted meta tags)
+             - Add new meta tags for storing release related information of parsed html
+             - Rename <br> tags
+         """
+
         for junk_tag in self.soup.find_all():
             if junk_tag.get("class") == ['Apple-converted-space'] or junk_tag.name == "i":
                 junk_tag.unwrap()
@@ -87,6 +90,7 @@ class KYParseHtml(ParserBase):
                     junk_tag["class"] = "headbreak"
 
         [text_junk.decompose() for text_junk in self.soup.find_all("p", class_=self.class_regex["junk"])]
+
         for b_tag in self.soup.findAll("b"):
             b_tag.name = "span"
             b_tag["class"] = "boldspan"
@@ -138,6 +142,7 @@ class KYParseHtml(ParserBase):
 
     # wrap the main content
     def create_main_tag(self):
+
         section_nav_tag = self.soup.new_tag("main")
         first_chapter_header = self.soup.find(class_=self.class_regex["head2"])
 
@@ -621,8 +626,17 @@ class KYParseHtml(ParserBase):
                         text = re.sub(fr'\s{re.escape(match)}', format_text, inside_text, re.I)
                         tag.append(text)
 
-    # replace title tag to "h1" and wrap it with "nav" tag
-    def set_appropriate_tag_name_and_id1(self):
+    def set_appropriate_tag_name_and_id (self, header_tag,chap_nums,prev_id):
+        header_tag.name = "h2"
+        header_tag.attrs = {}
+        header_tag['id'] = f"t{self.title_id}c{chap_nums}"
+        header_tag["class"] = "chapterh2"
+
+
+
+
+
+    def replace_tags(self):
         snav = 0
         cnav = 0
         anav = 0
@@ -774,36 +788,41 @@ class KYParseHtml(ParserBase):
                             current_id = re.sub(r'\s', '', header_tag.text.strip())
                             header_tag["id"] = f'{self.title_id}-{current_id}'
 
+
+
+
+
+
+
+
+
+
+
+
+
+
             else:
-
-
+                #  title files
                 if header_tag.get("class") == [self.class_regex["title"]]:
                     header_tag.name = "h1"
                     header_tag.attrs = {}
                     header_tag.wrap(self.soup.new_tag("nav"))
-
                     self.title_id = re.search(r'^(TITLE)\s(?P<title_id>\w+)', header_tag.text.strip()).group('title_id')
 
                 elif header_tag.get("class") == [self.class_regex["head2"]]:
 
-                    # nested if
-
                     if re.search("^CHAPTER", header_tag.text, re.I):
-
-                        chap_nums = re.search(r'^(CHAPTER|Chapter)\s(?P<chapter_id>\w+)',
-                                              header_tag.text.strip()).group(
-                            'chapter_id').zfill(2)
-
-                        header_tag.name = "h2"
-                        header_tag.attrs = {}
-                        header_tag['id'] = f"t{self.title_id}c{chap_nums}"
-                        header_tag["class"] = "chapterh2"
+                        chap_nums = re.search(r'^CHAPTER\s(?P<chapter_id>\w+)',header_tag.text.strip(),re.I).group('chapter_id').zfill(2)
+                        self.set_appropriate_tag_name_and_id(header_tag,chap_nums)
 
 
                     elif re.search("^(Article|SUBCHAPTER)", header_tag.text):
                         artical_nums = re.search(r'^(Article|SUBCHAPTER(S)*)\s(?P<chapter_id>\w+)',
                                                  header_tag.text.strip()).group(
                             'chapter_id').zfill(2)
+
+
+
                         header_tag.name = "h2"
                         header_tag.attrs = {}
                         prev_id = header_tag.find_previous("h2", class_="chapterh2").get("id")
@@ -1011,9 +1030,6 @@ class KYParseHtml(ParserBase):
                 elif header_tag.get('class') == [self.class_regex["head4"]]:
                     if re.match(r'^(\d+\.)', header_tag.text.strip()):
                         header_tag.name = "h5"
-
-
-
 
                     else:
                         header_tag.name = "h4"
@@ -3094,42 +3110,61 @@ class KYParseHtml(ParserBase):
         print(start_time)
         self.create_page_soup()
         self.css_file()
-        if re.search('constitution', self.html_file_name):
-            self.class_regex = {'ul': '^(§ )|^(ARTICLE)', 'head2': '^(§ )|^(ARTICLE)',
-                                'title': '^(CONSTITUTION OF KENTUCKY)|^(THE CONSTITUTION OF THE UNITED STATES OF AMERICA)',
-                                'sec_head': r'^([^\s]+[^\D]+)|^(Section)',
-                                'junk': '^(Text)', 'ol': r'^(\(1\))',
-                                'head4': '^(NOTES TO DECISIONS)|^(Compiler’s Notes.)'}
 
-            self.get_class_name()
-            self.create_main_tag()
-            self.remove_junk()
-            self.set_appropriate_tag_name_and_id1()
-            self.create_ul_tag()
-            self.create_chap_sec_nav1()
-            self.create_link_to_notetodecision_nav1()
-            self.create_ul_tag_to_notes_to_decision2()
-            self.create_and_wrap_with_div_tag()
-            self.add_citation1()
-            self.add_watermark_and_remove_class_name()
+        self.get_class_name()
+        self.remove_junk()
+        self.replace_tags()
 
-        else:
-            self.get_class_name()
-            self.create_main_tag()
-            self.remove_junk()
-            self.set_appropriate_tag_name_and_id1()
-            self.create_ul_tag()
-            self.create_chap_sec_nav1()
-            self.create_link_to_notetodecision_nav1()
-            self.create_ul_tag_to_notes_to_decision2()
-            self.create_and_wrap_with_div_tag()
+        #  self.create_main_tag()
+        #     self.set_appropriate_tag_name_and_id1()
+        #     self.create_ul_tag()
+        #     self.create_chap_sec_nav1()
+        #     self.create_link_to_notetodecision_nav1()
+        #     self.create_ul_tag_to_notes_to_decision2()
+        #     self.create_and_wrap_with_div_tag()
+        #     self.add_citation1()
+        #     self.add_watermark_and_remove_class_name()
 
-            # # self.wrap_with_ordered_tag_3()
 
-            self.wrap_with_ordered_tag_4()
-            self.create_numberical_ol()
-            self.add_citation1()
-            self.add_watermark_and_remove_class_name()
+
+
+
+        # if re.search('constitution', self.html_file_name):
+        #     self.class_regex = {'ul': '^(§ )|^(ARTICLE)', 'head2': '^(§ )|^(ARTICLE)',
+        #                         'title': '^(CONSTITUTION OF KENTUCKY)|^(THE CONSTITUTION OF THE UNITED STATES OF AMERICA)',
+        #                         'sec_head': r'^([^\s]+[^\D]+)|^(Section)',
+        #                         'junk': '^(Text)', 'ol': r'^(\(1\))',
+        #                         'head4': '^(NOTES TO DECISIONS)|^(Compiler’s Notes.)'}
+        #
+        #     self.get_class_name()
+        #     self.create_main_tag()
+        #     self.remove_junk()
+        #     self.set_appropriate_tag_name_and_id1()
+        #     self.create_ul_tag()
+        #     self.create_chap_sec_nav1()
+        #     self.create_link_to_notetodecision_nav1()
+        #     self.create_ul_tag_to_notes_to_decision2()
+        #     self.create_and_wrap_with_div_tag()
+        #     self.add_citation1()
+        #     self.add_watermark_and_remove_class_name()
+        #
+        # else:
+        #     self.get_class_name()
+        #     self.create_main_tag()
+        #     self.remove_junk()
+        #     self.set_appropriate_tag_name_and_id1()
+        #     self.create_ul_tag()
+        #     self.create_chap_sec_nav1()
+        #     self.create_link_to_notetodecision_nav1()
+        #     self.create_ul_tag_to_notes_to_decision2()
+        #     self.create_and_wrap_with_div_tag()
+        #
+        #     # # self.wrap_with_ordered_tag_3()
+        #
+        #     self.wrap_with_ordered_tag_4()
+        #     self.create_numberical_ol()
+        #     self.add_citation1()
+        #     self.add_watermark_and_remove_class_name()
 
         self.write_soup_to_file()
         print(datetime.now() - start_time)
