@@ -1,11 +1,9 @@
-
 """
     - this file accepts the text util generated html and parse it
     - here the html is converted in such a way that it matches the html5 standards
     - the start_parse method is called by parser base
     - this method based on the file type(constitution files or title files) decides which methods to run
 """
-
 
 from bs4 import BeautifulSoup, Doctype
 import re
@@ -66,7 +64,6 @@ class KYParseHtml(ParserBase):
 
         print(self.class_regex)
         print('updated class dict')
-
 
     def remove_junk(self):
 
@@ -283,15 +280,12 @@ class KYParseHtml(ParserBase):
                         if re.search(pattern, tag.span.text.strip()):
                             tag.span.string = ""
                     else:
-                        tag_text = re.sub(r'^\d+\.','',tag.text.strip())
+                        tag_text = re.sub(r'^\d+\.', '', tag.text.strip())
                         tag.string = tag_text
 
             if re.match(pattern, tag.text.strip()):
-                tag_text = re.sub(pattern,'',tag.text.strip())
+                tag_text = re.sub(pattern, '', tag.text.strip())
                 tag.string = tag_text
-
-
-
 
     # add watermark and remove default class names
     def add_watermark_and_remove_class_name(self):
@@ -316,18 +310,12 @@ class KYParseHtml(ParserBase):
             if all_tag.get("class"):
                 all_tag_class = str(all_tag.get("class"))
                 # print(all_tag_class)
-                if re.match(r'^\[\'p\d\'\]',all_tag_class.strip()):
+                if re.match(r'^\[\'p\d\'\]', all_tag_class.strip()):
                     del all_tag["class"]
-
 
         for all_li in self.soup.find_all("li"):
             if re.search(r'^<li\s*class="p\d"', all_li.text.strip()):
                 all_li.unwrap()
-
-
-
-
-
 
     # citation
     def add_citation1(self):
@@ -389,9 +377,9 @@ class KYParseHtml(ParserBase):
                       'XL': ['431', '432', '434', '435', '436', '437', '438', '439', '440', '441'],
                       'XLI': ['446', '447'], 'XLII': ['451', '452', '453', '454', '455', '456', '457'],
                       'L': ['500', '501', '502', '503', '504', '505', '506', '507', '507A', '508', '509', '510',
-                                '511', '512', '513', '514', '515',
-                                '516', '517', '518', '519', '520', '521', '522', '523', '524', '525', '526', '527',
-                                '528', '529', '530', '531', '532', '533', '534'],
+                            '511', '512', '513', '514', '515',
+                            '516', '517', '518', '519', '520', '521', '522', '523', '524', '525', '526', '527',
+                            '528', '529', '530', '531', '532', '533', '534'],
                       'LI': ['600', '605', '610', '615', '620', '625', '630', '635', '640', '645']
 
                       }
@@ -466,7 +454,6 @@ class KYParseHtml(ParserBase):
                             # r'<li\sclass="\w\d+"\sid="t[a-zA-Z]+\d+s\d+.\d+[\w\W]+ol\d\d\D">|'                               
                             r'</li>$',
                             '', text, re.DOTALL)
-
 
                         # 1.2025/1A.2025
                         if re.search(r'(\d+[a-zA-Z]*\.\d+)(-\d+)*', match.strip()):
@@ -612,7 +599,7 @@ class KYParseHtml(ParserBase):
                         text = re.sub(fr'\s{re.escape(match)}', format_text, inside_text, re.I)
                         tag.append(text)
 
-    def set_appropriate_tag_name_and_id (self,tag_name,header_tag,chap_nums,prev_id, sub_tag, class_name):
+    def set_appropriate_tag_name_and_id(self, tag_name, header_tag, chap_nums, prev_id, sub_tag, class_name):
         if re.search('constitution', self.html_file_name):
             header_tag.name = tag_name
             header_tag.attrs = {}
@@ -790,18 +777,19 @@ class KYParseHtml(ParserBase):
                     prev_id = None
                     sub_tag = None
                     class_name = None
-                    if re.search("^CHAPTER|^Article|^SUBCHAPTER|^Part",header_tag.text, re.I):
-                        tag_name ="h2"
+                    if re.search("^CHAPTER|^Article|^SUBCHAPTER|^Part", header_tag.text, re.I):
+                        tag_name = "h2"
                         if re.search("^CHAPTER", header_tag.text, re.I):
-                            chap_nums = re.search(r'^CHAPTER\s(?P<chapter_id>\w+)',header_tag.text.strip(),re.I).group('chapter_id').zfill(2)
+                            chap_nums = re.search(r'^CHAPTER\s(?P<chapter_id>\w+)', header_tag.text.strip(),
+                                                  re.I).group('chapter_id').zfill(2)
                             sub_tag = "c"
                             class_name = "chapterh2"
                             prev_id = None
 
                         elif re.search("^(Article|SUBCHAPTER)", header_tag.text):
                             chap_nums = re.search(r'^(Article|SUBCHAPTER(S)*)\s(?P<chapter_id>\w+)',
-                                                 header_tag.text.strip()).group(
-                            'chapter_id').zfill(2)
+                                                  header_tag.text.strip()).group(
+                                'chapter_id').zfill(2)
 
                             prev_id = header_tag.find_previous("h2", class_="chapterh2").get("id")
 
@@ -821,7 +809,8 @@ class KYParseHtml(ParserBase):
                             sub_tag = "p"
                             class_name = "parth2"
 
-                        self.set_appropriate_tag_name_and_id(tag_name,header_tag,chap_nums,prev_id,sub_tag,class_name)
+                        self.set_appropriate_tag_name_and_id(tag_name, header_tag, chap_nums, prev_id, sub_tag,
+                                                             class_name)
 
                     elif re.search("^([A-Z]\.)|^(Subpart)", header_tag.text):
                         header_tag.name = "h3"
@@ -861,9 +850,10 @@ class KYParseHtml(ParserBase):
                             header_tag["id"] = f"t{self.title_id}c{chap_num}s{sec_num}"
 
                     elif re.match(r'^(\d+[a-z]?\.\d+[a-zA-Z]?-\d+\.)', header_tag.text.strip()):
-                        header_pattern = re.search(r'^(?P<sec>(?P<chap>\d+[a-z]?)\.\d+[a-zA-Z]?-\d+)', header_tag.text.strip())
+                        header_pattern = re.search(r'^(?P<sec>(?P<chap>\d+[a-z]?)\.\d+[a-zA-Z]?-\d+)',
+                                                   header_tag.text.strip())
                         chap_num = header_pattern.group("chap").zfill(2)
-                        sec_num= header_pattern.group("sec").zfill(2)
+                        sec_num = header_pattern.group("sec").zfill(2)
                         header_tag["id"] = f"t{self.title_id}c{chap_num}s{sec_num}"
 
 
@@ -888,7 +878,7 @@ class KYParseHtml(ParserBase):
 
 
                     elif re.match(r'^(\d+\D\.\d+-\d+)|^(\d+\.\d+-\d+)', header_tag.text):
-                        header_pattern = re.search(r'^(?P<sec>(?P<chap>\d+\D?)\.\d+-\d+)',header_tag.text.strip())
+                        header_pattern = re.search(r'^(?P<sec>(?P<chap>\d+\D?)\.\d+-\d+)', header_tag.text.strip())
                         chap_num = header_pattern.group("chap").zfill(2)
                         sec_num = header_pattern.group("sec").zfill(2)
                         if header_tag.find_previous(name="h3", class_=self.class_regex["sec_head"]):
@@ -1007,7 +997,7 @@ class KYParseHtml(ParserBase):
                                 sub_sec_id = f"{prev_head_tag}-{sub_sec_text}"
                             header_tag["id"] = sub_sec_id
                             repeated_header_list.append(header_tag.text.strip())
-                            if re.match(r'^1.\s*[a-zA-Z]+',header_tag.text.strip()):
+                            if re.match(r'^1.\s*[a-zA-Z]+', header_tag.text.strip()):
                                 repeated_header_list = []
 
                         elif re.match(r'^(\d+\.\s*—\s*[a-zA-Z]+)', header_tag.text.strip()):
@@ -1028,29 +1018,32 @@ class KYParseHtml(ParserBase):
                             innr_subsec_header_tag_id = f"{prev_child_id1}-{innr_subsec_header_id}"
                             header_tag["id"] = innr_subsec_header_tag_id
 
-                if re.match(r'^(Article)\s*[I,V,X]*\.|^(ARTICLE)\s*[I,V,X]*|Section\s*[A-Z0-9]+\.',header_tag.text.strip()):
+                if re.match(r'^(Article)\s*[I,V,X]*\.|^(ARTICLE)\s*[I,V,X]*|Section\s*[A-Z0-9]+\.',
+                            header_tag.text.strip()):
                     tag_name = "h4"
-                    article_id =None
-                    prev_id =None
+                    article_id = None
+                    prev_id = None
                     sub_tag = None
                     class_name = None
                     if re.match(r'^(Article)\s*[I,V,X]*\.|^(ARTICLE)\s*[I,V,X]*', header_tag.text.strip()):
                         prev_id = header_tag.find_previous("h3").get("id")
-                        article_id = re.search(r'^(Article)\s*(?P<ar_id>[I,V,X]*)', header_tag.text.strip()).group("ar_id")
+                        article_id = re.search(r'^(Article)\s*(?P<ar_id>[I,V,X]*)', header_tag.text.strip()).group(
+                            "ar_id")
                         sub_tag = "a"
                         class_name = "article"
 
                     if re.match(r'Section\s*[A-Z0-9]+\.', header_tag.text.strip()):
                         prev_id = header_tag.find_previous("h4", class_="article").get("id")
-                        article_id = re.search(r'^(Section)\s*(?P<ar_id>[A-Z0-9]+)\.', header_tag.text.strip()).group("ar_id")
+                        article_id = re.search(r'^(Section)\s*(?P<ar_id>[A-Z0-9]+)\.', header_tag.text.strip()).group(
+                            "ar_id")
                         sub_tag = "s"
                         class_name = "section"
 
-                    self.set_appropriate_tag_name_and_id(tag_name,header_tag, article_id, prev_id, sub_tag, class_name)
+                    self.set_appropriate_tag_name_and_id(tag_name, header_tag, article_id, prev_id, sub_tag, class_name)
 
         print("tags are replaced")
 
-    def set_chapter_section_nav(self,list_item,chap_num,sub_tag,prev_id,sec_num):
+    def set_chapter_section_nav(self, list_item, chap_num, sub_tag, prev_id, sec_num):
         nav_list = []
         nav_link = self.soup.new_tag('a')
         nav_link.append(list_item.text)
@@ -1069,10 +1062,8 @@ class KYParseHtml(ParserBase):
                 else:
                     nav_link["href"] = f"#t{self.title_id}{sub_tag}{chap_num}"
 
-
         nav_list.append(nav_link)
         list_item.contents = nav_list
-
 
     # create a reference
     def create_chapter_section_nav(self):
@@ -1099,7 +1090,8 @@ class KYParseHtml(ParserBase):
                         else:
                             prev_id = list_item.find_previous("h2").get("id")
 
-                        chap_num = re.search(r'^(Section\s?(?P<sec>\d+).)', list_item.text.strip()).group("sec").zfill(2)
+                        chap_num = re.search(r'^(Section\s?(?P<sec>\d+).)', list_item.text.strip()).group("sec").zfill(
+                            2)
                         nav_list = []
                         sub_tag = "s"
 
@@ -1109,33 +1101,33 @@ class KYParseHtml(ParserBase):
                         prev_id = None
 
                     elif re.match(r'^AMENDMENT', list_item.text.strip()):
-                        chap_num = re.search(r'AMENDMENT (?P<chap>[I,V,X]+)',list_item.text.strip()).group("chap")
-                        prev_id = list_item.find_previous("h2",class_="amendh2").get("id")
+                        chap_num = re.search(r'AMENDMENT (?P<chap>[I,V,X]+)', list_item.text.strip()).group("chap")
+                        prev_id = list_item.find_previous("h2", class_="amendh2").get("id")
                         sub_tag = "-amend"
 
-                    self.set_chapter_section_nav(list_item,chap_num,sub_tag,prev_id,None)
+                    self.set_chapter_section_nav(list_item, chap_num, sub_tag, prev_id, None)
 
-            #title files
+            # title files
             else:
-                if re.match(r'^chapter', list_item.text.strip(),re.I):
+                if re.match(r'^chapter', list_item.text.strip(), re.I):
                     chap_nav_nums = re.search(r'CHAPTER (?P<chap>\d+[a-zA-Z]?)', list_item.text.strip())
                     chap_num = chap_nav_nums.group("chap").zfill(2)
                     sub_tag = "c"
                     prev_id = None
 
-                    self.set_chapter_section_nav(list_item, chap_num, sub_tag, prev_id,None)
+                    self.set_chapter_section_nav(list_item, chap_num, sub_tag, prev_id, None)
 
                 else:
                     if re.match(r'^(\d+\.\d+\.)', list_item.text.strip()):
                         sec_pattern = re.search(r'^(?P<sec>(?P<chap>\d+)\.\d+)', list_item.text.strip())
-                        chap_num =sec_pattern.group("chap").zfill(2)
+                        chap_num = sec_pattern.group("chap").zfill(2)
                         sec_num = sec_pattern.group("sec").zfill(2)
                         sec_next_tag = list_item.find_next('li')
                         sec_prev_tag = list_item.find_previous("li")
                         sec_prev_tag_text = sec_prev_tag.a
                         if sec_next_tag:
                             if sec_pattern.group("sec") in sec_next_tag.text:
-                                self.set_chapter_section_nav(list_item,chap_num,None,None,sec_num)
+                                self.set_chapter_section_nav(list_item, chap_num, None, None, sec_num)
 
                             elif sec_prev_tag_text:
                                 sub = re.search(r'^[^\s]+', sec_prev_tag.a.text.strip()).group()
@@ -1158,7 +1150,7 @@ class KYParseHtml(ParserBase):
                             sub_num = re.search(r'((?P<chap>\d+[a-zA-Z]*)\.(?P<sub>\d+)-\d+\.)',
                                                 list_item.text.strip()).group("sub").zfill(2)
                             chap_num = re.search(r'((?P<chap>\d+[a-zA-Z]*)\.(?P<sub>\d+)-\d+\.)',
-                                                list_item.text.strip()).group("chap").zfill(2)
+                                                 list_item.text.strip()).group("chap").zfill(2)
 
                             sec_num = re.sub(r'[\s\.\[\]]', '', list_item.text.strip())
                             nav_link = self.soup.new_tag('a')
@@ -1170,7 +1162,7 @@ class KYParseHtml(ParserBase):
                             sec_pattern = re.search(r'^(?P<sec>(?P<chap>\d+\D\.)\d+)', list_item.text.strip())
                             chap_num = sec_pattern.group("chap").zfill(2)
                             sec_num = sec_pattern.group("sec").zfill(2)
-                            self.set_chapter_section_nav(list_item,chap_num,None,None,sec_num)
+                            self.set_chapter_section_nav(list_item, chap_num, None, None, sec_num)
 
                     elif re.match(r'Article|SUBCHAPTER', list_item.text.strip()):
                         chap_num = list_item.find_previous("h2", class_="chapterh2").get("id")
@@ -1217,7 +1209,7 @@ class KYParseHtml(ParserBase):
                     elif re.match(r'^(\d+\.\d+\D?-\d+\.)', list_item.text.strip()):
                         chap_num = re.search(r'^([^.]+)', list_item.text.strip()).group().zfill(2)
                         sec_num = re.search(r'^(\d+\.\d+\D?-\d+)', list_item.text.strip()).group().zfill(2)
-                        self.set_chapter_section_nav(list_item,chap_num,None,None,sec_num)
+                        self.set_chapter_section_nav(list_item, chap_num, None, None, sec_num)
                     else:
                         chapter_header = list_item.find_previous("h2")
                         chap_nums = re.search(r'(\s+[^\s]+)', chapter_header.text.strip()).group(0)
@@ -1228,21 +1220,19 @@ class KYParseHtml(ParserBase):
                         new_link["href"] = f"#t{self.title_id}c{chap_num}{sec_id}"
                         list_item.contents = [new_link]
 
-
-
     def create_ul_tag_to_notes_to_decision(self):
         new_ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
         # new_nav_tag = self.soup.new_tag("nav")
         innr_ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
         innr_ul_tag1 = self.soup.new_tag("ul", **{"class": "leaders"})
         innr_ul_tag2 = self.soup.new_tag("ul", **{"class": "leaders"})
-        note_nav_pattern = re.compile(r'^(\d+\.\s*“?[a-zA-Z0-9]+)|^(\d+\.\s*“?\d*)|^(\d+\.\s*—\s*[a-zA-Z]+)|^(\d+\.\d+)|^(\d+\.\s*—\s*—\s*[a-zA-Z]+)|^(\d+\.\s*—\s*—\s*—\s*[a-zA-Z]+)')
+        note_nav_pattern = re.compile(
+            r'^(\d+\.\s*“?[a-zA-Z0-9]+)|^(\d+\.\s*“?\d*)|^(\d+\.\s*—\s*[a-zA-Z]+)|^(\d+\.\d+)|^(\d+\.\s*—\s*—\s*[a-zA-Z]+)|^(\d+\.\s*—\s*—\s*—\s*[a-zA-Z]+)')
 
         if re.search('constitution', self.html_file_name):
             tag_class = self.class_regex["sec_head"]
         else:
             tag_class = self.class_regex["nd_nav"]
-
 
         for note_tag in self.soup.find_all(class_=tag_class):
             if re.match(note_nav_pattern, note_tag.text.strip()):
@@ -1271,7 +1261,7 @@ class KYParseHtml(ParserBase):
                     else:
                         new_ul_tag.append(note_tag)
 
-                #-
+                # -
                 elif re.match(r'^(\d+\.\s*—\s*“?[a-zA-Z]+)|^(\d+\.\d+)|^(\d+\.(\d+\.)\s*“*[a-zA-Z]+)',
                               note_tag.text.strip()) and note_tag.name == "li":
                     if re.match(r'^(\d+\.\s*“?[a-zA-Z]+)|^(\d+\.\d+)|^(\d+\.(\d+\.)\s*“*[a-zA-Z]+)',
@@ -1288,9 +1278,9 @@ class KYParseHtml(ParserBase):
 
                 # # --
                 if re.match(r'^(\d+\.\s*—\s*—\s*"?[a-zA-Z]+)|^(\d+\.\d+\.\s*—\s*"?[a-zA-Z]*)',
-                                    note_tag.text.strip()) and note_tag.name == "li":
+                            note_tag.text.strip()) and note_tag.name == "li":
                     if re.match(r'^(\d+\.\s*—\s*—\s*"?[a-zA-Z]+)|^(\d+\.\d+\.\s*—\s*"?[a-zA-Z]*)',
-                                        note_tag.find_previous().text.strip()) and note_tag.name == "li":
+                                note_tag.find_previous().text.strip()) and note_tag.name == "li":
                         innr_ul_tag1.append(note_tag)
                     else:
                         if re.match(r'^(\d+\.\s*—\s*—\s*—\s*[a-zA-Z]+)',
@@ -1303,9 +1293,9 @@ class KYParseHtml(ParserBase):
 
                 # # ---
                 if re.match(r'^(\d+\.\s*—\s*—\s*—\s*[a-zA-Z]+)',
-                                    note_tag.text.strip()) and note_tag.name == "li":
+                            note_tag.text.strip()) and note_tag.name == "li":
                     if re.match(r'^(\d+\.\s*—\s*—\s*—\s*[a-zA-Z]+)',
-                                        note_tag.find_previous().text.strip()) and note_tag.name == "li":
+                                note_tag.find_previous().text.strip()) and note_tag.name == "li":
                         innr_ul_tag2.append(note_tag)
 
                     else:
@@ -1326,7 +1316,7 @@ class KYParseHtml(ParserBase):
 
         print("notes to decision nav created")
 
-    def set_ref_link_to_notetodecision_nav(self,nd_tag,prev_head_tag,sub_sec_id,count):
+    def set_ref_link_to_notetodecision_nav(self, nd_tag, prev_head_tag, sub_sec_id, count):
         if count:
             nav_link = self.soup.new_tag('a')
             nav_link.string = nd_tag.text
@@ -1342,7 +1332,6 @@ class KYParseHtml(ParserBase):
             nd_tag.insert(0, nav_link)
             return f"{prev_head_tag}-{sub_sec_id}"
 
-
     def create_ref_link_to_notetodecision_nav(self):
         nav_link = self.soup.new_tag('a')
         innr_nav_link1 = self.soup.new_tag('a')
@@ -1356,7 +1345,7 @@ class KYParseHtml(ParserBase):
         else:
             nd_class_name = self.class_regex['nd_nav']
 
-        for nd_tag in self.soup.find_all(class_= nd_class_name):
+        for nd_tag in self.soup.find_all(class_=nd_class_name):
             if re.match(r'^\d+\.', nd_tag.text.strip()):
                 if re.search(r'^(\d+\.(\d+\.)?\s*“*[a-zA-Z0-9]+)', nd_tag.get_text().strip()):
                     prev_head_tag = nd_tag.find_previous("h4").get("id")
@@ -1456,7 +1445,6 @@ class KYParseHtml(ParserBase):
                     nd_tag.insert(0, innr_nav_link1)
                     p_text = re.sub(r'[\s.—]', '', nd_tag.text.strip())
                     nav_link_list.append(p_text)
-
 
     def wrap_with_ordered_tag_2(self):
         pattern = re.compile(
@@ -1761,7 +1749,6 @@ class KYParseHtml(ParserBase):
                 else:
                     if re.match(r'i\.', current_tag) and re.match(r'ii\.', tag.find_next_sibling().text.strip()):
 
-
                         rom_ol_tag = self.soup.new_tag("ol", type="i", **{"class": "roman"})
                         tag.wrap(rom_ol_tag)
 
@@ -1845,7 +1832,7 @@ class KYParseHtml(ParserBase):
                         if not re.match(r'^(ARTICLE)\s*[I,V,X]*',
                                         tag.find_previous("h4").text.strip()) and not re.match(r'Section\s*[A-Z]+\.',
                                                                                                tag.find_previous(
-                                                                                                       "h4").text.strip()):
+                                                                                                   "h4").text.strip()):
                             tag.find_previous("li").append(ol_tag5)
 
                             main_olcount = 1
@@ -1877,7 +1864,7 @@ class KYParseHtml(ParserBase):
 
                         if not re.match(r'^(ARTICLE)\s*[I,V,X]*',
                                         tag.find_previous("h4").text.strip()) and not re.match(
-                                r'Section\s*[A-Z]+\.', tag.find_previous("h4").text.strip()):
+                            r'Section\s*[A-Z]+\.', tag.find_previous("h4").text.strip()):
                             if prev_id:
                                 current_id = f"{prev_id}{main_olcount}"
 
@@ -1964,7 +1951,8 @@ class KYParseHtml(ParserBase):
 
             # I.
             if re.match(r'^([A-Z]{0,3}\.\s*“?[a-zA-Z]+)', current_tag):
-                if re.match(r'^([I,V,X]{0,3}\.)', current_tag) and not re.match(r'^H.', tag.find_previous("li").text.strip()):
+                if re.match(r'^([I,V,X]{0,3}\.)', current_tag) and not re.match(r'^H.',
+                                                                                tag.find_previous("li").text.strip()):
 
                     ol_rom = tag
                     if re.search(r'^(I\.)', current_tag):
@@ -2092,29 +2080,31 @@ class KYParseHtml(ParserBase):
                         # prev_header_id = tag.find_previous("h3").get("id")
                         tag["id"] = f"{prev_header_id}ol{ol_count}{tag_id}"
 
-
             # (a)
             if re.match(alpha_pattern, current_tag):
                 ol_alpha = tag
                 if tag.find_previous("h4"):
-                    if re.search(r'ARTICLE',tag.find_previous("h4").text.strip()):
+                    if re.search(r'ARTICLE', tag.find_previous("h4").text.strip()):
                         prev_header_id = tag.find_previous("h4").get("id")
                     else:
                         prev_header_id = ol_num.get("id")
 
-                if re.match(r'^\(a\)', tag.text.strip()) :
+                if re.match(r'^\(a\)', tag.text.strip()):
                     curr_id = None
                     ol_tag2 = self.soup.new_tag("ol", type="a", **{"class": "alpha"})
                     tag.wrap(ol_tag2)
 
-                    if re.match(alpha_pattern, tag.find_previous("li").text.strip()) and tag.find_previous().name == "span":
+                    if re.match(alpha_pattern,
+                                tag.find_previous("li").text.strip()) and tag.find_previous().name == "span":
                         tag.find_previous("li").append(ol_tag2)
                         prev_header_id = tag.find_previous("li").get("id")
                         tag_id = re.search(r'^(\(\s*(?P<id>[a-z][a-z]?)\s*\))', current_tag).group('id')
                         curr_id = f"{prev_header_id}{tag_id}"
                         tag["id"] = f"{prev_header_id}{tag_id}"
 
-                    elif tag.find_previous("ol").find_previous().name == "span" and not re.match(r'ARTICLE',tag.find_previous("ol").find_previous().text.strip()):
+                    elif tag.find_previous("ol").find_previous().name == "span" and not re.match(r'ARTICLE',
+                                                                                                 tag.find_previous(
+                                                                                                         "ol").find_previous().text.strip()):
                         ol_num.append(ol_tag2)
                         tag_id = re.search(r'^(\(\s*(?P<id>[a-z][a-z]?)\s*\))', current_tag).group('id')
                         prev_header_id = ol_num.get("id")
@@ -2122,7 +2112,7 @@ class KYParseHtml(ParserBase):
                         tag["id"] = f"{prev_header_id}{tag_id}"
 
                     else:
-                        if not re.match(r'ARTICLE',tag.find_previous().find_previous().text.strip()):
+                        if not re.match(r'ARTICLE', tag.find_previous().find_previous().text.strip()):
                             tag.find_previous("li").append(ol_tag2)
                             tag_id = re.search(r'^(\(\s*(?P<id>[a-z][a-z]?)\s*\))', current_tag).group('id')
                             prev_header_id = tag.find_previous("li").get("id")
@@ -2197,7 +2187,7 @@ class KYParseHtml(ParserBase):
 
                     ol_tag3 = self.soup.new_tag("ol", type="a", **{"class": "alpha"})
 
-                    if re.search(r'ARTICLE',tag.find_previous().find_previous().text.strip()):
+                    if re.search(r'ARTICLE', tag.find_previous().find_previous().text.strip()):
                         tag.wrap(ol_tag3)
                         prev_id = tag.find_previous("h4").get("id")
                         tag["id"] = f"{prev_id}{tag_id}"
@@ -2228,7 +2218,6 @@ class KYParseHtml(ParserBase):
                         # ol_tag.append(rom_ol_tag)
                         tag.find_previous("li").append(rom_ol_tag)
 
-
                         pre_rom_id = tag.find_previous("li").get("id")
                         tag["id"] = f'{pre_rom_id}i'
 
@@ -2237,10 +2226,10 @@ class KYParseHtml(ParserBase):
 
                         ol_tag3.append(tag)
                         # pre_id = ol_num_id.get("id")
-                        #print(tag.find_previous("li"))
+                        # print(tag.find_previous("li"))
 
                         # print(tag.find_previous("li").get("id"))
-                        pre_id = re.sub(r'\D+$','',tag.find_previous("li").get("id"))
+                        pre_id = re.sub(r'\D+$', '', tag.find_previous("li").get("id"))
                         tag["id"] = f"{pre_id}{tag_id}"
 
 
@@ -2248,8 +2237,8 @@ class KYParseHtml(ParserBase):
                         rom_ol_tag.append(tag)
                         if tag.find_previous("li"):
                             if tag.find_previous("li").get("id"):
-                                pre_rom_id = re.sub(r'\D$','',tag.find_previous("li").get("id"))
-                                cur_rom_id = re.search(r'^[^\s\.]+',current_tag).group()
+                                pre_rom_id = re.sub(r'\D$', '', tag.find_previous("li").get("id"))
+                                cur_rom_id = re.search(r'^[^\s\.]+', current_tag).group()
                                 tag["id"] = f'{pre_rom_id}{cur_rom_id}'
 
                 if tag.span:
@@ -2283,7 +2272,7 @@ class KYParseHtml(ParserBase):
                 # 2.a.
             if re.match(r'(\d+\.(\s*[a-z]\.))', current_tag):
 
-                if re.match(r'(\d+\.(\s*i\.))',current_tag):
+                if re.match(r'(\d+\.(\s*i\.))', current_tag):
                     ol_tag3 = self.soup.new_tag("ol", type="i", **{"class": "roman"})
                     inner_a_tag = self.soup.new_tag("li")
                     tag_text = re.sub(r'(\d+\.(\s*(?P<prev>[a-z])\.))', '', current_tag)
@@ -2291,9 +2280,9 @@ class KYParseHtml(ParserBase):
                     prev = tag.find_previous("li").get("id")
 
                     if prev:
-                        prev = re.sub(r'\d$','',prev)
+                        prev = re.sub(r'\d$', '', prev)
                         curr = re.search(r'(?P<prev>\d+\.\s*[a-z]\.)', current_tag).group("prev")
-                        curr = re.sub(r'[\.\s]','',curr)
+                        curr = re.sub(r'[\.\s]', '', curr)
                         inner_a_tag["id"] = f'{prev}{curr}'
 
                     tag.clear()
@@ -2309,9 +2298,9 @@ class KYParseHtml(ParserBase):
                     prev = tag.find_previous("li").get("id")
 
                     if prev:
-                        prev = re.sub(r'\d$','',prev)
+                        prev = re.sub(r'\d$', '', prev)
                         curr = re.search(r'(?P<prev>\d+\.\s*[a-z]\.)', current_tag).group("prev")
-                        curr = re.sub(r'[\.\s]','',curr)
+                        curr = re.sub(r'[\.\s]', '', curr)
                         inner_a_tag["id"] = f'{prev}{curr}'
 
                     tag.clear()
@@ -2331,7 +2320,7 @@ class KYParseHtml(ParserBase):
                         if not re.match(r'^(ARTICLE)\s*[I,V,X]*',
                                         tag.find_previous("h4").text.strip()) and not re.match(r'Section\s*[A-Z]+\.',
                                                                                                tag.find_previous(
-                                                                                                       "h4").text.strip()):
+                                                                                                   "h4").text.strip()):
                             tag.find_previous("li").append(ol_tag5)
                             main_olcount = 1
                             prev_id = tag.find_previous("li").get("id")
@@ -2361,7 +2350,7 @@ class KYParseHtml(ParserBase):
 
                         if not re.match(r'^(ARTICLE)\s*[I,V,X]*',
                                         tag.find_previous("h4").text.strip()) and not re.match(
-                                r'Section\s*[A-Z]+\.', tag.find_previous("h4").text.strip()):
+                            r'Section\s*[A-Z]+\.', tag.find_previous("h4").text.strip()):
                             if prev_id:
                                 current_id = f"{prev_id}{main_olcount}"
 
@@ -2383,7 +2372,6 @@ class KYParseHtml(ParserBase):
 
         print("ol tag is created")
 
-
     def wrap_with_ordered_tag_4(self):
 
         # pattern = re.compile(r'^(\d+)|^(\(\d+\)|^\(\s*[a-z][a-z]?\s*\))|^([a-z]\.)|^([A-Z]{0,3}\.)|^([a-z]{0,3}\.)')
@@ -2403,7 +2391,6 @@ class KYParseHtml(ParserBase):
         ol_tag1 = self.soup.new_tag("ol")
         ol_tag5 = self.soup.new_tag("ol")
         rom_ol_tag = self.soup.new_tag("ol", type="i", **{"class": "roman"})
-
 
         ol_num = None
         ol_alpha = None
@@ -2427,7 +2414,8 @@ class KYParseHtml(ParserBase):
 
             # I.
             if re.match(r'^([A-Z]{0,3}\.\s*“?[a-zA-Z]+)', current_tag):
-                if re.match(r'^([I,V,X]{0,3}\.)', current_tag) and not re.match(r'^H.', tag.find_previous("li").text.strip()):
+                if re.match(r'^([I,V,X]{0,3}\.)', current_tag) and not re.match(r'^H.',
+                                                                                tag.find_previous("li").text.strip()):
 
                     ol_rom = tag
                     if re.search(r'^(I\.)', current_tag):
@@ -2553,30 +2541,32 @@ class KYParseHtml(ParserBase):
                         # prev_header_id = tag.find_previous("h3").get("id")
                         tag["id"] = f"{prev_header_id}ol{ol_count}{tag_id}"
 
-
             # (a)
             if re.match(alpha_pattern, current_tag):
                 ol_alpha = tag
                 if tag.find_previous("h4"):
-                    if re.search(r'ARTICLE|Section',tag.find_previous("h4").text.strip()):
+                    if re.search(r'ARTICLE|Section', tag.find_previous("h4").text.strip()):
                         prev_header_id = tag.find_previous("h4").get("id")
                     else:
                         prev_header_id = ol_num.get("id")
 
-                if re.match(r'^\(a\)', tag.text.strip()) :
+                if re.match(r'^\(a\)', tag.text.strip()):
                     curr_id = None
 
                     ol_tag2 = self.soup.new_tag("ol", type="a", **{"class": "alpha"})
                     tag.wrap(ol_tag2)
 
-                    if re.match(alpha_pattern, tag.find_previous("li").text.strip()) and tag.find_previous().name == "span":
+                    if re.match(alpha_pattern,
+                                tag.find_previous("li").text.strip()) and tag.find_previous().name == "span":
                         tag.find_previous("li").append(ol_tag2)
                         prev_header_id = tag.find_previous("li").get("id")
                         tag_id = re.search(r'^(\(\s*(?P<id>[a-z][a-z]?)\s*\))', current_tag).group('id')
                         curr_id = f"{prev_header_id}{tag_id}"
                         tag["id"] = f"{prev_header_id}{tag_id}"
 
-                    elif tag.find_previous("ol").find_previous().name == "span" and not re.match(r'ARTICLE|Section',tag.find_previous("ol").find_previous().text.strip()):
+                    elif tag.find_previous("ol").find_previous().name == "span" and not re.match(r'ARTICLE|Section',
+                                                                                                 tag.find_previous(
+                                                                                                         "ol").find_previous().text.strip()):
                         ol_num.append(ol_tag2)
                         tag_id = re.search(r'^(\(\s*(?P<id>[a-z][a-z]?)\s*\))', current_tag).group('id')
                         prev_header_id = ol_num.get("id")
@@ -2584,7 +2574,7 @@ class KYParseHtml(ParserBase):
                         tag["id"] = f"{prev_header_id}{tag_id}"
 
                     else:
-                        if not re.match(r'ARTICLE|Section',tag.find_previous().find_previous().text.strip()):
+                        if not re.match(r'ARTICLE|Section', tag.find_previous().find_previous().text.strip()):
                             if not re.search(r'^[a-zA-Z]+', tag.find_previous().find_previous().text.strip()):
                                 tag.find_previous("li").append(ol_tag2)
                                 tag_id = re.search(r'^(\(\s*(?P<id>[a-z][a-z]?)\s*\))', current_tag).group('id')
@@ -2607,7 +2597,6 @@ class KYParseHtml(ParserBase):
                     ol_tag2.append(tag)
                     tag_id = re.search(r'^(\(\s*(?P<id>[a-z][a-z]?)\s*\))', current_tag).group('id')
                     if tag.find_previous("li").get("id"):
-
 
                         prev_header_id = re.search(r'^.+ol\d\d*', tag.find_previous("li").get("id")).group()
                         tag["id"] = f"{prev_header_id}{tag_id}"
@@ -2675,7 +2664,7 @@ class KYParseHtml(ParserBase):
 
                     ol_tag3 = self.soup.new_tag("ol", type="a", **{"class": "alpha"})
 
-                    if re.search(r'ARTICLE',tag.find_previous().find_previous().text.strip()):
+                    if re.search(r'ARTICLE', tag.find_previous().find_previous().text.strip()):
                         tag.wrap(ol_tag3)
                         prev_id = tag.find_previous("h4").get("id")
                         tag["id"] = f"{prev_id}ol1{tag_id}"
@@ -2711,15 +2700,15 @@ class KYParseHtml(ParserBase):
 
                         ol_tag3.append(tag)
 
-                        pre_id = re.sub(r'\D+$|\D\d+$','',tag.find_previous("li").get("id"))
+                        pre_id = re.sub(r'\D+$|\D\d+$', '', tag.find_previous("li").get("id"))
                         tag["id"] = f"{pre_id}{tag_id}"
 
                     else:
                         rom_ol_tag.append(tag)
                         if tag.find_previous("li"):
                             if tag.find_previous("li").get("id"):
-                                pre_rom_id = re.sub(r'\D+$','',tag.find_previous("li").get("id"))
-                                cur_rom_id = re.search(r'^[^\s\.]+',current_tag).group()
+                                pre_rom_id = re.sub(r'\D+$', '', tag.find_previous("li").get("id"))
+                                cur_rom_id = re.search(r'^[^\s\.]+', current_tag).group()
                                 tag["id"] = f'{pre_rom_id}{cur_rom_id}'
 
                 if tag.span:
@@ -2750,11 +2739,10 @@ class KYParseHtml(ParserBase):
                 tag.contents = []
                 tag.append(ol_tag5)
 
-
                 # 2.a.
             if re.match(r'(\d+\.(\s*[a-z]\.))', current_tag):
 
-                if re.match(r'(\d+\.(\s*i\.))',current_tag):
+                if re.match(r'(\d+\.(\s*i\.))', current_tag):
 
                     rom_ol_tag = self.soup.new_tag("ol", type="i", **{"class": "roman"})
                     inner_a_tag = self.soup.new_tag("li")
@@ -2763,9 +2751,9 @@ class KYParseHtml(ParserBase):
                     prev = tag.find_previous("li").get("id")
 
                     if prev:
-                        prev = re.sub(r'\d$','',prev)
+                        prev = re.sub(r'\d$', '', prev)
                         curr = re.search(r'(?P<prev>\d+\.\s*[a-z]\.)', current_tag).group("prev")
-                        curr = re.sub(r'[\.\s]','',curr)
+                        curr = re.sub(r'[\.\s]', '', curr)
                         inner_a_tag["id"] = f'{prev}{curr}'
 
                     tag.clear()
@@ -2780,15 +2768,14 @@ class KYParseHtml(ParserBase):
                     prev = tag.find_previous("li").get("id")
 
                     if prev:
-                        prev = re.sub(r'\d$','',prev)
+                        prev = re.sub(r'\d$', '', prev)
                         curr = re.search(r'(?P<prev>\d+\.\s*[a-z]\.)', current_tag).group("prev")
-                        curr = re.sub(r'[\.\s]','',curr)
+                        curr = re.sub(r'[\.\s]', '', curr)
                         inner_a_tag["id"] = f'{prev}{curr}'
 
                     tag.clear()
                     ol_tag3.append(inner_a_tag)
                     tag.insert(1, ol_tag3)
-
 
             # 1.
             if re.match(num_pattern, current_tag):
@@ -2799,10 +2786,10 @@ class KYParseHtml(ParserBase):
                     ol_tag5 = self.soup.new_tag("ol")
                     tag.wrap(ol_tag5)
 
-
-                    if re.search(alpha_pattern, tag.find_previous().find_previous().text.strip()) or re.search(r'^\s*[a-zA-Z]+',tag.find_previous().find_previous().text.strip())\
-                        or tag.find_previous().find_previous().text == "":
-                        if not re.match(r'^(ARTICLE)\s*',tag.find_previous("h4").text.strip()):
+                    if re.search(alpha_pattern, tag.find_previous().find_previous().text.strip()) or re.search(
+                            r'^\s*[a-zA-Z]+', tag.find_previous().find_previous().text.strip()) \
+                            or tag.find_previous().find_previous().text == "":
+                        if not re.match(r'^(ARTICLE)\s*', tag.find_previous("h4").text.strip()):
                             ol_tag2.append(ol_tag5)
                             tag.find_previous("li").append(ol_tag5)
                             prev_id = tag.find_previous("li").get("id")
@@ -2821,7 +2808,7 @@ class KYParseHtml(ParserBase):
                         if not re.match(r'^(ARTICLE)\s*[I,V,X]*',
                                         tag.find_previous("h4").text.strip()) and not re.match(r'Section\s*[A-Z]+\.',
                                                                                                tag.find_previous(
-                                                                                              "h4").text.strip()):
+                                                                                                   "h4").text.strip()):
 
                             if tag.find_previous().find_previous().name == "li":
                                 tag.find_previous("li").append(ol_tag5)
@@ -2853,13 +2840,11 @@ class KYParseHtml(ParserBase):
                 elif tag.find_previous("li"):
                     ol_tag5.append(tag)
 
-
-
                     if tag.find_previous("h4"):
 
                         if not re.match(r'^(ARTICLE)\s*[I,V,X]*',
                                         tag.find_previous("h4").text.strip()) and not re.match(
-                                r'Section\s*[A-Z]+\.', tag.find_previous("h4").text.strip()):
+                            r'Section\s*[A-Z]+\.', tag.find_previous("h4").text.strip()):
 
                             prev_id = tag.find_previous("li").get("id")
                             if prev_id:
@@ -2884,7 +2869,61 @@ class KYParseHtml(ParserBase):
 
     def wrap_with_ordered_tag(self):
 
-        for ol_tag in self.soup.find_all(class_=self.class_regex['ol']):
+        """
+            For each tag which has to be converted to orderd list(<ol>)
+            - create new <ol> tags with appropriate type (1, A, i, a ..)
+            - get previous headers id to set unique id for each list item (<li>)
+            - append each li to respective ol accordingly
+        """
+        alpha = 'a'
+        ol_head = 1
+
+        pattern = re.compile(
+            r'^(\d+\.(\s*[a-z]\.)*)|^(\(\d+\)|^\(\s*[a-z][a-z]?\s*\))|^([a-z]\.)|^([A-Z]{0,3}\.\s*“?[a-zA-Z]+)|^([a-z]{0,3}\.)|^[A-Z]\.\s*[a-zA-Z]+')
+        Num_bracket_pattern = re.compile(r'^\(\d+\)')
+        alpha_pattern = re.compile(r'^\(\s*[a-z][a-z]?\s*\)')
+        # alp_pattern = re.compile(r'\(\D+\)')
+        num_pattern = re.compile(r'^\d+\.')
+        # num_pattern1 = re.compile(r'^1\.')
+        numAlpha_pattern = re.compile(r'^\(\d+\)\s\(\D\)')
+        alphanum_pattern = re.compile(r'^\(\D+\)\s(\d)+')
+
+        # alpha_ol_tag = self.soup.new_tag("ol", type="a", **{"class": "alpha"})
+        # cap_alpha_ol_tag = self.soup.new_tag("ol", type="A", **{"class": "alpha"})
+        # rom_ol_tag = self.soup.new_tag("ol", type="i", **{"class": "roman"})
+        # num_ol_tag = self.soup.new_tag("ol")
+        # innr_num_ol_tag = self.soup.new_tag("ol")
+
+        for p_tag in self.soup.find_all("p", class_=self.class_regex['ol']):
+            current_tag = p_tag.text.strip()
+            if re.search(r'^\(\d+\)|^\d+\.',current_tag):
+                if re.search(r'^\(\d+\)',current_tag):
+                    if re.search(r'^\(1\)', current_tag):
+                        num_ol_tag = self.soup.new_tag("ol")
+                        p_tag.wrap(num_ol_tag)
+
+                    else:
+                        print(p_tag)
+                        num_ol_tag.append(p_tag)
+
+
+            # elif re.search(r'^\(\s*[a-z][a-z]?\s*\)|[a-z]\.',current_tag):
+            #     print()
+            # elif re.match(r'^([I,V,X]{0,3}\.)', current_tag):
+            #     print()
+
+
+
+
+
+
+        print('ol tags added')
+
+
+
+
+
+
 
 
 
@@ -2935,7 +2974,7 @@ class KYParseHtml(ParserBase):
                                 'title': '^(CONSTITUTION OF KENTUCKY)|^(THE CONSTITUTION OF THE UNITED STATES OF AMERICA)',
                                 'sec_head': r'^([^\s]+[^\D]+)|^(Section)',
                                 'junk': '^(Text)', 'ol': r'^(\(1\))',
-                                'head4': '^(NOTES TO DECISIONS)|^(Compiler’s Notes.)','nd_nav':r'^1\.'}
+                                'head4': '^(NOTES TO DECISIONS)|^(Compiler’s Notes.)', 'nd_nav': r'^1\.'}
 
             self.get_class_name()
             self.remove_junk()
@@ -2961,9 +3000,7 @@ class KYParseHtml(ParserBase):
             self.create_ul_tag_to_notes_to_decision()
             self.create_and_wrap_with_div_tag()
             self.wrap_with_ordered_tag()
-
-
-
+            # self.create_numberical_ol()
 
         #     self.wrap_with_ordered_tag_4()
         #     self.create_numberical_ol()
@@ -2972,6 +3009,3 @@ class KYParseHtml(ParserBase):
 
         self.write_soup_to_file()
         print(datetime.now() - start_time)
-
-
-
