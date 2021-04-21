@@ -39,8 +39,6 @@ class coParseHtml(ParserBase):
         self.soup.html.attrs['lang'] = 'en'
         print('created soup')
 
-
-
     def get_class_name(self):
 
         """
@@ -57,7 +55,6 @@ class coParseHtml(ParserBase):
         print(self.class_regex)
         print('updated class dict')
 
-
     def remove_junk(self):
         """
                  - Delete the junk tags (empty tags,span tags and unwanted meta tags)
@@ -67,7 +64,6 @@ class coParseHtml(ParserBase):
 
         for junk_tag in self.soup.find_all(class_=self.class_regex['junk']):
             junk_tag.decompose()
-
 
         for meta in self.soup.findAll('meta'):
             if meta.get('name') and meta.get('name') in ['Author', 'Description']:
@@ -82,8 +78,6 @@ class coParseHtml(ParserBase):
             self.soup.head.append(new_meta)
 
         print('junk removed')
-
-
 
     def set_appropriate_tag_name_and_id(self, tag_name, header_tag, chap_nums, prev_id, sub_tag, class_name):
         if re.search('constitution', self.html_file_name):
@@ -127,7 +121,7 @@ class coParseHtml(ParserBase):
 
 
                 elif header_tag.get("class") == [self.class_regex["head2"]]:
-                    if re.search(r'^ARTICLE', header_tag.text.strip(),re.I):
+                    if re.search(r'^ARTICLE', header_tag.text.strip(), re.I):
                         tag_name = "h2"
                         prev_id = None
                         chap_num = None
@@ -140,12 +134,12 @@ class coParseHtml(ParserBase):
                             class_name = "articleh2"
 
                             self.set_appropriate_tag_name_and_id(tag_name, header_tag, chap_num, prev_id, sub_tag,
-                                                                    class_name)
+                                                                 class_name)
 
                     else:
                         tag_name = "h2"
                         prev_id = None
-                        chap_num = re.sub(r'[\s]+','',header_tag.text.strip())
+                        chap_num = re.sub(r'[\s]+', '', header_tag.text.strip())
                         sub_tag = 'c'
                         class_name = "chapterh2"
                         self.set_appropriate_tag_name_and_id(tag_name, header_tag, chap_num, prev_id, sub_tag,
@@ -167,21 +161,21 @@ class coParseHtml(ParserBase):
         for p_tag in self.soup.find_all(class_=self.class_regex['ol']):
             current_p_tag = p_tag.text.strip()
             if re.search('^§', current_p_tag):
-                if re.search('^§',p_tag.find_next("b").text.strip()):
-                    p_tag_text = re.sub(r'^§ \d+\.','',current_p_tag)
-
-                    p_tag.string = p_tag_text
+                if re.search('^§', p_tag.find_next("b").text.strip()):
+                    p_tag.name = "ol"
                     p_tag.find_next("b").name = "h3"
+                    p_tag.unwrap()
+
+
 
 
 
 
                 # else:
-                #     print()
+                #     p_tag.find_next("b").name = "h3"
+                #     p_tag.find_next("b").string = "§" + p_tag.find_next("b").text
 
-
-
-
+        print("tags are recreated")
 
     # writting soup to the file
     def write_soup_to_file(self):
@@ -193,7 +187,8 @@ class coParseHtml(ParserBase):
         """
 
         soup_str = str(self.soup.prettify(formatter=None))
-        with open(f"/home/mis/cic-code-co/transforms/co/occo/r{self.release_number}/{self.html_file_name}", "w") as file:
+        with open(f"/home/mis/cic-code-co/transforms/co/occo/r{self.release_number}/{self.html_file_name}",
+                  "w") as file:
             file.write(soup_str)
 
     # add css file
@@ -223,13 +218,12 @@ class coParseHtml(ParserBase):
         self.create_page_soup()
         self.css_file()
 
-
         if re.search('constitution', self.html_file_name):
             self.class_regex = {'ul': '^(§ )|^(ARTICLE)', 'head2': '^(§ )|^(ARTICLE)',
                                 'title': '^Declaration of Independence|^Constitution of the State of Colorado|^COLORADO COURT RULES',
                                 'sec_head': r'^([^\s]+[^\D]+)|^(Section)',
                                 'junk': '^Statute text', 'ol': r'^(\(1\))',
-                                'head4': '^(NOTES TO DECISIONS)|^(Compiler’s Notes.)','art_head': '^ARTICLE'}
+                                'head4': '^(NOTES TO DECISIONS)|^(Compiler’s Notes.)', 'art_head': '^ARTICLE'}
 
             self.get_class_name()
             self.remove_junk()
@@ -261,4 +255,3 @@ class coParseHtml(ParserBase):
 
         self.write_soup_to_file()
         print(datetime.now() - start_time)
-
