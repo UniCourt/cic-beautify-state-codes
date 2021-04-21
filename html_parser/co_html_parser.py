@@ -183,17 +183,6 @@ class coParseHtml(ParserBase):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
     # writting soup to the file
     def write_soup_to_file(self):
 
