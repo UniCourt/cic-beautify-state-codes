@@ -142,6 +142,55 @@ class coParseHtml(ParserBase):
                             self.set_appropriate_tag_name_and_id(tag_name, header_tag, chap_num, prev_id, sub_tag,
                                                                     class_name)
 
+                    else:
+                        tag_name = "h2"
+                        prev_id = None
+                        chap_num = re.sub(r'[\s]+','',header_tag.text.strip())
+                        sub_tag = 'c'
+                        class_name = "chapterh2"
+                        self.set_appropriate_tag_name_and_id(tag_name, header_tag, chap_num, prev_id, sub_tag,
+                                                             class_name)
+
+                elif header_tag.get("class") == [self.class_regex["art_head"]]:
+                    if re.search(r'^(ARTICLE)', header_tag.text.strip()):
+                        tag_name = "h2"
+                        prev_id = None
+                        chap_num = re.search(r'^(ARTICLE\s*(?P<ar>[I,V,X]{0,3}))', header_tag.text.strip()).group(
+                            "ar").zfill(2)
+                        sub_tag = "-ar"
+                        class_name = "articleh2"
+
+                        self.set_appropriate_tag_name_and_id(tag_name, header_tag, chap_num, prev_id, sub_tag,
+                                                             class_name)
+
+    def recreate_tag(self):
+        for p_tag in self.soup.find_all(class_=self.class_regex['ol']):
+            current_p_tag = p_tag.text.strip()
+            if re.search('^§', current_p_tag):
+                if re.search('^§',p_tag.find_next("b").text.strip()):
+                    p_tag_text = re.sub(r'^§ \d+\.','',current_p_tag)
+
+                    p_tag.string = p_tag_text
+                    p_tag.find_next("b").name = "h3"
+
+
+
+
+                # else:
+                #     print()
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -191,10 +240,11 @@ class coParseHtml(ParserBase):
                                 'title': '^Declaration of Independence|^Constitution of the State of Colorado|^COLORADO COURT RULES',
                                 'sec_head': r'^([^\s]+[^\D]+)|^(Section)',
                                 'junk': '^Statute text', 'ol': r'^(\(1\))',
-                                'head4': '^(NOTES TO DECISIONS)|^(Compiler’s Notes.)'}
+                                'head4': '^(NOTES TO DECISIONS)|^(Compiler’s Notes.)','art_head': '^ARTICLE'}
 
             self.get_class_name()
             self.remove_junk()
+            self.recreate_tag()
             self.replace_tags()
         #     self.create_main_tag()
         #     self.create_ul_tag()
