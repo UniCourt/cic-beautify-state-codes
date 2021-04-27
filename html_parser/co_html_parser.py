@@ -7,9 +7,9 @@ from parser_base import ParserBase
 class coParseHtml(ParserBase):
     def __init__(self, input_file_name):
         super().__init__()
-        self.class_regex = {'ul': '^\d+-\d+-\d+\.', 'head2': '^ARTICLE ',
+        self.class_regex = {'ul': '^Art.', 'head2': '^ARTICLE ',
                             'title': '^(TITLE)|^(CONSTITUTION OF KENTUCKY)',
-                            'sec_head': r'\d+-\d+-\d+\.', 'part_head': '^PART\s\d+',
+                            'sec_head': r'^\d+(\.\d+)*-\d+-\d+\.', 'part_head': '^PART\s\d+',
                             'junk': '^Annotations', 'ol': r'^(\(1\))', 'head4': '^ANNOTATION', 'nd_nav': '^1\.',
                             'Analysis': '^I\.'}
         self.title_id = None
@@ -136,7 +136,8 @@ class coParseHtml(ParserBase):
                         chap_num = None
                         sub_tag = None
 
-                        chap_num = re.search(r'^(ARTICLE\s*(?P<ar>[A-Z]+))', header_tag.text.strip()).group(
+
+                        chap_num = re.search(r'^((ARTICLE|Article)\s*(?P<ar>[A-Z]+|[I,V,X]+))', header_tag.text.strip()).group(
                             "ar").zfill(2)
                         sub_tag = "-ar"
                         class_name = "articleh2"
@@ -155,8 +156,19 @@ class coParseHtml(ParserBase):
                                                              class_name)
 
                 elif header_tag.get("class") == [self.class_regex["art_head"]]:
+                    if re.search(r'^AMENDMENTS', header_tag.text.strip(),re.I):
+                        tag_name = "h2"
+                        prev_id = header_tag.find_previous("h1").get("id")
+                        chap_num = re.sub(r'[\s]+', '', header_tag.text.strip()).lower()
+                        sub_tag = "-am-"
+                        class_name = "amendmenth2"
+
+                        self.set_appropriate_tag_name_and_id(tag_name, header_tag, chap_num, prev_id, sub_tag,
+                                                             class_name)
+
                     if re.search(r'^(ARTICLE)', header_tag.text.strip()):
                         tag_name = "h2"
+
                         prev_id = header_tag.find_previous("h2", class_='amendmenth2').get("id")
                         chap_num = re.search(r'^(ARTICLE\s*(?P<ar>[I,V,X]+))', header_tag.text.strip()).group(
                             "ar").zfill(2)
@@ -168,10 +180,11 @@ class coParseHtml(ParserBase):
 
                 elif header_tag.get("class") == [self.class_regex["sec_head"]]:
                     if re.search(r'^Section\s*[0-9]+[a-z]*\.', header_tag.text.strip()):
-                        tag_name = "h3"
-                        prev_id = header_tag.find_previous("h2").get("id")
                         chap_num = re.search(r'^Section\s*(?P<ar>[0-9]+[a-z]*)\.', header_tag.text.strip()).group(
                             "ar").zfill(2)
+                        tag_name = "h3"
+                        prev_id = header_tag.find_previous("h2").get("id")
+
                         sub_tag = "-s"
                         class_name = "section"
 
@@ -179,7 +192,7 @@ class coParseHtml(ParserBase):
                                                              class_name)
 
                 elif header_tag.get("class") == [self.class_regex["amd"]]:
-                    if re.search(r'^AMENDMENTS', header_tag.text.strip()):
+                    if re.search(r'^AMENDMENTS', header_tag.text.strip(),re.I):
                         tag_name = "h2"
                         prev_id = header_tag.find_previous("h1").get("id")
                         chap_num = re.sub(r'[\s]+', '', header_tag.text.strip()).lower()
@@ -220,20 +233,48 @@ class coParseHtml(ParserBase):
                 elif header_tag.get("class") == [self.class_regex["ul"]]:
                     header_tag.name = "li"
 
-
             # titles
             else:
+                prev_tag = self.soup.find(class_=self.class_regex["ul"])
+                prev_id1 = prev_tag.find_previous(
+                        lambda tag: tag.name in ['p'] and re.search(r'^\w+',
+                                                                    tag.text.strip()))
+                if prev_id1:
+                    if not re.search(r'^Cross references', prev_id1.text.strip()):
+                        self.class_regex['nav_head'] = prev_id1['class']
+
+                    else:
+                        self.class_regex['nav_head'] = None
+
+
                 if header_tag.get("class") == [self.class_regex["title"]]:
-                    self.title_id = re.search(r'^TITLE\s(?P<title_id>\d+)', header_tag.text.strip()).group(
-                        'title_id').zfill(2)
-                    header_tag.name = "h1"
-                    header_tag.attrs = {}
-                    header_tag["id"] = f't{self.title_id}'
+                    if re.search(r'^TITLE\s(?P<title_id>\d+)', header_tag.text.strip()):
+                        self.title_id = re.search(r'^TITLE\s(?P<title_id>\d+)', header_tag.text.strip()).group(
+                            'title_id').zfill(2)
+                        header_tag.name = "h1"
+                        header_tag.attrs = {}
+                        header_tag["id"] = f't{self.title_id}'
+
+                    if re.search(r'^SUBPART\s*(?P<id>\d+)',header_tag.text.strip()):
+                        tag_name = "h2"
+                        prev_id = header_tag.find_previous("h2", class_="parth2").get("id")
+                        chap_num = re.search(r'^SUBPART\s*(?P<id>\d+)', header_tag.text.strip()).group(
+                            "id").zfill(2)
+                        sub_tag = "-sp"
+                        class_name = "subparth2"
+
+                        self.set_appropriate_tag_name_and_id(tag_name, header_tag, chap_num, prev_id, sub_tag,
+                                                             class_name)
+
 
                 elif header_tag.get("class") == [self.class_regex["head2"]]:
                     if re.search(r'^ARTICLE', header_tag.text.strip(), re.I):
                         tag_name = "h2"
-                        prev_id = header_tag.find_previous("h2", class_="gnrlh2").get("id")
+
+                        if header_tag.find_previous("h2", class_="gnrlh2"):
+                            prev_id = header_tag.find_previous("h2", class_="gnrlh2").get("id")
+                        else:
+                            prev_id = None
 
                         chap_num = re.search(r'^(ARTICLE\s*(?P<ar>\d+(\.\d+)*))', header_tag.text.strip()).group(
                             "ar").zfill(2)
@@ -243,9 +284,11 @@ class coParseHtml(ParserBase):
                         self.set_appropriate_tag_name_and_id(tag_name, header_tag, chap_num, prev_id, sub_tag,
                                                              class_name)
 
-                    elif re.search(r'^PART', header_tag.text.strip(), re.I):
+                    elif re.search(r'^PART\s*(?P<ar>\d+)', header_tag.text.strip(), re.I):
                         tag_name = "h2"
                         prev_id = header_tag.find_previous("h2", class_="articleh2").get("id")
+
+
                         chap_num = re.search(r'^PART\s*(?P<ar>\d+)', header_tag.text.strip()).group(
                             "ar").zfill(2)
                         sub_tag = "-p"
@@ -264,17 +307,36 @@ class coParseHtml(ParserBase):
                                                              class_name)
 
 
-                elif header_tag.get("class") == [self.class_regex["part_head"]]:
+                elif header_tag.get("class") == [self.class_regex["part_head"]] or header_tag.get("class") == self.class_regex["nav_head"] :
                     if re.search(r'\w+', header_tag.text.strip()):
                         header_tag["class"] = "nav_head"
 
 
+
+                # elif header_tag.get("class") == self.class_regex["nav_head"]:
+                #     if re.search(r'\w+', header_tag.text.strip()):
+                #         header_tag["class"] = "nav_head"
+                #
+                # elif header_tag.get("class") == [self.class_regex["part_head"]]:
+                #     if re.search(r'^PART', header_tag.text.strip(), re.I):
+                #         tag_name = "h2"
+                #         prev_id = header_tag.find_previous("h2", class_="articleh2").get("id")
+                #         chap_num = re.search(r'^PART\s*(?P<ar>\d+)', header_tag.text.strip()).group(
+                #             "ar").zfill(2)
+                #         sub_tag = "-p"
+                #         class_name = "parth2"
+                #
+                #         self.set_appropriate_tag_name_and_id(tag_name, header_tag, chap_num, prev_id, sub_tag,
+                #                                              class_name)
+
+
+
                 elif header_tag.get("class") == [self.class_regex["sec_head"]]:
-                    if re.search(r'\d+-\d+(\.\d+)*-\d+\.*', header_tag.text.strip(), re.I):
+                    if re.search(r'^\d+(\.\d+)*-\d+(\.\d+)*-\d+\.*', header_tag.text.strip(), re.I):
                         tag_name = "h3"
                         prev_id = header_tag.find_previous("h2").get("id")
 
-                        chap_num = re.search(r'^(?P<sid>\d+-\d+(\.\d+)*-\d+)\.*', header_tag.text.strip()).group(
+                        chap_num = re.search(r'^(?P<sid>\d+(\.\d+)*-\d+(\.\d+)*-\d+)\.*', header_tag.text.strip()).group(
                             "sid").zfill(2)
                         sub_tag = "-s"
                         class_name = "section"
@@ -308,13 +370,21 @@ class coParseHtml(ParserBase):
 
                     else:
                         header_tag.name = "h4"
-                        prev_id = header_tag.find_previous("h3").get("id")
-                        chap_num = re.sub(r'[\s]+', '', header_tag.text.strip()).lower()
-                        header_tag["id"] = f'{prev_id}-{chap_num}'
+                        if header_tag.find_previous("h3"):
+                            prev_id = header_tag.find_previous("h3").get("id")
+                            chap_num = re.sub(r'[\s]+', '', header_tag.text.strip()).lower()
+                            header_tag["id"] = f'{prev_id}-{chap_num}'
+                        else:
+                            chap_num = re.sub(r'[\s]+', '', header_tag.text.strip()).lower()
+                            header_tag["id"] = f't{self.title_id}-{chap_num}'
 
                 elif header_tag.get("class") == [self.class_regex["ul"]]:
                     if not re.search(r'^Section', header_tag.text.strip()):
                         header_tag.name = "li"
+
+
+
+
 
                 elif header_tag.get("class") == [self.class_regex["Analysis"]]:
                     if re.search(r'^[I,V,X]+\.', header_tag.text.strip()):
@@ -434,7 +504,7 @@ class coParseHtml(ParserBase):
             current_li_tag = p_tag.text.strip()
 
             # (1)
-            if re.search(r'^\(\d+\)|^\(\d+\.\d+\)', current_li_tag):
+            if re.search(r'^\(\d+\)', current_li_tag):
                 p_tag.name = "li"
                 num_curr_tag = p_tag
 
@@ -456,31 +526,32 @@ class coParseHtml(ParserBase):
                     ol_list.append(prev_head_id)
                     p_tag["id"] = f'{prev_head_id}ol{ol_count}1'
 
-
-
                 else:
                     if re.search(r'^\(\d+\)', p_tag.find_previous(class_=self.class_regex['ol']).text.strip()):
-                        cur_tag = re.search(r'^\((?P<cid>\d+)\)', current_li_tag).group("cid")
-                        prev_tag = re.search(r'^\((?P<pid>\d+)\)',
-                                             p_tag.find_previous(class_=self.class_regex['ol']).text.strip()).group(
-                            "pid")
+                            cur_tag = re.search(r'^\((?P<cid>\d+)\)', current_li_tag).group("cid")
+                            prev_tag = re.search(r'^\((?P<pid>\d+)\)',
+                                                 p_tag.find_previous(class_=self.class_regex['ol']).text.strip()).group(
+                                "pid")
 
-                        if int(cur_tag) == (int(prev_tag)) + 1:
-                            num_ol_tag.append(p_tag)
+                            if int(cur_tag) == (int(prev_tag)) + 1:
+                                num_ol_tag.append(p_tag)
 
-                        p_tag["id"] = f'{prev_head_id}ol{ol_count}{cur_tag}'
+                            p_tag["id"] = f'{prev_head_id}ol{ol_count}{cur_tag}'
+
+
 
                     elif re.search(r'^\(\D\)|^\([I,V,X]+\)',
                                    p_tag.find_previous(class_=self.class_regex['ol']).text.strip()):
-                        cur_tag = re.search(r'^\((?P<cid>\d+)\)', current_li_tag).group("cid")
-                        prev_tag = re.search(r'^\((?P<pid>\d+)\)', p_tag.find_previous(
-                            lambda tag: tag.name in ['li'] and re.search(r'^\(\d+\)',
-                                                                         tag.text.strip())).text.strip()).group("pid")
 
-                        if int(cur_tag) == (int(prev_tag)) + 1:
-                            num_ol_tag.append(p_tag)
+                            cur_tag = re.search(r'^\((?P<cid>\d+)\)', current_li_tag).group("cid")
+                            prev_tag = re.search(r'^\((?P<pid>\d+)\)', p_tag.find_previous(
+                                lambda tag: tag.name in ['li'] and re.search(r'^\(\d+\)',
+                                                                             tag.text.strip())).text.strip()).group("pid")
 
-                        p_tag["id"] = f'{prev_head_id}ol{ol_count}{cur_tag}'
+                            if int(cur_tag) == (int(prev_tag)) + 1:
+                                num_ol_tag.append(p_tag)
+
+                            p_tag["id"] = f'{prev_head_id}ol{ol_count}{cur_tag}'
 
                 if re.search(r'^\(\d+\)\s\(\D\)', current_li_tag):
                     alpha_ol_tag = self.soup.new_tag("ol", type="a", **{"class": "alpha"})
@@ -507,6 +578,40 @@ class coParseHtml(ParserBase):
                         innr_num_ol_tag.append(inner_li_tag)
                         p_tag.insert(1, innr_num_ol_tag)
                         innr_num_ol_tag.find_previous().string.replace_with(innr_num_ol_tag)
+
+
+            # (2.5)
+            elif re.search(r'^\(\d+\.\d+\)', current_li_tag):
+                p_tag.name = "p"
+
+                prev_tag = p_tag.find_previous(
+                    lambda tag: tag.name in ['li'] and re.search(r'^\(\d+\)',
+                                                                 tag.text.strip()))
+
+                prev_id  = re.search(r'^\((?P<pid>\d+)\)', p_tag.find_previous(
+                    lambda tag: tag.name in ['li'] and re.search(r'^\(\d+\)',
+                                                                 tag.text.strip())).text.strip()).group("pid")
+
+                cur_tag = re.search(r'^\((?P<cid>\d+)\.\d+\)', current_li_tag).group("cid")
+
+                print(cur_tag)
+                print(prev_id)
+                print(prev_tag)
+
+                if cur_tag == prev_id:
+
+                    prev_tag.append(p_tag)
+
+
+
+
+
+
+
+
+
+
+
 
 
             # (a)
@@ -674,7 +779,6 @@ class coParseHtml(ParserBase):
         list_item.contents = nav_list
 
     def create_chapter_section_nav(self):
-
         count = 0
         for list_item in self.soup.find_all(class_=self.class_regex['ul']):
             if re.search('constitution', self.html_file_name):
@@ -717,35 +821,55 @@ class coParseHtml(ParserBase):
 
                         self.set_chapter_section_nav(list_item, chap_num, sub_tag, prev_id, None)
 
+
+            #title
             else:
                 if re.match(r'^Art\.\s*\d+\.', list_item.text.strip()):
                     chap_num = re.search(r'^Art\.\s*(?P<id>\d+(\.\d+)*)\.',
                                          list_item.text.strip()).group(
                         "id").zfill(2)
-                    sub_tag = "-ar"
-                    prev_tag = list_item.find_previous("p", class_="nav_head").text.strip()
-                    prev_id1 = re.sub(r'[\s]+', '', prev_tag).lower()
-                    prev_id = f't{self.title_id}-{prev_id1}'
+
+                    if list_item.find_previous("p", class_="nav_head"):
+                        sub_tag = "-ar"
+                        prev_id1 = re.sub(r'[\s]+', '', list_item.find_previous("p", class_="nav_head").text.strip()).lower()
+                        prev_id = f't{self.title_id}-{prev_id1}'
+                    else:
+                        sub_tag = "ar"
+                        prev_id = None
 
                     self.set_chapter_section_nav(list_item, chap_num, sub_tag, prev_id, None)
 
 
-                elif re.match(r'^(?P<id>\d+-\d+(\.\d+)*-\d+)\.*', list_item.text.strip()):
-                    chap_num = re.search(r'^(?P<id>\d+-\d+(\.\d+)*-\d+)\.*', list_item.text.strip()).group("id").zfill(
+                elif re.match(r'^(?P<id>\d+(\.\d+)*-\d+(\.\d+)*-\d+)\.*', list_item.text.strip()):
+                    chap_num = re.search(r'^(?P<id>\d+(\.\d+)*-\d+(\.\d+)*-\d+)\.*', list_item.text.strip()).group("id").zfill(
                         2)
 
                     if re.match(r'^Section', list_item.find_previous("p").text.strip()):
                         prev_id = list_item.find_previous("h2", class_="articleh2").get("id")
                     else:
-                        prev_id1 = list_item.find_previous("h2", class_="articleh2").get("id")
-                        prev_id2 = re.search(r'^PART\s*(?P<id>\d+)',
-                                             list_item.find_previous("p", class_="nav_head").text.strip()).group(
-                            "id").zfill(2)
-                        prev_id = f"{prev_id1}-p{prev_id2}"
+                        # prev_id1 = list_item.find_previous("h2", class_="articleh2").get("id")
+
+                        if re.search(r'^PART\s*(?P<id>\d+)',list_item.find_previous("p", class_="nav_head").text.strip()):
+                            prev_id1 = list_item.find_previous("h2", class_="articleh2").get("id")
+                            prev_id2 = re.search(r'^PART\s*(?P<id>\d+)',
+                                                 list_item.find_previous("p", class_="nav_head").text.strip()).group(
+                                "id").zfill(2)
+                            prev_id = f"{prev_id1}-p{prev_id2}"
+                            prev_id4 = f"{prev_id1}-p{int(prev_id2)+1:02}"
+
+                        elif re.search(r'^SUBPART\s*(?P<id>\d+)',list_item.find_previous("p", class_="nav_head").text.strip()):
+                            prev_id1 = prev_id4
+                            prev_id2 = re.search(r'^SUBPART\s*(?P<id>\d+)',
+                                                 list_item.find_previous("p", class_="nav_head").text.strip()).group(
+                                "id").zfill(2)
+                            prev_id = f"{prev_id1}-sp{prev_id2}"
+                        else:
+                            prev_id = list_item.find_previous("h2", class_="parth2").get("id")
 
                     sub_tag = "-s"
 
                     self.set_chapter_section_nav(list_item, chap_num, sub_tag, prev_id, None)
+
 
         ul_analy_tag = self.soup.new_tag("ul", **{"class": "leaders"})
         num_ul_analy_tag = self.soup.new_tag("ul", **{"class": "leaders"})
@@ -755,62 +879,64 @@ class coParseHtml(ParserBase):
                 if re.search('constitution', self.html_file_name):
                     prev_id = li_tag.find_previous("h4").get("id")
                     chap_num = re.sub(r'[\s.]+', '', li_tag.text.strip()).lower()
+                    sub_tag = "-"
+                    self.set_chapter_section_nav(li_tag, chap_num, sub_tag, prev_id, None)
                 else:
                     if re.search(r'^[A-HJ-UW-Z]\.', li_tag.text.strip()):
                         if re.search(r'^A\.', li_tag.text.strip()):
                             ul_analy_tag = self.soup.new_tag("ul", **{"class": "leaders"})
                             prev_li = li_tag.find_previous("li")
-
                             li_tag.wrap(ul_analy_tag)
                             prev_li.append(ul_analy_tag)
-                            prev_id = prev_li.get("id")
 
-                            prev_id = re.sub(r'^#','',li_tag.find_previous(
+                            if li_tag.find_previous(
                                 lambda tag: tag.name in ['a'] and re.search(r'^[I,V,X]+\.',
-                                                                            tag.text.strip())).get("href"))
-                            chap_num = "a"
+                                                                            tag.text.strip())):
+                                prev_id1 = re.sub(r'^#','',li_tag.find_previous(
+                                    lambda tag: tag.name in ['a'] and re.search(r'^[I,V,X]+\.',
+                                                                                tag.text.strip())).get("href"))
+                            else:
+                                prev_id1 = None
 
+                            chap_num = "A"
                         else:
-                            prev_id = re.sub(r'^#', '', li_tag.find_previous(
-                                lambda tag: tag.name in ['a'] and re.search(r'^[I,V,X]+\.',
-                                                                            tag.text.strip())).get("href"))
-
                             chap_num = re.search(r'^(?P<id>[A-HJ-UW-Z])\.', li_tag.text.strip()).group("id")
                             ul_analy_tag.append(li_tag)
+                        sub_tag = "-"
+                        self.set_chapter_section_nav(li_tag, chap_num, sub_tag, prev_id1, None)
 
                     elif re.search(r'^[1-9]\.', li_tag.text.strip()):
                         if re.search(r'^1\.', li_tag.text.strip()):
                             num_ul_analy_tag = self.soup.new_tag("ul", **{"class": "leaders"})
                             prev_li = li_tag.find_previous("li")
-
                             li_tag.wrap(num_ul_analy_tag)
                             prev_li.append(num_ul_analy_tag)
-
-                            prev_id = re.sub(r'^#', '', li_tag.find_previous(
+                            prev_id2 = re.sub(r'^#', '', li_tag.find_previous(
                                 lambda tag: tag.name in ['a'] and re.search(r'^[A-Z]+\.',
                                                                             tag.text.strip())).get("href"))
                             chap_num = "1"
-                        else:
-                            prev_id = re.sub(r'^#', '', li_tag.find_previous(
-                                lambda tag: tag.name in ['a'] and re.search(r'^[A-Z]+\.',
-                                                                            tag.text.strip())).get("href"))
 
+                        else:
                             chap_num = re.search(r'^(?P<id>[1-9])\.', li_tag.text.strip()).group("id")
                             num_ul_analy_tag.append(li_tag)
+                        sub_tag = "-"
+                        self.set_chapter_section_nav(li_tag, chap_num, sub_tag, prev_id2, None)
 
+                    if re.search(r'^[I,V,X]+\.',li_tag.text.strip()):
+                        if re.search(r'^I\.',li_tag.text.strip()) and re.search(r'^H\.',li_tag.find_previous("li").text.strip()):
+                            ul_analy_tag.append(li_tag)
+                            prev_id3 = prev_id1
 
-                    elif re.search(r'[I,V,X]',li_tag.text.strip()):
-                        if re.search(r'^I\.',li_tag.text.strip()):
-                            prev_id1 = li_tag.find_previous("h4").get("id")
-
+                        elif re.search(r'^I\.',li_tag.text.strip()):
+                            prev_id3 = li_tag.find_previous("h4").get("id")
 
                         chap_num = re.search(r'^(?P<ar>[I,V,X]+)',li_tag.text.strip()).group("ar")
-                        prev_id = prev_id1
+                        prev_id = prev_id3
+                        sub_tag = "-"
+                        self.set_chapter_section_nav(li_tag, chap_num, sub_tag, prev_id, None)
 
 
-                sub_tag = "-"
 
-                self.set_chapter_section_nav(li_tag, chap_num, sub_tag, prev_id, None)
 
     def write_soup_to_file(self):
 
@@ -866,18 +992,31 @@ class coParseHtml(ParserBase):
             self.replace_tags()
             self.create_ul_tag()
             self.create_chapter_section_nav()
-            # self.create_and_wrap_with_ol_tag()
+            self.create_and_wrap_with_ol_tag()
+
+
 
         #     self.create_and_wrap_with_div_tag()
         #     self.add_citation1()
         #     self.add_watermark_and_remove_class_name()
+
 
         else:
             self.get_class_name()
             self.remove_junk()
             self.replace_tags()
             self.create_ul_tag()
+
             self.create_chapter_section_nav()
+
+
+
+
+
+
+
+
+
 
         #     self.get_class_name()
         #     self.remove_junk()
@@ -895,3 +1034,5 @@ class coParseHtml(ParserBase):
 
         self.write_soup_to_file()
         print(datetime.now() - start_time)
+
+# --input_file_name gov.co.crs.title.01.html
