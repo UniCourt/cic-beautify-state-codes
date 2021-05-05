@@ -1224,33 +1224,50 @@ class coParseHtml(ParserBase):
         previous_inner_li = None
         previous_roman_li = None
         alpha_li_id = None
-        ol_count = 0
+        ol_count = 1
         sub_ol_id = None
         sec_sub_ol = None
         sec_sub_li = None
         sub_alpha_ol = None
         prev_chap_id = None
+        ol_list = []
 
 
         for p_tag in self.soup.find_all():
+
             current_tag_text = p_tag.text.strip()
             if re.search(rf'^\({ol_head}\)',current_tag_text):
                 p_tag.name = "li"
                 main_sec_alpha = "a"
+                cap_alpha = 'A'
 
+                num_cur_tag = p_tag
 
                 if re.search(r'^\(1\)', current_tag_text):
                     num_ol = self.soup.new_tag("ol")
                     p_tag.wrap(num_ol)
 
+                    prev_head_id = p_tag.find_previous(["h4","h3"]).get("id")
+                    if prev_head_id  in ol_list:
+                        ol_count += 1
+                    else:
+                        ol_count = 1
+                    ol_list.append(prev_head_id)
                 else:
                     num_ol.append(p_tag)
+
+                prev_id = f'{prev_head_id}ol{ol_count}{ol_head}'
+
+                p_tag["id"] = f'{prev_head_id}ol{ol_count}{ol_head}'
                 ol_head += 1
+
+
 
                 if re.search(r'^\(\d+\)\s\(\w\)', current_tag_text):
                     alpha_ol = self.soup.new_tag("ol", Class="alpha")
                     li_tag = self.soup.new_tag("li")
                     li_tag.append(current_tag_text)
+                    alpha_cur_tag = li_tag
 
                     cur_tag = re.search(r'^\((?P<cid>\d+)\)\s\((?P<pid>\w)\)', current_tag_text)
                     # prev_tag_id = f'{prev_head_id}ol{ol_count}{cur_tag.group("cid")}'
@@ -1266,6 +1283,7 @@ class coParseHtml(ParserBase):
                         inner_li_tag = self.soup.new_tag("li")
                         inner_li_tag.append(current_tag_text)
                         li_tag["class"] = self.class_regex['ol']
+                        rom_cur_tag= li_tag
 
                         cur_tag = re.search(r'^\((?P<id1>\d+)\)\s*\((?P<cid>\w)\)\s*\((?P<id2>[I,V,X]+)\)', current_tag_text)
                         # inner_li_tag[
@@ -1275,10 +1293,32 @@ class coParseHtml(ParserBase):
                         p_tag.insert(1, roman_ol)
                         roman_ol.find_previous().string.replace_with(roman_ol)
 
+                        if re.search(r'^\(\d+\)\s*\(\w\)\s*\([I,V,X]+\)\s*\(\w\)', current_tag_text):
+                            cap_alpha_ol = self.soup.new_tag("ol", type="A")
+                            inner_li_tag = self.soup.new_tag("li")
+                            inner_li_tag.append(current_tag_text)
+                            li_tag["class"] = self.class_regex['ol']
+
+
+                            cur_tag = re.search(r'^\((?P<id1>\d+)\)\s*\((?P<cid>\w)\)\s*\((?P<id2>[I,V,X]+)\)\s*\((?P<id3>\w)\)',
+                                                current_tag_text)
+                            # inner_li_tag[
+                            #         "id"] = f'{prev_head_id}ol{ol_count}{cur_tag.group("id1")}{cur_tag.group("cid")}{cur_tag.group("id2")}'
+
+                            cap_alpha_ol.append(inner_li_tag)
+                            p_tag.insert(1, cap_alpha_ol)
+                            cap_alpha_ol.find_previous().string.replace_with(cap_alpha_ol)
+                            cap_alpha = "B"
 
 
             elif re.search(r'^\(\d+\.\d+\)', current_tag_text):
-                num_ol.append(p_tag)
+
+                cur_tag = re.search(r'^\((?P<cid>\d+\.\d+)\)', current_tag_text).group("cid")
+                p_tag["id"] = f'{prev_id}-{cur_tag}'
+                num_cur_tag.append(p_tag)
+                main_sec_alpha = "a"
+                num_cur_tag = p_tag
+
 
                 if re.search(r'^\(\d+\.\d+\)\s\(\w\)', current_tag_text):
                     alpha_ol = self.soup.new_tag("ol", Class="alpha")
@@ -1301,20 +1341,28 @@ class coParseHtml(ParserBase):
             elif re.search(rf'^\({main_sec_alpha}\)', current_tag_text):
                 p_tag.name = "li"
 
+                alpha_cur_tag = p_tag
+
                 if re.search(r'^\(a\)', current_tag_text):
                     alpha_ol = self.soup.new_tag("ol", Class="alpha")
                     p_tag.wrap(alpha_ol)
-                    num_ol.append(alpha_ol)
+                    num_cur_tag.append(alpha_ol)
+
                 else:
                     alpha_ol.append(p_tag)
+
+                p_tag["id"] = f'{prev_head_id}ol{ol_count}{main_sec_alpha}'
                 main_sec_alpha = chr(ord(main_sec_alpha)+1)
 
+
                 if re.search(r'^\(\w\)\s*\([I,V,X]+\)', current_tag_text):
+
 
                     roman_ol = self.soup.new_tag("ol", type="I")
                     li_tag = self.soup.new_tag("li")
                     li_tag.append(current_tag_text)
                     li_tag["class"] = self.class_regex['ol']
+                    rom_cur_tag = li_tag
 
                     cur_tag = re.search(r'^\((?P<cid>\w+)\)\s*\((?P<pid>[I,V,X]+)\)', current_tag_text)
                             # prev_tag_id = f'{prev_head_id}ol{ol_count}{cur_tag.group("cid")}'
@@ -1328,22 +1376,51 @@ class coParseHtml(ParserBase):
 
             elif re.search(r'^\(\w+\.\w+\)', current_tag_text):
                 alpha_ol.append(p_tag)
+                alpha_cur_tag = p_tag
 
+            # I
             elif re.search(r'^\([IVX]+\)',current_tag_text):
                 p_tag.name = "li"
-                if re.search(r'\(I\)',current_tag_text):
+                rom_cur_tag = p_tag
+                if re.search(r'^\(I\)',current_tag_text):
                     roman_ol = self.soup.new_tag("ol", type="I")
                     p_tag.wrap(roman_ol)
-                    alpha_ol.append(roman_ol)
+                    alpha_cur_tag.append(roman_ol)
+                    p_tag["id"] = f'{prev_head_id}ol{ol_count}I'
                 else:
+                    cur_tag = re.search(r'^\((?P<cid>[IVX]+)\)',current_tag_text).group("cid")
                     roman_ol.append(p_tag)
+                    p_tag["id"] = f'{prev_head_id}ol{ol_count}{cur_tag}'
 
 
 
 
 
-            if re.search(r'^Source',current_tag_text):
+
+            #  A
+
+            elif re.search(rf'^\({cap_alpha}\)', current_tag_text):
+                p_tag.name = "li"
+
+                if re.search(r'^\(A\)', current_tag_text):
+                    cap_alpha_ol = self.soup.new_tag("ol", type="A")
+                    p_tag.wrap(cap_alpha_ol)
+                    rom_cur_tag.append(cap_alpha_ol)
+                else:
+                    cap_alpha_ol.append(p_tag)
+
+                cap_alpha = chr(ord(cap_alpha)+1)
+
+
+
+
+
+
+
+
+            if re.search(r'^Source|^Cross references:',current_tag_text) or p_tag.name in ['h3','h4']:
                 ol_head = 1
+
 
 
 
@@ -1372,13 +1449,16 @@ class coParseHtml(ParserBase):
                 if list_item.find_previous().name == "li":
                     ul_tag.append(list_item)
                 else:
+                    if re.search(r'^I.',ul_tag.text.strip()):
+                        print(ul_tag)
+                        print(ul_tag.find_previous())
                     ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
                     list_item.wrap(ul_tag)
 
-                    if ul_tag.find_previous().find_previous().name == "h1":
-                        ul_tag.find_previous("nav").append(ul_tag)
-                    else:
-                        ul_tag.wrap(self.soup.new_tag("nav"))
+                    # if ul_tag.find_previous().find_previous().name == "h1":
+                    #     ul_tag.find_previous("nav").append(ul_tag)
+                    # else:
+                    #     ul_tag.wrap(self.soup.new_tag("nav"))
 
         print("ul tag is created")
 
@@ -1913,7 +1993,7 @@ class coParseHtml(ParserBase):
             self.create_ul_tag()
             self.create_chapter_section_nav()
             self.create_and_wrap_with_div_tag()
-            self.create_and_wrap_with_ol_tag()
+            # self.create_and_wrap_with_ol_tag()
             self.add_citation()
 
 
