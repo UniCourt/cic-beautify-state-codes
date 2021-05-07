@@ -1362,6 +1362,7 @@ class coParseHtml(ParserBase):
                             cap_alpha = "B"
 
 
+            # 1.5
             elif re.search(r'^\(\d+\.\d+\)', current_tag_text):
 
                 cur_tag = re.search(r'^\((?P<cid>\d+\.\d+)\)', current_tag_text).group("cid")
@@ -1370,6 +1371,7 @@ class coParseHtml(ParserBase):
 
                 if not re.search(r'^\(\d+\.\d+\)', p_tag.find_next().text.strip()):
                     prev_num_id = f'{prev_num_id}-{cur_tag}'
+                    p_tag.name = "div"
 
                 prev_num_tag.append(p_tag)
                 main_sec_alpha = "a"
@@ -1377,13 +1379,11 @@ class coParseHtml(ParserBase):
                 num_cur_tag = p_tag
 
 
-
-
-
                 if re.search(r'^\(\d+\.\d+\)\s\(\w\)', current_tag_text):
                     alpha_ol = self.soup.new_tag("ol", Class="alpha")
                     li_tag = self.soup.new_tag("li")
                     li_tag.append(current_tag_text)
+                    alpha_cur_tag = li_tag
 
                     cur_tag = re.search(r'^\((?P<cid>\d+\.\d+)\)\s\((?P<pid>\w)\)', current_tag_text)
                     prev_alpha_id = f'{prev_head_id}ol{ol_count}{cur_tag.group("cid")}{cur_tag.group("pid")}'
@@ -1469,7 +1469,7 @@ class coParseHtml(ParserBase):
 
 
 
-
+            # a.5
             elif re.search(r'^\(\w+\.\d+\)', current_tag_text):
 
                 cur_tag = re.search(r'^\((?P<cid>\w+\.\d+)\)', current_tag_text).group("cid")
@@ -1480,8 +1480,9 @@ class coParseHtml(ParserBase):
                     lambda tag: tag.name in ['li'] and re.search(r'^\(\w+\)', tag.text.strip()))
 
 
-                if not re.search(r'^\(\w+\.\d+\)', p_tag.find_next().text.strip()):
+                if not re.search(r'^\(\w+\.\d+\)', p_tag.find_next().text.strip()) and  re.search(r'^\([A-Z]\)', p_tag.find_next().text.strip()):
                     prev_alpha_id = f'{prev_alpha_id}-{cur_tag}'
+                    p_tag.name = "div"
 
                 prev_alpha_tag.append(p_tag)
                 alpha_cur_tag = p_tag
@@ -1501,30 +1502,57 @@ class coParseHtml(ParserBase):
                     p_tag.contents = []
                     p_tag.append(roman_ol)
 
+
+
+
+                    if re.search(r'^\(\w\.\d+\)\s*\([I,V,X]+\)\s*\(\w\)', current_tag_text):
+                        cap_alpha_ol = self.soup.new_tag("ol", type="A")
+                        inner_li_tag = self.soup.new_tag("li")
+                        inner_li_tag.append(current_tag_text)
+                        li_tag["class"] = self.class_regex['ol']
+
+                        cur_tag = re.search(
+                            r'^\((?P<cid>\w\.\d+)\)\s*\((?P<id2>[I,V,X]+)\)\s*\((?P<id3>\w)\)',
+                            current_tag_text)
+                        inner_li_tag[
+                            "id"] = f'{prev_head_id}ol{ol_count}{cur_tag.group("cid")}{cur_tag.group("id2")}{cur_tag.group("id3")}'
+
+                        cap_alpha_ol.append(inner_li_tag)
+                        p_tag.insert(1, cap_alpha_ol)
+                        cap_alpha_ol.find_previous().string.replace_with(cap_alpha_ol)
+                        cap_alpha = "B"
+
+
+
+
             # I
             elif re.search(r'^\([IVX]+\)',current_tag_text):
                 p_tag.name = "li"
                 rom_cur_tag = p_tag
                 cap_alpha = "A"
+
+
                 if re.search(r'^\(I\)',current_tag_text):
-                    roman_ol = self.soup.new_tag("ol", type="I")
-                    p_tag.wrap(roman_ol)
-                    alpha_cur_tag.append(roman_ol)
-
-                    p_tag["id"] = f'{prev_alpha_id}I'
-
-                    prev_cap_alpha_tag = p_tag.find_previous(
-                        lambda tag: tag.name in ['p', 'li'] and re.search(r'^\([A-Z]\)', tag.text.strip()))
-
+                    prev_cap_alpha_tag = p_tag.find_previous( lambda tag: tag.name in ['li'] and re.search(r'^\([A-Z]\)', tag.text.strip()))
                     if prev_cap_alpha_tag:
                         if not re.search(r'^\(H\)',prev_cap_alpha_tag.text.strip()):
-                            continue
+
+                            roman_ol = self.soup.new_tag("ol", type="I")
+                            p_tag.wrap(roman_ol)
+                            alpha_cur_tag.append(roman_ol)
+                            p_tag["id"] = f'{prev_alpha_id}I'
+
                         else:
                             cap_alpha_ol.append(p_tag)
-                            roman_ol.unwrap()
-                            p_tag["id"] = f'{prev_rom_id}{cap_alpha}'
+                            p_tag["id"] = f'{prev_rom_id}I'
+                    else:
+                        roman_ol = self.soup.new_tag("ol", type="I")
+                        p_tag.wrap(roman_ol)
+                        alpha_cur_tag.append(roman_ol)
+                        p_tag["id"] = f'{prev_alpha_id}I'
 
                     prev_rom_id = f'{prev_alpha_id}I'
+
                 else:
                     cur_tag = re.search(r'^\((?P<cid>[IVX]+)\)',current_tag_text).group("cid")
                     roman_ol.append(p_tag)
@@ -1898,30 +1926,82 @@ class coParseHtml(ParserBase):
 
     # citation
     def add_citation(self):
-
+        title_no = 'title01'
 
         class_dict = {'co_code':'Colo\.\s*\d+',
                       'co_law':'Colo\.\s*Law\.\s*\d+|L\.\s*\d+,\s*p\.\s*\d+',
                       'denv_law':'\d+\s*Denv\.\s*L\.\s*Rev\.\s*\d+',
                       'COA':'\d{4}\s*COA\s*\d+'}
 
+        title01 = {'GENERAL, PRIMARY, RECALL, AND CONGRESSIONAL VACANCY ELECTIONS': ['1', '1.5', '2', '3', '4', '5', '5.5',
+                   '6', '7', '7.5', '8', '8.3', '8.5', '9', '10','10.5', '11', '12', '12', '13', '13.5', '14','15', '16', '17'],
+         'OTHER ELECTION OFFENSES': ['30'], 'INITIATIVE AND REFERENDUM': ['40'], 'ODD-YEAR ELECTIONS': ['41'], 'ELECTION CAMPAIGN REGULATIONS': ['45']}
 
-        #
-        # for tag in self.soup.find_all(["p", "li"]):
-        #     if re.search(r"Colo\.\s*\d+|Colo\.\s*Law\.\s*\d+|"
-        #                  r"\d+\s*Denv\.\s*L\.\s*Rev\.\s*\d+|"
-        #                  r"\d{4}\s*COA\s*\d+|"
-        #                  r"L\.\s*\d+,\s*p\.\s*\d+", tag.text.strip()):
-        #         # cite_li_tags.append(tag)
-        #         text = str(tag)
-        #         for key, value in class_dict.items():
-        #             for match in [x for x in re.findall(value, tag.get_text(), re.I)]:
-        #                 inside_text = re.sub(r'<p\sclass="\w\d+">|</p>|<b>|</b>', '', text, re.DOTALL)
-        #                 tag.clear()
-        #                 text = re.sub(re.escape(match),
-        #                               f'<cite class="{key}">{match}</cite>',
-        #                               inside_text, re.I)
-        #                 tag.append(text)
+        title02 = {'CONGRESSIONAL DISTRICTS': ['1'], 'GENERAL ASSEMBLY': ['2'], 'LEGISLATIVE SERVICES': ['3'],
+                   'STATUTES - CONSTRUCTION AND REVISION': ['4', '5'], 'MISCELLANEOUS': ['6', '7']}
+
+        title03 = {'JURISDICTION': ['1', '2', '3']}
+
+        title05 = {'CONSUMER CREDIT CODE': ['1', '2', '3', '3.1', '3.5', '3.7', '4', '5', '6', '7', '9'],
+                   'REFUND ANTICIPATION LOANS': ['9.5'], 'RENTAL PURCHASE': ['10'], 'INTEREST RATES': ['12', '13'],
+                   'DEBT MANAGEMENT': ['16', '17', '18', '19', '20']}
+
+        title06 = {'FAIR TRADE AND RESTRAINT OF TRADE': ['1', '2', '2.5', '3', '4', '5', '6', '6.5'],
+                   'ENERGY AND WATER CONSERVATION': ['7', '7.5'],
+                   'AGRICULTURAL ASSISTANCE': ['8', '9'], 'ASSIGNMENTS IN GENERAL': ['10'],
+                   'PATENTS - PROHIBITED COMMUNICATION': ['12'],
+                   'ENFORCEMENT OF NONDRAMATIC MUSIC COPYRIGHTS': ['13'], 'ART TRANSACTIONS': ['15'],
+                   'CHARITABLE SOLICITATIONS': ['16'],
+                   'RECORDS RETENTION': ['17'], 'HEALTH CARE COVERAGE COOPERATIVES': ['18'],
+                   'TRANSACTIONS INVOLVING LICENSED HOSPITALS': ['19'],
+                   'HOSPITAL DISCLOSURES TO CONSUMERS': ['20'],
+                   'PROTECTION AGAINST EXPLOITATION OF AT-RISK ADULTS': ['21'],
+                   'RESIDENTIAL ROOFING SERVICES': ['22'], 'DIRECT PRIMARY HEALTH CARE': ['23'], 'CEMETERIES': ['24'],
+                   'PUBLIC ESTABLISHMENTS': ['25'], 'INTERNET SERVICE PROVIDERS': ['26']}
+        title07= {'Colorado Corporation Code': ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'],
+                  'Nonprofit Corporation': ['20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30'],
+                  'Special Purpose Corporations': ['40', '41', '42', '43', '44', '45', '46', '47', '48', '49', '49.5'],
+                  'Religious and Benevolent Organizations': ['50', '51', '52'],
+                  'ASSOCIATIONS': ['55', '56', '57', '58'],
+                  'PARTNERSHIPS': ['60', '61', '62', '63', '64'],
+                  'TRADEMARKS AND BUSINESS NAMES': ['70', '71', '72', '73'],
+                  'TRADE SECRETS': ['74'], 'LIMITED LIABILITY COMPANIES': ['80'],
+                  'CORPORATIONS AND ASSOCIATIONS': ['90'],
+                  'Colorado Business Corporations': ['101', '102', '103', '104', '105', '106', '107', '108', '109',
+                                                     '110', '111', '112', '113', '114', '115', '116', '117'],
+                  'Nonprofit Corporations': ['121', '122', '123', '124', '125', '126', '127', '128', '129', '130','131','132','134','135', '136', '137']}
+
+        title08 = {'Division of Labor - Industrial Claim Appeals Office': ['1'],
+                   'Labor Relations': ['2', '2.5', '3', '3.5'],
+                   'Wages': ['4', '5', '6', '7', '8', '9', '10'],
+                   'Labor Conditions': ['11', '12', '13', '13.3', '13.5', '14', '14.3'],
+                   'Workers\' Compensation Cost Containment':['14.5'],'Apprenticeship and Training':['15','15.5'],
+                   'Public Works': ['16', '17', '17.5', '18', '19', '19.5', '19.7'], 'Fuel Products': ['20', '20.5'],
+                   'Workers\' Compensation':['40','41','42','43','44','45','46','47'],
+                   'Workmen\'s Compensation': ['48', '49','50','51','52','53','54'],'Workers\'Compensation - Continued':['55'],
+                   'Occupational Diseases':['60'],'MedicalInsuranceProvisions':['65','66','67'],
+                   'LABOR III - EMPLOYMENT SECURITY': ['70', '71', '72', '73', '74', '75', '76', '77', '78', '79', '80', '81','82'],
+                   'EMPLOYMENT AND TRAINING': ['83', '84'], 'INDEPENDENT LIVING SERVICES': ['85', '86']}
+
+        title09 = {'BUILDINGS AND EQUIPMENT': ['1', '1.3', '1.5', '2', '2.5', '3', '4', '5', '5.5'],
+                   'EXPLOSIVES': ['6', '7'], 'SPECIAL SAFETY PROVISIONS': ['10']}
+
+        title10 = {'GENERAL PROVISIONS': ['1'], 'LICENSES': ['2'], 'REGULATION OF INSURANCE COMPANIES': ['3'],
+                   'CERTIFIED CAPITAL COMPANIES': ['3.5'], 'PROPERTY AND CASUALTY INSURANCE': ['4'],
+                   'NONADMITTED INSURANCE': ['5'],
+                   'CAPTIVE INSURANCE COMPANIES': ['6'], 'LIFE INSURANCE': ['7'], 'COVERCOLORADO': ['8'],
+                   'FRANCHISE INSURANCE': ['9'],
+                   'CREDIT INSURANCE': ['10'], 'TITLE INSURANCE': ['11'], 'MUTUAL INSURANCE': ['12'],
+                   'INTERINSURANCE': ['13'],'FRATERNAL BENEFIT SOCIETIES': ['14'], 'PRENEED FUNERAL CONTRACTS': ['15'],
+                   'HEALTH CARE COVERAGE':['16','16.5'],'HEALTH MAINTENANCE ORGANIZATIONS':['17'],
+                   'MEDICARESUPPLEMENT INSURANCE':['18'],'LONG-TERM CARE': ['19'], 'LIFE AND HEALTH INSURANCE PROTECTION': ['20'],
+                   'HEALTH CARE': ['21', '22', '22.3', '22.5'],
+                   'CASH-BONDING AGENTS': ['23']}
+
+
+
+
+
 
         for tag in self.soup.find_all(["p","li"]):
             if re.search(r"§*\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+\))*(\s*\([a-z]\))*(\([I,V,X]+\))*", tag.text.strip()):
@@ -1935,6 +2015,22 @@ class coParseHtml(ParserBase):
                             t_id = chap_num.group("title_id").zfill(2)
                             c_id = chap_num.group("chap_id").zfill(2)
                             s_id = chap_num.group("sec_id").zfill(2)
+
+                            title_no = "title01"
+
+
+                            for key, value in eval(title_no).items():
+                                if c_id in value:
+                                    title = key
+                                    print(match)
+                                    print(title)
+
+
+
+
+
+
+
                             tag_id = f'gov.co.crs.title.{t_id}.html#t{t_id}c{c_id}s{s_id}'
                             target = "_blank"
 
@@ -2136,12 +2232,9 @@ class coParseHtml(ParserBase):
             self.create_chapter_section_nav()
             self.create_and_wrap_with_div_tag()
             self.convert_paragraph_to_alphabetical_ol_tags()
+            self.add_citation()
 
-
-            # self.create_and_wrap_with_ol_tag()
-            # self.add_citation()
-            # self.create_numberical_ol()
-            # self.add_watermark_and_remove_class_name()
+            self.add_watermark_and_remove_class_name()
 
         self.write_soup_to_file()
         print(datetime.now() - start_time)
