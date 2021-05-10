@@ -2294,14 +2294,15 @@ class coParseHtml(ParserBase):
                         tag.clear()
 
                         if re.search(r'§*\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*', match.strip()):
-                            chap_num = re.search(r'§*\s*(?P<sec_id>(?P<title_id>\d+(\.\d+)*)-(?P<chap_id>\d+(\.\d+)*)-\d+(\.\d+)*)', match.strip())
+                            chap_num = re.search(r'§*\s*(?P<sec_id>(?P<title_id>\d+(\.\d+)*)-(?P<chap_id>\d+(\.\d+)*)-(?P<part_id>\d(\.\d)*)\d+(\.\d+)*)', match.strip())
                             t_id = chap_num.group("title_id").zfill(2)
                             c_id = chap_num.group("chap_id")
                             s_id = chap_num.group("sec_id").zfill(2)
+                            p_id = chap_num.group("part_id").zfill(2)
 
-                            #
-                            # if re.search(r'§§ 32-1-906',match):
-                            #     print()
+
+                            # if re.search(r'32-1-906',match):
+                            #     print(p_id)
 
 
                             if t_id not in ['04','18','19','20','21','26','25.5']:
@@ -2313,15 +2314,23 @@ class coParseHtml(ParserBase):
                                         title = key
 
                                         header = re.sub(r'[\s]+','',title).lower()
-                                        tag_id = f'gov.co.crs.title.{t_id}.html#t{t_id}-{header}-ar{c_id.zfill(2)}-s{s_id}'
-                                        target = "_blank"
+
+                                        if t_id in ['01','10','12','13','15','16','17','18','19','20','22','25','25.5','26','29','31','32','34','38','42','43']:
+                                            # print(match)
+                                            tag_id = f'gov.co.crs.title.{t_id}.html#t{t_id}-{header}-ar{c_id.zfill(2)}-p{p_id}-s{s_id}'
+                                            target = "_blank"
+
+                                        else:
+                                            tag_id = f'gov.co.crs.title.{t_id}.html#t{t_id}-{header}-ar{c_id.zfill(2)}-s{s_id}'
+                                            target = "_blank"
                                         break
 
                                     else:
-                                        print(match)
+
 
                                         tag_id = f'gov.co.crs.title.{t_id}.html#t{t_id}c{c_id}s{s_id}'
                                         target = "_blank"
+
 
 
                             else:
