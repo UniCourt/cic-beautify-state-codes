@@ -1924,18 +1924,15 @@ class coParseHtml(ParserBase):
         print('wrapped div tags')
 
 
-    # citation
-    def add_citation(self):
-        title_no = 'title01'
+    def create_citation(self,t_id,c_id,s_id,p_id):
 
-        class_dict = {'co_code':'Colo\.\s*\d+',
-                      'co_law':'Colo\.\s*Law\.\s*\d+|L\.\s*\d+,\s*p\.\s*\d+',
-                      'denv_law':'\d+\s*Denv\.\s*L\.\s*Rev\.\s*\d+',
-                      'COA':'\d{4}\s*COA\s*\d+'}
-
-        title01 = {'GENERAL, PRIMARY, RECALL, AND CONGRESSIONAL VACANCY ELECTIONS': ['1', '1.5', '2', '3', '4', '5', '5.5',
-                   '6', '7', '7.5', '8', '8.3', '8.5', '9', '10','10.5', '11', '12', '12', '13', '13.5', '14','15', '16', '17'],
-                    'OTHER ELECTION OFFENSES': ['30'], 'INITIATIVE AND REFERENDUM': ['40'], 'ODD-YEAR ELECTIONS': ['41'], 'ELECTION CAMPAIGN REGULATIONS': ['45']}
+        title01 = {
+            'GENERAL, PRIMARY, RECALL, AND CONGRESSIONAL VACANCY ELECTIONS': ['1', '1.5', '2', '3', '4', '5', '5.5',
+                                                                              '6', '7', '7.5', '8', '8.3', '8.5', '9',
+                                                                              '10', '10.5', '11', '12', '12', '13',
+                                                                              '13.5', '14', '15', '16', '17'],
+            'OTHER ELECTION OFFENSES': ['30'], 'INITIATIVE AND REFERENDUM': ['40'], 'ODD-YEAR ELECTIONS': ['41'],
+            'ELECTION CAMPAIGN REGULATIONS': ['45']}
 
         title02 = {'CONGRESSIONAL DISTRICTS': ['1'], 'GENERAL ASSEMBLY': ['2'], 'LEGISLATIVE SERVICES': ['3'],
                    'STATUTES - CONSTRUCTION AND REVISION': ['4', '5'], 'MISCELLANEOUS': ['6', '7']}
@@ -1958,29 +1955,32 @@ class coParseHtml(ParserBase):
                    'PROTECTION AGAINST EXPLOITATION OF AT-RISK ADULTS': ['21'],
                    'RESIDENTIAL ROOFING SERVICES': ['22'], 'DIRECT PRIMARY HEALTH CARE': ['23'], 'CEMETERIES': ['24'],
                    'PUBLIC ESTABLISHMENTS': ['25'], 'INTERNET SERVICE PROVIDERS': ['26']}
-        title07= {'Colorado Corporation Code': ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'],
-                  'Nonprofit Corporation': ['20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30'],
-                  'Special Purpose Corporations': ['40', '41', '42', '43', '44', '45', '46', '47', '48', '49', '49.5'],
-                  'Religious and Benevolent Organizations': ['50', '51', '52'],
-                  'ASSOCIATIONS': ['55', '56', '57', '58'],
-                  'PARTNERSHIPS': ['60', '61', '62', '63', '64'],
-                  'TRADEMARKS AND BUSINESS NAMES': ['70', '71', '72', '73'],
-                  'TRADE SECRETS': ['74'], 'LIMITED LIABILITY COMPANIES': ['80'],
-                  'CORPORATIONS AND ASSOCIATIONS': ['90'],
-                  'Colorado Business Corporations': ['101', '102', '103', '104', '105', '106', '107', '108', '109',
-                                                     '110', '111', '112', '113', '114', '115', '116', '117'],
-                  'Nonprofit Corporations': ['121', '122', '123', '124', '125', '126', '127', '128', '129', '130','131','132','134','135', '136', '137']}
+        title07 = {'Colorado Corporation Code': ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'],
+                   'Nonprofit Corporation': ['20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30'],
+                   'Special Purpose Corporations': ['40', '41', '42', '43', '44', '45', '46', '47', '48', '49', '49.5'],
+                   'Religious and Benevolent Organizations': ['50', '51', '52'],
+                   'ASSOCIATIONS': ['55', '56', '57', '58'],
+                   'PARTNERSHIPS': ['60', '61', '62', '63', '64'],
+                   'TRADEMARKS AND BUSINESS NAMES': ['70', '71', '72', '73'],
+                   'TRADE SECRETS': ['74'], 'LIMITED LIABILITY COMPANIES': ['80'],
+                   'CORPORATIONS AND ASSOCIATIONS': ['90'],
+                   'Colorado Business Corporations': ['101', '102', '103', '104', '105', '106', '107', '108', '109',
+                                                      '110', '111', '112', '113', '114', '115', '116', '117'],
+                   'Nonprofit Corporations': ['121', '122', '123', '124', '125', '126', '127', '128', '129', '130',
+                                              '131', '132', '134', '135', '136', '137']}
 
         title08 = {'Division of Labor - Industrial Claim Appeals Office': ['1'],
                    'Labor Relations': ['2', '2.5', '3', '3.5'],
                    'Wages': ['4', '5', '6', '7', '8', '9', '10'],
                    'Labor Conditions': ['11', '12', '13', '13.3', '13.5', '14', '14.3'],
-                   'Workers\' Compensation Cost Containment':['14.5'],'Apprenticeship and Training':['15','15.5'],
+                   'Workers\' Compensation Cost Containment': ['14.5'], 'Apprenticeship and Training': ['15', '15.5'],
                    'Public Works': ['16', '17', '17.5', '18', '19', '19.5', '19.7'], 'Fuel Products': ['20', '20.5'],
-                   'Workers\' Compensation':['40','41','42','43','44','45','46','47'],
-                   'Workmen\'s Compensation': ['48', '49','50','51','52','53','54'],'Workers\'Compensation - Continued':['55'],
-                   'Occupational Diseases':['60'],'MedicalInsuranceProvisions':['65','66','67'],
-                   'LABOR III - EMPLOYMENT SECURITY': ['70', '71', '72', '73', '74', '75', '76', '77', '78', '79', '80', '81','82'],
+                   'Workers\' Compensation': ['40', '41', '42', '43', '44', '45', '46', '47'],
+                   'Workmen\'s Compensation': ['48', '49', '50', '51', '52', '53', '54'],
+                   'Workers\'Compensation - Continued': ['55'],
+                   'Occupational Diseases': ['60'], 'MedicalInsuranceProvisions': ['65', '66', '67'],
+                   'LABOR III - EMPLOYMENT SECURITY': ['70', '71', '72', '73', '74', '75', '76', '77', '78', '79', '80',
+                                                       '81', '82'],
                    'EMPLOYMENT AND TRAINING': ['83', '84'], 'INDEPENDENT LIVING SERVICES': ['85', '86']}
 
         title09 = {'BUILDINGS AND EQUIPMENT': ['1', '1.3', '1.5', '2', '2.5', '3', '4', '5', '5.5'],
@@ -1992,16 +1992,19 @@ class coParseHtml(ParserBase):
                    'CAPTIVE INSURANCE COMPANIES': ['6'], 'LIFE INSURANCE': ['7'], 'COVERCOLORADO': ['8'],
                    'FRANCHISE INSURANCE': ['9'],
                    'CREDIT INSURANCE': ['10'], 'TITLE INSURANCE': ['11'], 'MUTUAL INSURANCE': ['12'],
-                   'INTERINSURANCE': ['13'],'FRATERNAL BENEFIT SOCIETIES': ['14'], 'PRENEED FUNERAL CONTRACTS': ['15'],
-                   'HEALTH CARE COVERAGE':['16','16.5'],'HEALTH MAINTENANCE ORGANIZATIONS':['17'],
-                   'MEDICARESUPPLEMENT INSURANCE':['18'],'LONG-TERM CARE': ['19'], 'LIFE AND HEALTH INSURANCE PROTECTION': ['20'],
+                   'INTERINSURANCE': ['13'], 'FRATERNAL BENEFIT SOCIETIES': ['14'], 'PRENEED FUNERAL CONTRACTS': ['15'],
+                   'HEALTH CARE COVERAGE': ['16', '16.5'], 'HEALTH MAINTENANCE ORGANIZATIONS': ['17'],
+                   'MEDICARESUPPLEMENT INSURANCE': ['18'], 'LONG-TERM CARE': ['19'],
+                   'LIFE AND HEALTH INSURANCE PROTECTION': ['20'],
                    'HEALTH CARE': ['21', '22', '22.3', '22.5'],
                    'CASH-BONDING AGENTS': ['23']}
 
         title11 = {
             'Banking Code': ['1', '2', '3', '4', '5', '6', '6.3', '6.4', '6.5', '7', '8', '9', '10', '10.5', '11'],
-            'General Financial Provisions': ['20', '21'], 'Industrial Banks':['22'],'Trust Companies and Trust Funds':['23','24'],
-            'BRANCH INSTITUTIONS':['25'], 'CREDIT UNIONS': [ '30'],'MARIJUANA FINANCIAL SERVICES COOPERATIVES': ['33'],'MISCELLANEOUS': ['35', '36', '37', '37.5', '38'],
+            'General Financial Provisions': ['20', '21'], 'Industrial Banks': ['22'],
+            'Trust Companies and Trust Funds': ['23', '24'],
+            'BRANCH INSTITUTIONS': ['25'], 'CREDIT UNIONS': ['30'], 'MARIJUANA FINANCIAL SERVICES COOPERATIVES': ['33'],
+            'MISCELLANEOUS': ['35', '36', '37', '37.5', '38'],
             'SAVINGS AND LOAN ASSOCIATIONS': ['40', '41', '42', '43', '44', '45', '46', '47', '47.5', '48', '49'],
             'Fiduciaries and Trusts': ['50'], 'Securities': ['51', '51.5', '52', '53', '54'],
             'PUBLIC SECURITIES': ['55', '56', '57', '58', '59', '59.3', '59.5'],
@@ -2047,14 +2050,16 @@ class coParseHtml(ParserBase):
 
         title16 = {
             'CODE OF CRIMINAL PROCEDURE': ['1', '2', '2.5', '2.7', '3', '4', '5', '6', '7', '8', '8.5', '9', '10', '11',
-            '11.3', '11.5', '11.7','11.8', '11.9', '12', '13'],'UNIFORM MANDATORY DISPOSITION OF DETAINERS ACT': ['14'],
+                                           '11.3', '11.5', '11.7', '11.8', '11.9', '12', '13'],
+            'UNIFORM MANDATORY DISPOSITION OF DETAINERS ACT': ['14'],
             'WIRETAPPING AND EAVESDROPPING': ['15'], 'CRIMINAL ACTIVITY INFORMATION': ['15.5', '15.7', '15.8'],
             'SENTENCING AND IMPRISONMENT': ['16', '17'], 'COSTS - CRIMINAL ACTIONS': ['18', '18.5'],
             'FUGITIVES AND EXTRADITION': ['19', '20'], 'OFFENDERS - REGISTRATION': ['20.5', '21', '22', '23']}
 
-        title17 = {'Organization': ['1'], 'Parole and Probation': ['2'],'Care and Custody - Reimbursement': ['10'],
+        title17 = {'Organization': ['1'], 'Parole and Probation': ['2'], 'Care and Custody - Reimbursement': ['10'],
                    'Facilities': ['18', '19', '20', '21', '22', '22.5', '23', '24', '25', '26', '26.5'],
-                   'Programs': ['27', '27.1', '27.5', '27.7', '27.8', '27.9', '28', '29', '30', '30.5', '31', '32','33', '34'],
+                   'Programs': ['27', '27.1', '27.5', '27.7', '27.8', '27.9', '28', '29', '30', '30.5', '31', '32',
+                                '33', '34'],
                    'DIAGNOSTIC PROGRAMS': ['40', '41'], 'MISCELLANEOUS PROVISIONS': ['42']}
 
         title22 = {
@@ -2066,16 +2071,15 @@ class coParseHtml(ParserBase):
             'FINANCIAL POLICIES AND PROCEDURES': ['40', '41', '41.5', '42', '43', '43.5', '43.7', '44', '45'],
             'FINANCING OF SCHOOLS': ['50', '51'],
             'SECOND CHANCE PROGRAM': ['52'],
-            'FINANCING OF SCHOOLS - Continued':['53', '54', '55', '56', '57', '58'],
-                                               'TEACHERS': ['60', '60.3', '60.5', '61', '61.5', '62', '62.5', '63',
-                                                            '64', '65', '66', '67', '68', '6805', '69'],
-        'JUNIOR COLLEGES': ['70', '71', '72', '73'],
-        'MISCELLANEOUS': ['80', '81', '81.5', '82', '82.3', '82.5', '82.6',
-                          '82.7', '82.8', '82.9', '83', '84', '86', '87', '88', '88.1', '89', '90', '91', '92', '93',
-                          '94', '95', '95.5', '96',
-                          '97', '98', '99', '100', '101', '102']}
-
-
+            'FINANCING OF SCHOOLS - Continued': ['53', '54', '55', '56', '57', '58'],
+            'TEACHERS': ['60', '60.3', '60.5', '61', '61.5', '62', '62.5', '63',
+                         '64', '65', '66', '67', '68', '6805', '69'],
+            'JUNIOR COLLEGES': ['70', '71', '72', '73'],
+            'MISCELLANEOUS': ['80', '81', '81.5', '82', '82.3', '82.5', '82.6',
+                              '82.7', '82.8', '82.9', '83', '84', '86', '87', '88', '88.1', '89', '90', '91', '92',
+                              '93',
+                              '94', '95', '95.5', '96',
+                              '97', '98', '99', '100', '101', '102']}
 
         title23 = {
             'General and Administrative': ['1', '1.5', '2', '3', '3.1', '3.3', '3.5', '3.6', '3.7', '3.8', '3.9', '4',
@@ -2097,22 +2101,31 @@ class coParseHtml(ParserBase):
             'STATE OFFICERS': ['20', '21', '22'],
             'PRINCIPAL DEPARTMENTS': ['30', '31', '32', '33', '33.5', '34', '35', '36'],
             'GOVERNOR\'S OFFICE': ['37', '37.3', '37.5', '37.7', '38', '38.3', '38.5', '38.7', '38.9'],
-            'OTHER AGENCIES': ['40', '40.5', '41', '42', '43', '44', '44.3', '44.5', '44.7','45', '45.5', '46', '46.1',
-            '46.3', '46.5', '46.6', '47', '47.5', '48', '48.5', '48.6','48.8','49', '49.5', '49.7', '49.9'],
+            'OTHER AGENCIES': ['40', '40.5', '41', '42', '43', '44', '44.3', '44.5', '44.7', '45', '45.5', '46', '46.1',
+                               '46.3', '46.5', '46.6', '47', '47.5', '48', '48.5', '48.6', '48.8', '49', '49.5', '49.7',
+                               '49.9'],
             'STATE PERSONNEL SYSTEM AND STATE EMPLOYEES': ['50', '50.3', '50.5'],
-            'PUBLIC EMPLOYEES\' RETIREMENT SYSTEMS':['51','51.1','52','52.5','53','54','54.3','54.5','54.6','54.7','54.8'],
-            'FEDERAL PROGRAMS - HOUSING - RELOCATION':['55', '56'],'INTERSTATE COMPACTS AND AGREEMENTS': ['60', '61', '62'],
-            'PLANNING - STATE': ['65', '65.1', '65.5', '66', '67', '68'],'PUBLICATION OF LEGAL NOTICES AND PUBLIC PRINTING': ['70'],
-            'ELECTRONIC TRANSACTIONS': ['71', '71.1', '71.3', '71.5'],'PUBLIC (OPEN) RECORDS': ['72', '72.1', '72.3', '72.4'],
-             'GOVERNMENTAL ACCESS TO NEWS INFORMATION': ['72.5'],'SECURITY BREACHES AND PERSONAL INFORMATIO': ['73'], 'STATE FUNDS': ['75'], 'FEDERAL FUNDS': ['76'],
-             'RESTRICTIONS ON PUBLIC BENEFITS': ['76.5'],'PRIORITIZING STATE ENFORCEMENT OF CIVIL IMMIGRATION LAW': ['76.6'],
-             'STATE FISCAL POLICIES RELATING TO SECTION 20 OF ARTICLE X OF THE STATE CONSTITUTION':['77'],
-        'FEDERAL MANDATES': ['78'], 'INTERNET REGULATION': ['79'], 'STATE DELINQUENCY CHARGES': ['79.5'],
-        'STATE HISTORY, ARCHIVES, AND EMBLEMS': ['80', '80.1'], 'ALLOCATION FOR ART': ['80.5'],
-        'STATE PROPERTY': ['82', '82.5'], 'STATE ASSISTANCE - DENVER CONVENTION CENTER': ['83'],
-        'INFORMATION TECHNOLOGY ACCESS FOR BLIND': ['85'],'LIBRARIES': ['90'], 'CONSTRUCTION': ['91', '92', '93'],
-        'PROCUREMENT CODE': ['101', '102', '103', '103.5', '104', '105', '106', '107', '108', '109', '110', '111','112'],
-        'GOVERNMENT COMPETITION WITH PRIVATE ENTERPRISE': ['113', '114'],'FINANCING OF CRITICAL STATE NEEDS': ['115']}
+            'PUBLIC EMPLOYEES\' RETIREMENT SYSTEMS': ['51', '51.1', '52', '52.5', '53', '54', '54.3', '54.5', '54.6',
+                                                      '54.7', '54.8'],
+            'FEDERAL PROGRAMS - HOUSING - RELOCATION': ['55', '56'],
+            'INTERSTATE COMPACTS AND AGREEMENTS': ['60', '61', '62'],
+            'PLANNING - STATE': ['65', '65.1', '65.5', '66', '67', '68'],
+            'PUBLICATION OF LEGAL NOTICES AND PUBLIC PRINTING': ['70'],
+            'ELECTRONIC TRANSACTIONS': ['71', '71.1', '71.3', '71.5'],
+            'PUBLIC (OPEN) RECORDS': ['72', '72.1', '72.3', '72.4'],
+            'GOVERNMENTAL ACCESS TO NEWS INFORMATION': ['72.5'], 'SECURITY BREACHES AND PERSONAL INFORMATIO': ['73'],
+            'STATE FUNDS': ['75'], 'FEDERAL FUNDS': ['76'],
+            'RESTRICTIONS ON PUBLIC BENEFITS': ['76.5'],
+            'PRIORITIZING STATE ENFORCEMENT OF CIVIL IMMIGRATION LAW': ['76.6'],
+            'STATE FISCAL POLICIES RELATING TO SECTION 20 OF ARTICLE X OF THE STATE CONSTITUTION': ['77'],
+            'FEDERAL MANDATES': ['78'], 'INTERNET REGULATION': ['79'], 'STATE DELINQUENCY CHARGES': ['79.5'],
+            'STATE HISTORY, ARCHIVES, AND EMBLEMS': ['80', '80.1'], 'ALLOCATION FOR ART': ['80.5'],
+            'STATE PROPERTY': ['82', '82.5'], 'STATE ASSISTANCE - DENVER CONVENTION CENTER': ['83'],
+            'INFORMATION TECHNOLOGY ACCESS FOR BLIND': ['85'], 'LIBRARIES': ['90'], 'CONSTRUCTION': ['91', '92', '93'],
+            'PROCUREMENT CODE': ['101', '102', '103', '103.5', '104', '105', '106', '107', '108', '109', '110', '111',
+                                 '112'],
+            'GOVERNMENT COMPETITION WITH PRIVATE ENTERPRISE': ['113', '114'],
+            'FINANCING OF CRITICAL STATE NEEDS': ['115']}
 
         title25 = {'ADMINISTRATION': ['1', '1.5'], 'VITAL STATISTICS': ['2'], 'HOSPITALS': ['3', '3.5'],
                    'DISEASE CONTROL': ['4'], 'PRODUCTS CONTROL AND SAFETY': ['5', '5.5'],
@@ -2127,20 +2140,20 @@ class coParseHtml(ParserBase):
                                    '44', '45', '46', '47', '48', '49', '50', '51', '52', '53', '54', '55']}
 
         title255 = {'ADMINISTRATION': ['1', '2'], 'PRESCRIPTION DRUGS': ['2.5'], 'INDIGENT CARE': ['3'],
-              'COLORADO MEDICAL ASSISTANCE ACT': ['4', '5', '6'], 'CHILDREN\'S BASIC HEALTH PLAN':['8'],
-                                                                                                    'COMMUNITY LIVING':[
-                                                                                                                           '10'], 'HEALTH CARE COST SAVINGS ACT': [
-            '11']}
-
+                    'COLORADO MEDICAL ASSISTANCE ACT': ['4', '5', '6'], 'CHILDREN\'S BASIC HEALTH PLAN': ['8'],
+                    'COMMUNITY LIVING': [
+                        '10'], 'HEALTH CARE COST SAVINGS ACT': [
+                '11']}
 
         title27 = {'DEPARTMENT OF HUMAN SERVICES': ['1', '2'],
-                   'General Provisions':['9', '10', '10.3', '10.5', '11', '12'],'Institutions':['13', '14', '15', '16'],
+                   'General Provisions': ['9', '10', '10.3', '10.5', '11', '12'],
+                   'Institutions': ['13', '14', '15', '16'],
                    'CORRECTIONS': ['20', '21', '22', '23', '24', '25', '26', '27', '28'],
-        'OTHER INSTITUTIONS': ['35'], 'COLORADO DIAGNOSTIC PROGRAM': ['40'], 'BEHAVIORAL HEALTH': ['60', '61', '62','63'],
-        'MENTAL HEALTH AND MENTAL HEALTH DISORDERS': ['65', '66', '66.5', '67', '68', '69', '70'],
-        'ALCOHOL AND SUBSTANCE USE -ALCOHOL AND SUBSTANCE USE DISORDERS': ['80', '81', '82'],
-        'INSTITUTIONS': ['90', '91', '92', '93', '94']}
-
+                   'OTHER INSTITUTIONS': ['35'], 'COLORADO DIAGNOSTIC PROGRAM': ['40'],
+                   'BEHAVIORAL HEALTH': ['60', '61', '62', '63'],
+                   'MENTAL HEALTH AND MENTAL HEALTH DISORDERS': ['65', '66', '66.5', '67', '68', '69', '70'],
+                   'ALCOHOL AND SUBSTANCE USE -ALCOHOL AND SUBSTANCE USE DISORDERS': ['80', '81', '82'],
+                   'INSTITUTIONS': ['90', '91', '92', '93', '94']}
 
         title28 = {'EMERGENCY PREPAREDNESS': ['1', '2'], 'MILITARY': ['3', '3.1', '4', '4.5', '4.7'],
                    'VETERANS': ['5'], 'DIVISION OF AVIATION': ['6']}
@@ -2159,11 +2172,13 @@ class coParseHtml(ParserBase):
                    'IMMIGRATION STATUS - COOPERATION WITH FEDERAL OFFICIALS': ['29', '30', '31']}
 
         title30 = {'COMPENSATION - FEES': ['1', '2'],
-                   'COUNTY ELECTED OFFICIALS\' SALARY COMMISSION':['3'],'LOCATION AND BOUNDARIES':['5', '6', '7','8'],
-                   'COUNTY OFFICERS': ['10'],'General': ['11', '12', '15', '17', '20', '24'], 'County Finance': ['25', '26'],
-                    'COUNTY PLANNING AND BUILDING CODES': ['28'], 'APPORTIONMENT OF FEDERAL MONEYS': ['29'], 'FLOOD CONTROL': ['30'],
-                    'HOME RULE': ['35']}
-
+                   'COUNTY ELECTED OFFICIALS\' SALARY COMMISSION': ['3'],
+                   'LOCATION AND BOUNDARIES': ['5', '6', '7', '8'],
+                   'COUNTY OFFICERS': ['10'], 'General': ['11', '12', '15', '17', '20', '24'],
+                   'County Finance': ['25', '26'],
+                   'COUNTY PLANNING AND BUILDING CODES': ['28'], 'APPORTIONMENT OF FEDERAL MONEYS': ['29'],
+                   'FLOOD CONTROL': ['30'],
+                   'HOME RULE': ['35']}
 
         title31 = {'CORPORATE CLASS - ORGANIZATION AND TERRITORY': ['1', '2', '3', '4'],
                    'MUNICIPAL ELECTIONS': ['10', '11'], 'ANNEXATION - CONSOLIDATION - DISCONNECTION': ['12'],
@@ -2269,11 +2284,8 @@ class coParseHtml(ParserBase):
                    'TAXATION': ['3'], 'REGULATION OF VEHICLES AND TRAFFIC': ['4'], 'AUTOMOBILE THEFT LAW': ['5'],
                    'CERTIFICATES OF TITLE': ['6'], 'MOTOR VEHICLE FINANCIAL RESPONSIBILITY LAW': ['7'],
                    'PORT OF ENTRY WEIGH STATIONS': ['8'],
-                   'MOTOR VEHICLE REPAIRS': ['9', '9.5', '10', '11'], 'COLLECTOR\'S ITEMS':['12'],
-                   'DISPOSITION OF PERSONAL PROPERTY':['13'],'IDLING STANDARD': ['14'], 'HIGHWAY SAFETY': ['20']}
-
-
-
+                   'MOTOR VEHICLE REPAIRS': ['9', '9.5', '10', '11'], 'COLLECTOR\'S ITEMS': ['12'],
+                   'DISPOSITION OF PERSONAL PROPERTY': ['13'], 'IDLING STANDARD': ['14'], 'HIGHWAY SAFETY': ['20']}
 
         title43 = {'GENERAL AND ADMINISTRATIVE': ['1'],
                    'HIGHWAYS AND HIGHWAY SYSTEMS': ['2'], 'SPECIAL HIGHWAY CONSTRUCTION': ['3'], 'FINANCING': ['4'],
@@ -2283,14 +2295,78 @@ class coParseHtml(ParserBase):
                    'MARIJUANA REGULATION': ['10', '11', '12'], 'AUTOMOBILES': ['20'],
                    'GAMING AND RACING': ['30', '31', '32', '33'], 'LOTTERY': ['40']}
 
+        title_part_01 = ['01', '02', '04', '05', '07', '09', '10', '11', '12', '13', '13.5']
+        title_part_10 = ['01', '02', '03', '04', '07', '08', '11', '12', '14', '16', '17']
+        title_part_12 = ['10', '20', '30', '135', '215', '220', '230', '280', '285', '290']
+        title_part_13 = ['01', '05', '06', '17', '20', '21', '22', '56', '64', '90', '93']
+        title_part_15 = ['01', '02', '2.5', '05', '10', '11', '12', '13', '14', '14.5', '15', '16', '18.7', '19']
+        title_part_16 = ['02', '2.5', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13']
+        title_part_17 = ['01', '02', '22.5']
+        title_part_18 = []
+        title_part_19 = []
+        title_part_20 = []
+        title_part_22 = ['02', '07', '11', '13', '20', '30', '30.5', '33', '63', '81', '95.5']
+        title_part_25 = ['01', '1.5', '03', '3.5', '04', '05', '5.5', '06', '6.5', '07', '08', '11', '14', '15', '16',
+                         '17', '20.5']
+        # title_part_255 = ['01','2.5','03','04','05','06','10']
+        title_part_26 = ['01', '02', '3.1', '06', '6.2', '6.5', '11', '12']
+        title_part_29 = ['01', '04', '05', '11', '20', '27']
+        title_part_31 = ['01', '02', '03', '04', '10', '12', '15', '16', '20', '21', '23', '25', '30', '30.5', '31',
+                         '32', '35']
+        title_part_32 = ['01', '04', '11', '11.5']
+        title_part_34 = ['01']
+        title_part_38 = ['01', '06', '12', '20', '29', '31', '33.3', '35', '36', '41']
+        title_part_42 = ['01', '02', '03', '04', '05', '06', '07', '12', '20']
+        title_part_43 = ['01', '02', '03', '04', '05 ']
 
 
+        if t_id not in ['04', '18', '19', '20', '21', '26', '25.5']:
+            title_no = f'title{t_id}'
+            for key, value in eval(title_no).items():
+                if c_id in value:
+                    title = key
+                    header = re.sub(r'[\s]+', '', title).lower()
+                    if t_id in ['01', '10', '12', '13', '15', '16', '17', '18', '19', '20', '22', '25', '26', '29',
+                                '31', '32', '34', '38', '42', '43']:
+                        title_part_id = f'title_part_{t_id}'
+                        if c_id.zfill(2) in eval(title_part_id):
+                            tag_id = f'gov.co.crs.title.{t_id}.html#t{t_id}-{header}-ar{c_id.zfill(2)}-p{p_id}-s{s_id}'
+                            target = "_blank"
+                        else:
+                            tag_id = f'gov.co.crs.title.{t_id}.html#t{t_id}-{header}-ar{c_id.zfill(2)}-s{s_id}'
+                            target = "_blank"
+                    else:
+                        tag_id = f'gov.co.crs.title.{t_id}.html#t{t_id}-{header}-ar{c_id.zfill(2)}-s{s_id}'
+                        target = "_blank"
+                    break
+                else:
+                    tag_id = f'gov.co.crs.title.{t_id}.html#t{t_id}-ar{c_id}-s{s_id}'
+                    target = "_blank"
+        else:
+            tag_id = f'gov.co.crs.title.{t_id}.html#t{t_id}-ar{c_id}-s{s_id}'
+            target = "_blank"
+
+        return tag_id
+
+
+
+
+
+
+    # citation
+    def add_citation(self):
+        title_no = 'title01'
+
+        class_dict = {'co_code':'Colo\.\s*\d+',
+                      'co_law':'Colo\.\s*Law\.\s*\d+|L\.\s*\d+,\s*p\.\s*\d+',
+                      'denv_law':'\d+\s*Denv\.\s*L\.\s*Rev\.\s*\d+',
+                      'COA':'\d{4}\s*COA\s*\d+'}
 
         for tag in self.soup.find_all(["p","li"]):
             if re.search(r"§*\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+\))*(\s*\([a-z]\))*(\([I,V,X]+\))*", tag.text.strip()):
                 text = str(tag)
                 for match in [x[0] for x in re.findall(r"(§*\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+\))*(\s*\([a-z]\))*(\([I,V,X]+\))*)", tag.get_text())]:
-                        inside_text = re.sub(r'<p\sclass="\w\d+">|</p>|<b>|</b>', '', text, re.DOTALL)
+                        inside_text = re.sub(r'<p\sclass="\w\d+">|</p>|<b>|</b>|^<li\sclass="\w\d+\sid=".+">|</li>$', '', text, re.DOTALL)
                         tag.clear()
 
                         if re.search(r'§*\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*', match.strip()):
@@ -2301,61 +2377,53 @@ class coParseHtml(ParserBase):
                             p_id = chap_num.group("part_id").zfill(2)
 
 
-                            # if re.search(r'32-1-906',match):
-                            #     print(p_id)
+                            tag_id = self.create_citation(t_id,c_id,s_id,p_id)
+                            target = "_blank"
 
 
-                            if t_id not in ['04','18','19','20','21','26','25.5']:
-
-                                title_no = f'title{t_id}'
-
-                                for key, value in eval(title_no).items():
-                                    if c_id in value:
-                                        title = key
-
-                                        header = re.sub(r'[\s]+','',title).lower()
-
-                                        if t_id in ['01','10','12','13','15','16','17','18','19','20','22','25','25.5','26','29','31','32','34','38','42','43']:
-                                            # print(match)
-                                            tag_id = f'gov.co.crs.title.{t_id}.html#t{t_id}-{header}-ar{c_id.zfill(2)}-p{p_id}-s{s_id}'
-                                            target = "_blank"
-
-                                        else:
-                                            tag_id = f'gov.co.crs.title.{t_id}.html#t{t_id}-{header}-ar{c_id.zfill(2)}-s{s_id}'
-                                            target = "_blank"
-                                        break
-
-                                    else:
-
-
-                                        tag_id = f'gov.co.crs.title.{t_id}.html#t{t_id}c{c_id}s{s_id}'
-                                        target = "_blank"
-
-
-
-                            else:
-                                tag_id = f'gov.co.crs.title.{t_id}.html#t{t_id}c{c_id}s{s_id}'
-                                target = "_blank"
-
-
-
-
-
-
-
-
+                            # if t_id not in ['04','18','19','20','21','26','25.5']:
+                            #     title_no = f'title{t_id}'
+                            #     for key, value in eval(title_no).items():
+                            #         if c_id in value:
+                            #             title = key
+                            #             header = re.sub(r'[\s]+','',title).lower()
+                            #             if t_id in ['01','10','12','13','15','16','17','18','19','20','22','25','26','29','31','32','34','38','42','43']:
+                            #                 title_part_id = f'title_part_{t_id}'
+                            #                 if c_id.zfill(2) in eval(title_part_id):
+                            #                     tag_id = f'gov.co.crs.title.{t_id}.html#t{t_id}-{header}-ar{c_id.zfill(2)}-p{p_id}-s{s_id}'
+                            #                     target = "_blank"
+                            #                 else:
+                            #                     tag_id = f'gov.co.crs.title.{t_id}.html#t{t_id}-{header}-ar{c_id.zfill(2)}-s{s_id}'
+                            #                     target = "_blank"
+                            #             else:
+                            #                 tag_id = f'gov.co.crs.title.{t_id}.html#t{t_id}-{header}-ar{c_id.zfill(2)}-s{s_id}'
+                            #                 target = "_blank"
+                            #             break
+                            #         else:
+                            #             tag_id = f'gov.co.crs.title.{t_id}.html#t{t_id}-ar{c_id}-s{s_id}'
+                            #             target = "_blank"
+                            # else:
+                            #     tag_id = f'gov.co.crs.title.{t_id}.html#t{t_id}-ar{c_id}-s{s_id}'
+                            #     target = "_blank"
 
 
                             if re.search(r'§*\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+(\.\d+)*\))',match.strip()):
+                                # print(match)
 
-                                chap_num = re.search(r'§*\s*(?P<title_id>\d+(\.\d+)*)-(?P<chap_id>\d+(\.\d+)*)-(?P<sec_id>\d+(\.\d+)*)(?P<ol_id>\s*\(\d+(\.\d+)*\))',
+                                # if re.search(r'1-1-104 \(17\)',match):
+                                #     print()
+
+                                chap_num = re.search(r'§*\s*(?P<sec_id>(?P<title_id>\d+(\.\d+)*)-(?P<chap_id>\d+(\.\d+)*)-(?P<part_id>\d)\d+(\.\d+)*)\s*\((?P<ol_id>\d+(\.\d+)*)\)',
                                     match.strip())
                                 t_id = chap_num.group("title_id").zfill(2)
-                                c_id = chap_num.group("chap_id").zfill(2)
+                                c_id = chap_num.group("chap_id")
                                 s_id = chap_num.group("sec_id").zfill(2)
+                                p_id = chap_num.group("part_id").zfill(2)
                                 ol_id = chap_num.group("ol_id")
-                                tag_id = f'gov.co.crs.title.{t_id}.html#t{t_id}c{c_id}s{s_id}ol1{ol_id}'
+                                tag_id_new = self.create_citation(t_id, c_id, s_id, p_id)
+                                tag_id = f'{tag_id_new}ol1{ol_id}'
                                 target = "_blank"
+
 
                                 if re.search(r'§*\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+\))*(\s*\([a-z](\.\d+)*\))', match.strip()):
                                     chap_num = re.search(
@@ -2396,11 +2464,14 @@ class coParseHtml(ParserBase):
                 text = str(tag)
                 for key, value in class_dict.items():
                     for match in [x for x in re.findall(value, tag.get_text(), re.I)]:
-                        inside_text = re.sub(r'<p\sclass="\w\d+">|</p>|<b>|</b>', '', text, re.DOTALL)
+                        inside_text = re.sub(r'<p\sclass="\w\d+">|</p>|<b>|</b>|^<li\sclass="\w\d+\sid=".+">|</li>$', '', text, re.DOTALL)
                         tag.clear()
-                        text = re.sub(re.escape(match),
-                                              f'<cite class="{key}">{match}</cite>',
-                                              inside_text, re.I)
+                        # text = re.sub(re.escape(match),
+                        #                       f'<cite class="{key}">{match}</cite>',
+                        #                       inside_text, re.I)
+
+                        text = re.sub(fr'\s{re.escape(match)}', f'<cite class="{key}">{match}</cite>',inside_text, re.I)
+
                         tag.append(text)
 
 
