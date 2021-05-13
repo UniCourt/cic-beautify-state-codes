@@ -120,6 +120,10 @@ class coParseHtml(ParserBase):
         count = 1
         section_head = []
         sec_count = 1
+        part_head = []
+        part_count = 1
+        art_head = []
+        art_count = 1
 
         for header_tag in self.soup.body.find_all():
             if re.search('constitution', self.html_file_name):
@@ -322,9 +326,19 @@ class coParseHtml(ParserBase):
                         sub_tag = "-ar"
                         class_name = "articleh2"
 
-                        self.set_appropriate_tag_name_and_id(tag_name, header_tag, chap_num, prev_id, sub_tag,
+                        if chap_num in art_head:
+                            new_chap_num = f'{chap_num}.{art_count}'
+                            art_count += 1
+                        else:
+                            new_chap_num = chap_num
+
+                        self.set_appropriate_tag_name_and_id(tag_name, header_tag, new_chap_num, prev_id, sub_tag,
                                                              class_name)
                         sec_count = 1
+                        section_head = []
+                        part_count = 1
+
+                        art_head.append(chap_num)
 
                     elif re.search(r'^PART\s*(?P<ar>\d+)', header_tag.text.strip(), re.I):
                         tag_name = "h2"
@@ -333,12 +347,24 @@ class coParseHtml(ParserBase):
 
                         chap_num = re.search(r'^PART\s*(?P<ar>\d+)', header_tag.text.strip()).group(
                             "ar").zfill(2)
+
+
+                        chap  = f'{prev_id}{chap_num}'
+
+                        if chap in part_head:
+                            new_chap_num = f'{chap_num}.{part_count}'
+                            part_count += 1
+                        else:
+                            new_chap_num = chap_num
+
                         sub_tag = "-p"
                         class_name = "parth2"
 
-                        self.set_appropriate_tag_name_and_id(tag_name, header_tag, chap_num, prev_id, sub_tag,
+                        self.set_appropriate_tag_name_and_id(tag_name, header_tag, new_chap_num, prev_id, sub_tag,
                                                              class_name)
                         sec_count = 1
+
+                        part_head.append(chap)
 
                     else:
                         tag_name = "h2"
@@ -601,8 +627,8 @@ class coParseHtml(ParserBase):
 
 
 
-                    if re.match(r'^\(\w+\)', p_tag.find_next_sibling().text.strip()):
-                        nxt_alpha = re.search(r'^\((?P<alpha3>\w+)\)', p_tag.find_next_sibling().text.strip()).group(
+                    if re.match(r'^\([a-z]\)', p_tag.find_next_sibling().text.strip()):
+                        nxt_alpha = re.search(r'^\((?P<alpha3>[a-z])\)', p_tag.find_next_sibling().text.strip()).group(
                             "alpha3")
 
 
@@ -2637,12 +2663,13 @@ class coParseHtml(ParserBase):
                             # if re.search(r'1-5-105 \(3\)',match):
                             #     print()
 
-
-                            if re.search(r'§ 1-1\.5-103',match):
+                            #
+                            if re.search(r'1-2-302\.5',match):
                                 print(tag.name)
 
 
                             if re.search(r'§*\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*', match.strip()):
+
                                 chap_num = re.search(r'§*\s*(?P<sec_id>(?P<title_id>\d+(\.\d+)*)-(?P<chap_id>\d+(\.\d+)*)-(?P<part_id>\d(\.\d)*)(\d+(\.\d+)*)*)', match.strip())
 
                                 t_id = chap_num.group("title_id").zfill(2)
@@ -2855,7 +2882,259 @@ class coParseHtml(ParserBase):
 
         print("cite is created")
 
+    def add_citation1(self):
+        title_no = 'title01'
 
+        class_dict = {'co_code': 'Colo\.\s*\d+',
+                      'co_law': 'Colo\.\s*Law\.\s*\d+|L\.\s*\d+,\s*p\.\s*\d+',
+                      'denv_law': '\d+\s*Denv\.\s*L\.\s*Rev\.\s*\d+',
+                      'COA': '\d{4}\s*COA\s*\d+'}
+
+        for tag in self.soup.find_all(["p", "li"]):
+            if re.search(r"§*\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+\))*(\s*\([a-z]\))*(\([I,V,X]+\))*",
+                         tag.text.strip()):
+                text = str(tag)
+                # for match in set(x[0] for x in re.findall(
+                #         r"(§*\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+\))*(\s*\([a-z]\))*(\([I,V,X]+\))*)",
+                #         tag.get_text())):
+
+                for match in set(x[0] for x in re.findall(
+                        r"(§*\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+\))(\s*\([a-z]\))(\([I,V,X]+\))|"
+                        r"§*\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+\))(\s*\([a-z]\))|"
+                        r"§*\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+\))|"
+                        r"§*\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*)",
+                        tag.get_text())):
+                    inside_text = re.sub(r'<p\sclass="\w\d+">|</p>|^<li\sclass="\w\d+"\sid=".+">|</li>$', '',
+                                         text, re.DOTALL)
+
+                    if tag.get("class") == [self.class_regex["ul"]]:
+                        continue
+                    else:
+                        tag.clear()
+
+                        if re.search(r'§*\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*', match.strip()):
+                            if re.search(
+                                    r'§*\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+\))*(\s*\([a-z](\.\d+)*\))(\([I,V,X]+\))',
+                                    match.strip()):
+                                tag.clear()
+                                chap_num = re.search(
+                                    r'§*\s*(?P<sec_id>(?P<title_id>\d+(\.\d+)*)-(?P<chap_id>\d+(\.\d+)*)-(?P<part>(?P<part_id>\d)(\d+)*)(\.\d+)*)\s*\((?P<ol_id>\d+(\.\d+)*)\)\s*\((?P<ol_id2>[a-z](\.\d+)*)\)\((?P<ol_id3>[I,V,X]+)\)',
+                                    match.strip())
+                                t_id = chap_num.group("title_id").zfill(2)
+                                c_id = chap_num.group("chap_id")
+                                s_id = chap_num.group("sec_id").zfill(2)
+                                if len(chap_num.group("part")) > 3:
+                                    p_id1 = chap_num.group("part")
+                                    p_id = p_id1[:2]
+                                else:
+                                    p_id = chap_num.group("part_id").zfill(2)
+                                ol_id = chap_num.group("ol_id")
+                                ol_id2 = chap_num.group("ol_id2")
+                                ol_id3 = chap_num.group("ol_id3")
+
+                                if t_id != '25.5':
+                                    if int(t_id) < 45:
+                                        tag_id_new = self.create_citation(t_id, c_id, s_id, p_id)
+                                        tag_id = f'{tag_id_new}ol1{ol_id}{ol_id2}{ol_id3}'
+                                        if self.title_id == t_id:
+                                            target = "_self"
+                                        else:
+                                            target = "_blank"
+                                        text = re.sub(fr'\s*{re.escape(match)}',
+                                                      f' <cite class="occo"><a href="{tag_id}" target="{target}">{match}</a></cite>',
+                                                      inside_text, re.I)
+                                        tag.append(text)
+                                    else:
+                                        text = re.sub(fr'\s*{re.escape(match)}',
+                                                      f'<cite class="occo">{match}</cite>',
+                                                      inside_text, re.I)
+                                        tag.append(text)
+                                else:
+                                    tag_id = self.create_citation(t_id, c_id, s_id, p_id)
+                                    if self.title_id == t_id:
+                                        target = "_self"
+                                    else:
+                                        target = "_blank"
+                                    text = re.sub(fr'\s*{re.escape(match)}',
+                                                  f' <cite class="occo"><a href="{tag_id}" target="{target}">{match}</a></cite>',
+                                                  inside_text, re.I)
+                                    tag.append(text)
+
+                            elif re.search(
+                                    r'§*\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+\))*(\s*\([a-z](\.\d+)*\))',
+                                    match.strip()):
+                                tag.clear()
+                                chap_num = re.search(
+                                    r'§*\s*(?P<sec_id>(?P<title_id>\d+(\.\d+)*)-(?P<chap_id>\d+(\.\d+)*)-(?P<part>(?P<part_id>\d)(\d+)*)(\.\d+)*)\s*\((?P<ol_id>\d+(\.\d+)*)\)\s*\((?P<ol_id2>[a-z](\.\d+)*)\)',
+                                    match.strip())
+                                t_id = chap_num.group("title_id").zfill(2)
+                                c_id = chap_num.group("chap_id")
+                                s_id = chap_num.group("sec_id").zfill(2)
+                                if len(chap_num.group("part")) > 3:
+                                    p_id1 = chap_num.group("part")
+                                    p_id = p_id1[:2]
+                                else:
+                                    p_id = chap_num.group("part_id").zfill(2)
+                                ol_id = chap_num.group("ol_id")
+                                ol_id2 = chap_num.group("ol_id2")
+
+                                if t_id != '25.5':
+                                    if int(t_id) < 45:
+                                        tag_id_new = self.create_citation(t_id, c_id, s_id, p_id)
+                                        tag_id = f'{tag_id_new}ol1{ol_id}{ol_id2}'
+                                        if self.title_id == t_id:
+                                            target = "_self"
+                                        else:
+                                            target = "_blank"
+
+                                        text = re.sub(fr'\s*{re.escape(match)}',
+                                                      f' <cite class="occo"><a href="{tag_id}" target="{target}">{match}</a></cite>',
+                                                      inside_text, re.I)
+                                        tag.append(text)
+                                    else:
+                                        text = re.sub(fr'\s*{re.escape(match)}',
+                                                      f'<cite class="occo">{match}</cite>',
+                                                      inside_text, re.I)
+
+                                        tag.append(text)
+
+                                else:
+                                    tag_id = self.create_citation(t_id, c_id, s_id, p_id)
+                                    if self.title_id == t_id:
+                                        target = "_self"
+                                    else:
+                                        target = "_blank"
+                                    text = re.sub(fr'\s*{re.escape(match)}',
+                                                  f' <cite class="occo"><a href="{tag_id}" target="{target}">{match}</a></cite>',
+                                                  inside_text, re.I)
+                                    tag.append(text)
+
+                            elif re.search(r'§*\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+(\.\d+)*\))',
+                                         match.strip()):
+                                tag.clear()
+                                chap_num = re.search(
+                                    r'§*\s*(?P<sec_id>(?P<title_id>\d+(\.\d+)*)-(?P<chap_id>\d+(\.\d+)*)-(?P<part>(?P<part_id>\d)(\d+)*)(\.\d+)*)\s*\((?P<ol_id>\d+(\.\d+)*)\)',
+                                    match.strip())
+
+                                t_id = chap_num.group("title_id").zfill(2)
+                                c_id = chap_num.group("chap_id")
+                                s_id = chap_num.group("sec_id").zfill(2)
+                                if len(chap_num.group("part")) > 3:
+                                    p_id1 = chap_num.group("part")
+                                    p_id = p_id1[:2]
+
+                                else:
+                                    p_id = chap_num.group("part_id").zfill(2)
+                                ol_id = chap_num.group("ol_id")
+                                if t_id != '25.5':
+                                    if int(t_id) < 45:
+                                        tag_id_new = self.create_citation(t_id, c_id, s_id, p_id)
+                                        tag_id = f'{tag_id_new}ol1{ol_id}'
+
+                                        if self.title_id == t_id:
+                                            target = "_self"
+                                        else:
+                                            target = "_blank"
+
+                                        text = re.sub(fr'\s*{re.escape(match)}',
+                                                      f' <cite class="occo"><a href="{tag_id}" target="{target}">{match}</a></cite>',
+                                                      inside_text, re.I)
+                                        tag.append(text)
+                                    else:
+                                        text = re.sub(fr'\s*{re.escape(match)}', f'<cite class="occo">{match}</cite>',
+                                                      inside_text, re.I)
+
+                                        tag.append(text)
+
+                                else:
+
+                                    tag_id = self.create_citation(t_id, c_id, s_id, p_id)
+                                    if self.title_id == t_id:
+                                        target = "_self"
+                                    else:
+                                        target = "_blank"
+                                    text = re.sub(fr'\s*{re.escape(match)}',
+                                                  f' <cite class="occo"><a href="{tag_id}" target="{target}">{match}</a></cite>',
+                                                  inside_text, re.I)
+                                    tag.append(text)
+
+                            else:
+
+                                chap_num = re.search(
+                                    r'§*\s*(?P<sec_id>(?P<title_id>\d+(\.\d+)*)-(?P<chap_id>\d+(\.\d+)*)-(?P<part>(?P<part_id>\d)(\d+)*)(\.\d+)*)',
+                                    match.strip())
+
+                                t_id = chap_num.group("title_id").zfill(2)
+                                c_id = chap_num.group("chap_id")
+                                s_id = chap_num.group("sec_id").zfill(2)
+
+                                if len(chap_num.group("part")) > 3:
+                                    p_id1 = chap_num.group("part")
+                                    p_id = p_id1[:2]
+                                else:
+                                    p_id = chap_num.group("part_id").zfill(2)
+
+                                if t_id != '25.5':
+                                    if int(t_id) < 45:
+                                        tag_id = self.create_citation(t_id, c_id, s_id, p_id)
+                                        if self.title_id == t_id:
+                                            target = "_self"
+                                        else:
+                                            target = "_blank"
+                                        text = re.sub(fr'\s*{re.escape(match)}',
+                                                      f' <cite class="occo"><a href="{tag_id}" target="{target}">{match}</a></cite>',
+                                                      inside_text, re.I)
+                                        tag.append(text)
+
+                                    else:
+
+                                        # text = re.sub(fr'\s{re.escape(match)}', f'<cite class="occo">{match}</cite>',
+                                        #               inside_text, re.I)
+                                        #
+                                        # tag.append(text)
+
+                                        cite_tag = self.soup.new_tag("cite")
+                                        cite_tag.string = match
+                                        cite_tag["class"] = "occo"
+                                        formated_string = str(cite_tag)
+                                        text = re.sub(fr'\s*{re.escape(match)}', formated_string, inside_text, re.I)
+                                        tag.append(text)
+                                else:
+                                    tag_id = self.create_citation(t_id, c_id, s_id, p_id)
+                                    if self.title_id == t_id:
+                                        target = "_self"
+                                    else:
+                                        target = "_blank"
+                                    text = re.sub(fr'\s*{re.escape(match)}',
+                                                  f' <cite class="occo"><a href="{tag_id}" target="{target}">{match}</a></cite>',
+                                                  inside_text, re.I)
+                                    tag.append(text)
+
+
+
+        for tag in self.soup.find_all(["p", "li"]):
+            if re.search(r"Colo\.\s*\d+|Colo\.\s*Law\.\s*\d+|"
+                         r"\d+\s*Denv\.\s*L\.\s*Rev\.\s*\d+|"
+                         r"\d{4}\s*COA\s*\d+|"
+                         r"L\.\s*\d+,\s*p\.\s*\d+", tag.text.strip()):
+
+                text = str(tag)
+                for key, value in class_dict.items():
+                    for match in [x for x in re.findall(value, tag.get_text(), re.I)]:
+                        inside_text = re.sub(r'<p\sclass="\w\d+">|</p>|^<li\sclass="\w\d+\sid=".+">|</li>$',
+                                             '', text, re.DOTALL)
+                        tag.clear()
+                        text = re.sub(fr'\s{re.escape(match)}', f'<cite class="{key}">{match}</cite>', inside_text,
+                                      re.I)
+
+                        tag.append(text)
+
+        for empty_li in self.soup.find_all("li"):
+            text = str(empty_li)
+            if re.search(r'^<li class="\w\d+" id=".+">&lt;', text):
+                empty_li.unwrap()
+
+        print("cite is created")
 
     # creating numberical ol
     def create_numberical_ol(self):
@@ -3024,11 +3303,10 @@ class coParseHtml(ParserBase):
             self.create_chapter_section_nav()
 
             self.create_and_wrap_with_div_tag()
-            self.add_citation()
+            self.add_citation1()
             self.convert_paragraph_to_alphabetical_ol_tags()
-            # # self.add_citation()
-            #
-            # self.add_watermark_and_remove_class_name()
+
+            self.add_watermark_and_remove_class_name()
 
         self.write_soup_to_file()
         print(datetime.now() - start_time)
