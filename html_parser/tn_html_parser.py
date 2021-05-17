@@ -11,7 +11,7 @@ from parser_base import ParserBase
 import roman
 
 
-class TNParseHtml(ParserBase):
+class tnParseHtml(ParserBase):
     def __init__(self, input_file_name):
         super().__init__()
         self.html_file_name = input_file_name
@@ -724,8 +724,10 @@ class TNParseHtml(ParserBase):
                     li_num += 1
                     if st_num_reg := re.search(r'^Subtitle\s(?P<st_num>\d+)', li.get_text().strip()):
                         header_id = f'#t{self.title.zfill(2)}st{st_num_reg.group("st_num").zfill(2)}'
+                        header_id = re.sub(r'\s+','',header_id)
                         anchor = self.soup.new_tag('a', href=header_id)
                         cleansed_header_id = header_id.strip("#")
+                        cleansed_header_id = re.sub(r'\s+','',cleansed_header_id)
                         anchor.attrs['aria-describedby'] = cleansed_header_id
                         li['id'] = f'{cleansed_header_id}-cnav{str(li_num).zfill(2)}'
                         anchor.string = li.text
@@ -739,8 +741,10 @@ class TNParseHtml(ParserBase):
                     li_num += 1
                     if chap_no := re.search(r'^Chapter\s(?P<chap_num>\d+([a-z])?)', li.get_text().strip()):
                         header_id = f'#t{self.title.zfill(2)}c{chap_no.group("chap_num").zfill(2)}'
+                        header_id = re.sub(r'\s+', '', header_id)
                         anchor = self.soup.new_tag('a', href=header_id)
                         cleansed_header_id = header_id.strip("#")
+                        cleansed_header_id = re.sub(r'\s+','',cleansed_header_id)
                         anchor.attrs['aria-describedby'] = cleansed_header_id
                         li['id'] = f'{cleansed_header_id}-cnav{str(li_num).zfill(2)}'
                         anchor.string = li.text
@@ -755,8 +759,10 @@ class TNParseHtml(ParserBase):
                     if chap_no := re.search(r'^Subchapter\s(?P<sub_chap_num>\d+)', li.get_text().strip()):
                         previous_head = ul.find_previous(lambda tag: tag.name == 'h2' and re.search('^Chapter', tag.get_text().strip()))
                         header_id = f'#{previous_head["id"]}sc{chap_no.group("sub_chap_num").zfill(2)}'
+                        header_id = re.sub(r'\s+', '', header_id)
                         anchor = self.soup.new_tag('a', href=header_id)
                         cleansed_header_id = header_id.strip("#")
+                        cleansed_header_id = re.sub(r'\s+','',cleansed_header_id)
                         anchor.attrs['aria-describedby'] = cleansed_header_id
                         li['id'] = f'{cleansed_header_id}-cnav{str(li_num).zfill(2)}'
                         anchor.string = li.text
@@ -779,12 +785,16 @@ class TNParseHtml(ParserBase):
                                                                 re.search(header_id, str(tag.a.attrs.get('href')))):
                             id_num += 1
                             header_id = f"{header_id}.1"
+                            header_id = re.sub(r'\s+', '', header_id)
                         elif ul.find_previous('nav').find(lambda tag: tag.name == 'a' and
                                                                       re.search(header_id, str(tag.attrs.get('href')))):
                             id_num += 1
                             header_id = f"{header_id}.1"
+                            header_id = re.sub(r'\s+', '', header_id)
+
                         anchor = self.soup.new_tag('a', href=header_id)
                         cleansed_header_id = header_id.strip("#")
+                        cleansed_header_id = re.sub(r'\s+','',cleansed_header_id)
                         anchor.attrs['aria-describedby'] = cleansed_header_id
                         li['id'] = f'{cleansed_header_id}-snav{str(li_num).zfill(2)}'
                         anchor.string = li.text
@@ -799,8 +809,10 @@ class TNParseHtml(ParserBase):
                     if chap_no := re.search(r'^Part\s(?P<sub_chap_num>\d+)', li.get_text().strip()):
                         previous_head = ul.find_previous(lambda tag: tag.name == 'h2' and re.search('^Chapter', tag.get_text().strip()))
                         header_id = f'#{previous_head["id"]}p{chap_no.group("sub_chap_num").zfill(2)}'
+                        header_id = re.sub(r'\s+', '', header_id)
                         anchor = self.soup.new_tag('a', href=header_id)
                         cleansed_header_id = header_id.strip("#")
+                        cleansed_header_id = re.sub(r'\s+','',cleansed_header_id)
                         anchor.attrs['aria-describedby'] = cleansed_header_id
                         li['id'] = f'{cleansed_header_id}-cnav{str(li_num).zfill(2)}'
                         anchor.string = li.text
@@ -963,6 +975,10 @@ class TNParseHtml(ParserBase):
             tag_to_wrap = next_tag
         print('added cites')
 
+        for meta in self.soup.findAll('meta'):
+            if meta.get('http-equiv') == "Content-Style-Type":
+                meta.decompose()
+
     def write_soup_to_file(self):
         """
             - add the space before self closing meta tags
@@ -1090,6 +1106,7 @@ class TNParseHtml(ParserBase):
                     if roman_match := re.search(r'^Article (\w+)', li.get_text(), re.I):
                         article_num = roman_match.group(1)
                         header_id = f'{self.title}-a{article_num.zfill(2)}'
+                        header_id = re.sub(r'\s+','',header_id)
                         anchor = self.soup.new_tag('a', href=f'#{header_id}')
                         anchor.string = li.get_text()
                         anchor.attrs['aria-describedby'] = header_id
@@ -1103,6 +1120,7 @@ class TNParseHtml(ParserBase):
                         header_id = f'{self.title}-amendment{str(amendment_num).zfill(2)}'
                         anchor = self.soup.new_tag('a', href=f'#{header_id}')
                         anchor.string = li.get_text()
+                        header_id = re.sub(r'\s+', '', header_id)
                         anchor.attrs['aria-describedby'] = header_id
                         if li.string:
                             li.string.replace_with(anchor)
@@ -1114,6 +1132,7 @@ class TNParseHtml(ParserBase):
                         header_id = f'{self.title}-{tag_text}'
                         anchor = self.soup.new_tag('a', href=f'#{header_id}')
                         anchor.string = li.get_text()
+                        header_id = re.sub(r'\s+', '', header_id)
                         anchor.attrs['aria-describedby'] = header_id
                         if li.string:
                             li.string.replace_with(anchor)
@@ -1128,6 +1147,7 @@ class TNParseHtml(ParserBase):
                         header_id = f'{parent["id"]}s{section_num.zfill(2)}'
                         anchor = self.soup.new_tag('a', href=f'#{header_id}')
                         anchor.string = li.get_text()
+                        header_id = re.sub(r'\s+', '', header_id)
                         anchor.attrs['aria-describedby'] = header_id
                         if li.string:
                             li.string.replace_with(anchor)
@@ -1141,6 +1161,7 @@ class TNParseHtml(ParserBase):
                         header_id = f'{self.title}-am{article_num.zfill(2)}'
                         anchor = self.soup.new_tag('a', href=f'#{header_id}')
                         anchor.string = li.get_text()
+                        header_id = re.sub(r'\s+', '', header_id)
                         anchor.attrs['aria-describedby'] = header_id
                         if li.string:
                             li.string.replace_with(anchor)
