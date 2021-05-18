@@ -3,6 +3,8 @@ import re
 from datetime import datetime
 from parser_base import ParserBase
 import roman
+import warnings
+
 
 
 class coParseHtml(ParserBase):
@@ -1598,9 +1600,9 @@ class coParseHtml(ParserBase):
                     prev_alpha_id = f'{prev_alpha_id}-{cur_tag}'
                     p_tag.name = "div"
 
-                print(p_tag)
-                print(prev_alpha_tag)
-                print(p_tag.find_previous("li"))
+                # print(p_tag)
+                # print(prev_alpha_tag)
+                # print(p_tag.find_previous("li"))
                 prev_alpha_tag.append(p_tag)
                 alpha_cur_tag = p_tag
 
@@ -2887,7 +2889,9 @@ class coParseHtml(ParserBase):
         print("cite is created")
 
     def add_citation1(self):
-        title_no = 'title01'
+
+        # warnings.filterwarnings("ignore", module='bs4')
+
 
         class_dict = {'co_code': 'Colo\.\s*\d+',
                       'co_law': 'Colo\.\s*Law\.\s*\d+|L\.\s*\d+,\s*p\.\s*\d+',
@@ -2916,7 +2920,7 @@ class coParseHtml(ParserBase):
                     else:
                         tag.clear()
 
-                        if re.search(r'§ 24-9-105', match):
+                        if re.search(r'1-1-403', match):
                             print()
 
                         if re.search(r'§*\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*', match.strip()):
@@ -3091,7 +3095,9 @@ class coParseHtml(ParserBase):
                                         text = re.sub(fr'\s*{re.escape(match)}',
                                                       f' <cite class="occo"><a href="{tag_id}" target="{target}">{match}</a></cite>',
                                                       inside_text, re.I)
-                                        tag.append(text)
+
+                                        # tag.append(text)
+                                        tag.append(BeautifulSoup(text))
 
                                     else:
 
@@ -3141,7 +3147,10 @@ class coParseHtml(ParserBase):
             if re.search(r'^<li class="\w\d+" id=".+">&lt;', text):
                 empty_li.unwrap()
 
+        self.soup = BeautifulSoup(str(self.soup), features="lxml")
+        warnings.filterwarnings("ignore")
         print("cite is created")
+
 
     # creating numberical ol
     def create_numberical_ol(self):
@@ -3333,13 +3342,17 @@ class coParseHtml(ParserBase):
 
             self.add_watermark_and_remove_class_name()
 
+
         self.write_soup_to_file()
+
         print(datetime.now() - start_time)
 
 
 
 # --input_file_name gov.co.crs.title.01.html
 # --input_file_name gov.co.crs.constitution.co.html
-#  --state_key co --release_number 72 --release_date 2020.09.30 --input_file_name gov.co.crs.title.30.html
+#  --state_key co --release_number 71 --release_date 2020.08.01 --input_file_name gov.co.crs.title.01.html
+
 
 # --state_key tn --release_number 76 --release_date 2021.05.21
+# --state_key tn --release_number 76 --release_date 2021.05.21 --input_file_name gov.tn.tca.title.01.html

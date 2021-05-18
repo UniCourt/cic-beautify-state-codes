@@ -707,6 +707,9 @@ class tnParseHtml(ParserBase):
                 nav_tag.append(new_ul)
                 notes_head.find_next_sibling('p').replace_with(nav_tag)
 
+
+
+
     def add_anchor_tags(self):
         """
             - for each nav tag in html
@@ -714,6 +717,8 @@ class tnParseHtml(ParserBase):
             - ie. 1-2-3 here 1 is title 2 is chapter number and 3 is section number
             - add a property called 'aria-describedby' with value same as previously built reference link
         """
+
+
         self.soup = BeautifulSoup(self.soup.prettify(formatter=None), features='lxml')
         [tag.unwrap() for tag in self.soup.find_all('key')]
         for ul in self.soup.findAll('nav'):
@@ -1169,6 +1174,22 @@ class tnParseHtml(ParserBase):
                             li.contents = []
                             li.append(anchor)
 
+
+    def note_to_decision_nav(self):
+        innr_ul = self.soup.new_tag("ul",Class="leaders")
+        for nd_tag in self.soup.findAll("li"):
+            if re.search(r'\d\.',nd_tag.text.strip()):
+                if re.search(r'\d\.\s*—',nd_tag.text.strip()):
+                    if re.search(r'\d\.\s*\w+',nd_tag.find_previous_sibling().text.strip()):
+                        prev_tag = nd_tag.find_previous_sibling("li")
+                        innr_ul = self.soup.new_tag("ul",Class="leaders")
+                        nd_tag.wrap(innr_ul)
+                        prev_tag.append(innr_ul)
+                    else:
+                        innr_ul.append(nd_tag)
+
+
+
     def start_parse(self):
         """
              - set the values to instance variables
@@ -1197,6 +1218,7 @@ class tnParseHtml(ParserBase):
             self.replace_tags()
             self.convert_paragraph_to_alphabetical_ol_tags()
             self.create_notes_decision_to_nav()
+            self.note_to_decision_nav()
             self.remove_or_replace_class_names()
             self.add_anchor_tags()
             self.wrap_div_tags()
