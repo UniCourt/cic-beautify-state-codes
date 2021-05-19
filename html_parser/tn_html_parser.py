@@ -1180,6 +1180,7 @@ class tnParseHtml(ParserBase):
         for nd_tag in self.soup.findAll("li"):
             if re.search(r'\d\.',nd_tag.text.strip()):
                 if re.search(r'\d\.\s*—',nd_tag.text.strip()):
+
                     if re.search(r'\d\.\s*\w+',nd_tag.find_previous_sibling().text.strip()):
                         prev_tag = nd_tag.find_previous_sibling("li")
                         innr_ul = self.soup.new_tag("ul",Class="leaders")
@@ -1222,6 +1223,8 @@ class tnParseHtml(ParserBase):
             self.remove_or_replace_class_names()
             self.add_anchor_tags()
             self.wrap_div_tags()
+
+
 
         self.clean_html_and_add_cite()
         self.write_soup_to_file()
