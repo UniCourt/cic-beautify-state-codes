@@ -10,7 +10,7 @@ from datetime import datetime
 from parser_base import ParserBase
 
 
-class GAParseHtml(ParserBase):
+class gaParseHtml(ParserBase):
     def __init__(self, input_file_name):
         super().__init__()
         self.html_file_name = input_file_name
@@ -151,6 +151,7 @@ class GAParseHtml(ParserBase):
                         ul = self.soup.new_tag("ul", Class="leaders")
 
                 if value in ['h2', 'h3']:
+
                     if chap_section_regex := re.search(
                             r'^(?P<title>\d+)-(?P<chapter>\d+([a-z])?)-(?P<section>\d+(\.\d+)?)'
                             r'|(chapter|article|part)\s(?P<chap>\d+([a-z])?)',
@@ -299,7 +300,8 @@ class GAParseHtml(ParserBase):
             if not re.search('\w+', p_tag.get_text()):
                 continue
             chap_id = p_tag.findPrevious(lambda tag: tag.name in ['h2', 'h3'])
-            sec_id = chap_id["id"]
+            if chap_id:
+                sec_id = chap_id["id"]
             if sec_id != prev_chap_id:
                 ol_count = 0
             prev_chap_id = sec_id
@@ -927,12 +929,14 @@ class GAParseHtml(ParserBase):
             - write html str to an output file
         """
         soup_str = str(self.soup.prettify(formatter=None))
+
+
         for tag in self.meta_tags:
             cleansed_tag = re.sub(r'/>', ' />', str(tag))
             soup_str = re.sub(rf'{tag}', rf'{cleansed_tag}', soup_str, re.I)
         print("validating")
         # html5validate.validate(soup_str)
-        with open(f"../transforms/ga/ocga/r{self.release_number}/{self.html_file_name}", "w") as file:
+        with open(f"/home/mis/cic-code-ga/transforms/ga/ocga/r{self.release_number}/{self.html_file_name}", "w") as file:
             file.write(soup_str)
 
     def replace_tag_names_constitution(self):
