@@ -136,22 +136,22 @@ class gaParseHtml(ParserBase):
                 p_tag.name = value
 
                 if key == self.tag_type_dict['ul']:
-                    if p_tag.findPrevious().name != 'li':
-                        p_tag.wrap(ul)
-                    elif p_tag.findPrevious().name == 'li':
+                    if p_tag.findPrevious().name == 'li':
                         ul.append(p_tag)
-                    if p_tag.findNext().has_attr('class') and \
-                            p_tag.findNext()['class'][0] != self.tag_type_dict['ul']:
-                        new_nav = self.soup.new_tag('nav')
-                        if re.search(r'sec\.|chap\.|Art\.', ul.contents[0].get_text(), re.I):
-                            ul.contents[0].name = 'p'
-                            ul.contents[0]['class'] = 'navheader'
-                            new_nav.append(ul.contents[0])
-                        ul.wrap(new_nav)
-                        ul = self.soup.new_tag("ul", Class="leaders")
+                    elif p_tag.findPrevious().name != 'li':
+                        p_tag.wrap(ul)
+
+
+                    if p_tag.findNext().has_attr('class') and p_tag.findNext()['class'][0] != self.tag_type_dict['ul']:
+                            new_nav = self.soup.new_tag('nav')
+                            if re.search(r'sec\.|chap\.|Art\.', ul.contents[0].get_text(), re.I):
+                                ul.contents[0].name = 'p'
+                                ul.contents[0]['class'] = 'navheader'
+                                new_nav.append(ul.contents[0])
+                            ul.wrap(new_nav)
+                            ul = self.soup.new_tag("ul", Class="leaders")
 
                 if value in ['h2', 'h3']:
-
                     if chap_section_regex := re.search(
                             r'^(?P<title>\d+)-(?P<chapter>\d+([a-z])?)-(?P<section>\d+(\.\d+)?)'
                             r'|(chapter|article|part)\s(?P<chap>\d+([a-z])?)',
@@ -268,6 +268,9 @@ class gaParseHtml(ParserBase):
             chap_nav = self.soup.find('nav')
             chap_nav.insert(0, watermark_p)
             chap_nav.insert(1, title_tag)
+
+
+
         print('tags replaced')
 
     def convert_paragraph_to_alphabetical_ol_tags(self):
@@ -300,8 +303,7 @@ class gaParseHtml(ParserBase):
             if not re.search('\w+', p_tag.get_text()):
                 continue
             chap_id = p_tag.findPrevious(lambda tag: tag.name in ['h2', 'h3'])
-            if chap_id:
-                sec_id = chap_id["id"]
+            sec_id = chap_id["id"]
             if sec_id != prev_chap_id:
                 ol_count = 0
             prev_chap_id = sec_id
@@ -785,18 +787,19 @@ class gaParseHtml(ParserBase):
             if re.search(chap_reg, ul.get_text(), re.I) or ul.p and re.search('Chap|Art', ul.p.get_text()):
                 for li in ul.findAll('li'):
                     li_num += 1
-                    chap_no = re.search('^\d+\w?', li.get_text().strip()).group()
-                    header_id = f'#t{self.title.zfill(2)}c{chap_no.zfill(2)}'
-                    anchor = self.soup.new_tag('a', href=header_id)
-                    cleansed_header_id = header_id.strip("#")
-                    anchor.attrs['aria-describedby'] = cleansed_header_id
-                    li['id'] = f'{cleansed_header_id}-cnav{str(li_num).zfill(2)}'
-                    anchor.string = li.text
-                    if li.string:
-                        li.string.replace_with(anchor)
-                    else:
-                        li.contents = []
-                        li.append(anchor)
+                    if re.search('^\d+\w?', li.get_text().strip()):
+                        chap_no = re.search('^\d+\w?', li.get_text().strip()).group()
+                        header_id = f'#t{self.title.zfill(2)}c{chap_no.zfill(2)}'
+                        anchor = self.soup.new_tag('a', href=header_id)
+                        cleansed_header_id = header_id.strip("#")
+                        anchor.attrs['aria-describedby'] = cleansed_header_id
+                        li['id'] = f'{cleansed_header_id}-cnav{str(li_num).zfill(2)}'
+                        anchor.string = li.text
+                        if li.string:
+                            li.string.replace_with(anchor)
+                        else:
+                            li.contents = []
+                            li.append(anchor)
             elif re.search(r'Sec|^\d+-\w+-\d+(\.\d+)?', ul.find().get_text().strip()):
                 for li in ul.findAll('li'):
                     if sec_id_reg := re.search(r'^(?P<sec>\d{1,2}-\d(\w+)?-\d+(\.\d+)?)', li.get_text().strip()):
@@ -843,7 +846,30 @@ class gaParseHtml(ParserBase):
                     else:
                         li.contents = []
                         li.append(anchor)
+
+        for li in self.soup.find_all("li"):
+            if re.search(r'^\d+\w?\.?\s', li.text.strip()):
+                first_nav = self.soup.find("ul")
+                if not li.has_attr('id'):
+                    chap_no = re.search('^\d+\w?', li.get_text().strip()).group()
+                    header_id = f'#t{self.title.zfill(2)}c{chap_no.zfill(2)}'
+                    anchor = self.soup.new_tag('a', href=header_id)
+                    cleansed_header_id = header_id.strip("#")
+                    anchor.attrs['aria-describedby'] = cleansed_header_id
+                    li['id'] = f'{cleansed_header_id}-cnav{str(li_num).zfill(2)}'
+                    anchor.string = li.text
+                    if li.string:
+                        li.string.replace_with(anchor)
+                    else:
+                        li.contents = []
+                        li.append(anchor)
+
+
+
         print('added anchor tags')
+
+
+
 
     def clean_html_and_add_cite(self):
         """
