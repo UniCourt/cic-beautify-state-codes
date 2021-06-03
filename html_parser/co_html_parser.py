@@ -2416,14 +2416,11 @@ class coParseHtml(ParserBase):
         ol_list = []
         new_num = None
         innr_roman_ol = None
+        cap_alpha_cur_tag = None
 
 
         for p_tag in self.soup.find_all():
             current_tag_text = p_tag.text.strip()
-
-            if re.search(r'Colorado\'s apportionment of congressional', current_tag_text):
-                print()
-
 
 
             if re.search(rf'^\({ol_head}\)', current_tag_text):
@@ -2730,15 +2727,33 @@ class coParseHtml(ParserBase):
                 if re.search(r'^\(I\)', current_tag_text):
                     prev_cap_alpha_tag = p_tag.find_previous(
                         lambda tag: tag.name in ['li'] and re.search(r'^\([A-Z]\)', tag.text.strip()))
-                    if prev_cap_alpha_tag:
-                        if not re.search(r'^\(H\)', prev_cap_alpha_tag.text.strip()):
+
+
+                    if cap_alpha_cur_tag:
+                        if not re.search(r'^H', cap_alpha1):
                             roman_ol = self.soup.new_tag("ol", type="I")
                             p_tag.wrap(roman_ol)
                             alpha_cur_tag.append(roman_ol)
                             p_tag["id"] = f'{prev_alpha_id}I'
                         else:
+                            print(current_tag_text)
                             cap_alpha_ol.append(p_tag)
                             p_tag["id"] = f'{prev_rom_id}I'
+                            cap_alpha1 = 'A'
+
+
+
+
+                    # if prev_cap_alpha_tag:
+                    #     if not re.search(r'^\(H\)', prev_cap_alpha_tag.text.strip()):
+                    #         roman_ol = self.soup.new_tag("ol", type="I")
+                    #         p_tag.wrap(roman_ol)
+                    #         alpha_cur_tag.append(roman_ol)
+                    #         p_tag["id"] = f'{prev_alpha_id}I'
+                    #     else:
+                    #         print(current_tag_text)
+                    #         cap_alpha_ol.append(p_tag)
+                    #         p_tag["id"] = f'{prev_rom_id}I'
                     else:
                         roman_ol = self.soup.new_tag("ol", type="I")
                         p_tag.wrap(roman_ol)
@@ -2792,6 +2807,7 @@ class coParseHtml(ParserBase):
             elif re.search(rf'^\({cap_alpha}\)', current_tag_text):
                 p_tag.name = "li"
                 cap_alpha_cur_tag = p_tag
+                cap_alpha1 = cap_alpha
 
 
 
@@ -4078,6 +4094,8 @@ class coParseHtml(ParserBase):
                     else:
                         tag.clear()
 
+
+
                         if re.search(r'§*\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+\))*(\s*\([a-z](\.\d+)*\))(\([I,V,X]+\))',
                                         match.strip()):
                                     tag.clear()
@@ -4110,6 +4128,8 @@ class coParseHtml(ParserBase):
                                             tag.append(BeautifulSoup(text))
                                             tag.html.unwrap()
                                             tag.body.unwrap()
+                                            if tag.p:
+                                                tag.p.unwrap()
 
                                         else:
                                             text = re.sub(fr'\s*{re.escape(match)}',
@@ -4119,6 +4139,8 @@ class coParseHtml(ParserBase):
                                             tag.append(BeautifulSoup(text))
                                             tag.html.unwrap()
                                             tag.body.unwrap()
+                                            if tag.p:
+                                                tag.p.unwrap()
 
                                     else:
                                         tag_id = self.create_citation(t_id, c_id, s_id, p_id)
@@ -4132,6 +4154,8 @@ class coParseHtml(ParserBase):
                                         tag.append(BeautifulSoup(text))
                                         tag.html.unwrap()
                                         tag.body.unwrap()
+                                        if tag.p:
+                                            tag.p.unwrap()
 
 
                         elif re.search(r'§*\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+\))*(\s*\([a-z](\.\d+)*\))',match.strip()):
@@ -4165,6 +4189,8 @@ class coParseHtml(ParserBase):
                                             tag.append(BeautifulSoup(text))
                                             tag.html.unwrap()
                                             tag.body.unwrap()
+                                            if tag.p:
+                                                tag.p.unwrap()
 
                                         else:
                                             text = re.sub(fr'\s*{re.escape(match)}',
@@ -4174,6 +4200,8 @@ class coParseHtml(ParserBase):
                                             tag.append(BeautifulSoup(text))
                                             tag.html.unwrap()
                                             tag.body.unwrap()
+                                            if tag.p:
+                                                tag.p.unwrap()
 
                                     else:
                                         tag_id = self.create_citation(t_id, c_id, s_id, p_id)
@@ -4187,6 +4215,8 @@ class coParseHtml(ParserBase):
                                         tag.append(BeautifulSoup(text))
                                         tag.html.unwrap()
                                         tag.body.unwrap()
+                                        if tag.p:
+                                            tag.p.unwrap()
 
 
                         elif re.search(r'§*\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+(\.\d+)*\))',match.strip()):
@@ -4219,6 +4249,8 @@ class coParseHtml(ParserBase):
                                             tag.append(BeautifulSoup(text))
                                             tag.html.unwrap()
                                             tag.body.unwrap()
+                                            if tag.p:
+                                                tag.p.unwrap()
 
                                         else:
                                             text = re.sub(fr'\s*{re.escape(match)}', f'<cite class="occo">{match}</cite>',
@@ -4226,6 +4258,8 @@ class coParseHtml(ParserBase):
                                             tag.append(BeautifulSoup(text))
                                             tag.html.unwrap()
                                             tag.body.unwrap()
+                                            if tag.p:
+                                                tag.p.unwrap()
 
                                     else:
                                         tag_id = self.create_citation(t_id, c_id, s_id, p_id)
@@ -4240,6 +4274,8 @@ class coParseHtml(ParserBase):
                                         tag.append(BeautifulSoup(text))
                                         tag.html.unwrap()
                                         tag.body.unwrap()
+                                        if tag.p:
+                                            tag.p.unwrap()
 
 
                         elif re.search(r'§*\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*', match.strip()):
@@ -4268,8 +4304,8 @@ class coParseHtml(ParserBase):
                                             tag.append(BeautifulSoup(text))
                                             tag.html.unwrap()
                                             tag.body.unwrap()
-                                            itag.p:
-                                            tag
+                                            if tag.p:
+                                                tag.p.unwrap()
 
                                         else:
                                             text = re.sub(fr'\s{re.escape(match)}', f'<cite class="occo">{match}</cite>',
@@ -4277,6 +4313,8 @@ class coParseHtml(ParserBase):
                                             tag.append(BeautifulSoup(text))
                                             tag.html.unwrap()
                                             tag.body.unwrap()
+                                            if tag.p:
+                                                tag.p.unwrap()
 
                                     else:
                                         tag_id = self.create_citation(t_id, c_id, s_id, p_id)
@@ -4292,6 +4330,8 @@ class coParseHtml(ParserBase):
                                         tag.append(BeautifulSoup(text))
                                         tag.html.unwrap()
                                         tag.body.unwrap()
+                                        if tag.p:
+                                            tag.p.unwrap()
 
 
 
@@ -4513,8 +4553,8 @@ class coParseHtml(ParserBase):
             self.add_citation1()
             # # # self.convert_paragraph_to_alphabetical_ol_tags()
             # # # self.create_and_wrap_with_ol_tag1()
-            # # self.convert_paragraph_to_alphabetical_ol_tags()
-            # self.convert_paragraph_to_alphabetical_ol_tags2()
+            # self.convert_paragraph_to_alphabetical_ol_tags()
+            self.convert_paragraph_to_alphabetical_ol_tags2()
 
             self.add_watermark_and_remove_class_name()
 
