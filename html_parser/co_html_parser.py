@@ -2574,6 +2574,8 @@ class coParseHtml(ParserBase):
                     else:
                         alpha_ol = self.soup.new_tag("ol", Class="alpha")
                         prev_tag = p_tag.find_previous_sibling()
+                        # print(alpha_ol)
+                        # print(p_tag)
                         p_tag.wrap(alpha_ol)
                         num_cur_tag.append(alpha_ol)
                         prev_alpha_id = f'{prev_num_id}{main_sec_alpha}'
@@ -2734,11 +2736,13 @@ class coParseHtml(ParserBase):
                     if cap_alpha_cur_tag:
                         if not re.search(r'^H', cap_alpha1):
                             roman_ol = self.soup.new_tag("ol", type="I")
+                            # print(p_tag)
+                            # print(roman_ol)
+
                             p_tag.wrap(roman_ol)
                             alpha_cur_tag.append(roman_ol)
                             p_tag["id"] = f'{prev_alpha_id}I'
                         else:
-                            print(current_tag_text)
                             cap_alpha_ol.append(p_tag)
                             p_tag["id"] = f'{prev_rom_id}I'
                             cap_alpha1 = 'A'
@@ -4389,23 +4393,19 @@ class coParseHtml(ParserBase):
         #         text = str(tag)
         #
         cite_p_tags = []
-        for tag in self.soup.findAll(lambda tag: re.search(r"(§?\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+\))(\s*\([a-z]\))(\([I,V,X]+\))|"
-                        r"§?\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+\))(\s*\([a-z]\))|"
-                        r"§?\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+\))|"
-                        r"§?\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*)",tag.get_text()) and tag.name == 'p'
+        for tag in self.soup.findAll(lambda tag: re.search(r"(\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+\))(\s*\([a-z]\))(\([I,V,X]+\))|"
+                        r"\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+\))(\s*\([a-z]\))|"
+                        r"\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+\))|"
+                        r"\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*)",tag.get_text()) and tag.name == 'p'
                                                          and tag not in cite_p_tags):
                 cite_p_tags.append(tag)
                 text = str(tag)
 
-                for match in set(x[0] for x in re.findall(r"(§?\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+\))(\s*\([a-z]\))(\([I,V,X]+\))|"
-                        r"§?\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+\))(\s*\([a-z]\))|"
-                        r"§?\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+\))|"
-                        r"§?\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*)",
+                for match in set(x[0] for x in re.findall(r"(\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+\))(\s*\([a-z]\))(\([I,V,X]+\))|"
+                        r"\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+\))(\s*\([a-z]\))|"
+                        r"\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+\))|"
+                        r"\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*)",
                         tag.get_text())):
-
-                    if re.search(r'1-40-132 \(1\)',match):
-                        print()
-
 
 
                     inside_text = re.sub(r'<p\sclass="\w\d+">|</p>|^<li\sclass="\w\d+"\sid=".+">|</li>$', '',
@@ -4442,20 +4442,13 @@ class coParseHtml(ParserBase):
                                     else:
                                         target = "_blank"
 
-
-
                                     text = re.sub(fr'\s*{re.escape(match)}',
                                                   f' <cite class="occo"><a href="{tag_id}" target="{target}">{match}</a></cite>',
                                                   inside_text, re.I)
-
-
                                 else:
                                     text = re.sub(fr'\s*{re.escape(match)}',
                                                   f'<cite class="occo">{match}</cite>',
                                                   inside_text, re.I)
-
-
-
                             else:
                                 tag_id = self.create_citation(t_id, c_id, s_id, p_id)
                                 if self.title_id == t_id:
@@ -4496,14 +4489,10 @@ class coParseHtml(ParserBase):
                                     text = re.sub(fr'\s*{re.escape(match)}',
                                                   f' <cite class="occo"><a href="{tag_id}" target="{target}">{match}</a></cite>',
                                                   inside_text, re.I)
-
-
                                 else:
                                     text = re.sub(fr'\s*{re.escape(match)}',
                                                   f'<cite class="occo">{match}</cite>',
                                                   inside_text, re.I)
-
-
 
                             else:
                                 tag_id = self.create_citation(t_id, c_id, s_id, p_id)
@@ -4515,15 +4504,11 @@ class coParseHtml(ParserBase):
                                               f' <cite class="occo"><a href="{tag_id}" target="{target}">{match}</a></cite>',
                                               inside_text, re.I)
 
-
-
                         elif re.search(r'§*\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+(\.\d+)*\))', match.strip()):
-
                             tag.clear()
                             chap_num = re.search(
                                 r'§*\s*(?P<sec_id>(?P<title_id>\d+(\.\d+)*)-(?P<chap_id>\d+(\.\d+)*)-(?P<part>(?P<part_id>\d)(\d+)*)(\.\d+)*)\s*\((?P<ol_id>\d+(\.\d+)*)\)',
                                 match.strip())
-
                             t_id = chap_num.group("title_id").zfill(2)
                             c_id = chap_num.group("chap_id")
                             s_id = chap_num.group("sec_id").zfill(2)
@@ -4542,14 +4527,9 @@ class coParseHtml(ParserBase):
                                     else:
                                         target = "_blank"
 
-
-
                                     text = re.sub(fr'\s*{re.escape(match)}',
                                                   f' <cite class="occo"><a href="{tag_id}" target="{target}">{match}</a></cite>',
                                                   inside_text, re.I)
-
-
-
                                 else:
                                     if tag.cite:
                                         tag.cite.unwrap()
@@ -4557,8 +4537,6 @@ class coParseHtml(ParserBase):
 
                                     text = re.sub(fr'\s*{re.escape(match)}', f'<cite class="occo">{match}</cite>',
                                                   inside_text, re.I)
-
-
                             else:
                                 tag_id = self.create_citation(t_id, c_id, s_id, p_id)
                                 if self.title_id == t_id:
@@ -4574,11 +4552,9 @@ class coParseHtml(ParserBase):
                                               f' <cite class="occo"><a href="{tag_id}" target="{target}">{match}</a></cite>',
                                               inside_text, re.I)
 
-
-
-
                         elif re.search(r'§*\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*', match.strip()):
                             tag.clear()
+
                             chap_num = re.search(
                                 r'§*\s*(?P<sec_id>(?P<title_id>\d+(\.\d+)*)-(?P<chap_id>\d+(\.\d+)*)-(?P<part>(?P<part_id>\d)(\d+)*)(\.\d+)*)',
                                 match.strip())
@@ -4601,16 +4577,10 @@ class coParseHtml(ParserBase):
                                     text = re.sub(fr'\s*{re.escape(match)}',
                                                   f' <cite class="occo"><a href="{tag_id}" target="{target}">{match}</a></cite>',
                                                   inside_text, re.I)
-
                                 else:
                                     text = re.sub(fr'\s{re.escape(match)}', f'<cite class="occo">{match}</cite>',
                                                   inside_text, re.I)
                                     tag.append(BeautifulSoup(text))
-                                    tag.html.unwrap()
-                                    tag.body.unwrap()
-                                    if tag.p:
-                                        tag.p.unwrap()
-
                             else:
                                 tag_id = self.create_citation(t_id, c_id, s_id, p_id)
                                 if self.title_id == t_id:
@@ -4628,6 +4598,7 @@ class coParseHtml(ParserBase):
                             tag.p.unwrap()
 
 
+
         for tag in self.soup.find_all(["p", "li"]):
             if re.search(r"Colo\.\s*\d+|Colo\.\s*Law\.\s*\d+|"
                          r"\d+\s*Denv\.\s*L\.\s*Rev\.\s*\d+|"
@@ -4642,19 +4613,36 @@ class coParseHtml(ParserBase):
                         tag.clear()
                         text = re.sub(fr'\s{re.escape(match)}', f'<cite class="{key}">{match}</cite>', inside_text,
                                       re.I)
-
                         tag.append(text)
 
-        # for empty_li in self.soup.find_all("li"):
-        #     text = str(empty_li)
-        #     if re.search(r'^<li class="\w\d+" id=".+">&lt;', text):
-        #         empty_li.unwrap()
+                        # tag.append(BeautifulSoup(text))
+                        # if tag.html:
+                        #     print(tag)
+                        # tag.html.unwrap()
+                        # tag.body.unwrap()
+                        # if tag.p:
+                        #     tag.p.unwrap()
 
-        # for all_tag in self.soup.findAll(["p"]):
-        #    if re.search(r'<html>', all_tag.text.strip()):
-        #       all_tag.string = re.sub(r'<html>|<body>|</html>|</body>','',all_tag.text.strip())
+
+
+        for remove_tag in self.soup.findAll(["html","body","cite"]):
+            if remove_tag.name == "html":
+                if not remove_tag.get("lang"):
+                    remove_tag.unwrap()
+            if remove_tag.name == "cite":
+                if remove_tag.cite:
+                    remove_tag.cite.decompose()
+            if remove_tag.name == "body" and not remove_tag.find_previous().name == "meta":
+                remove_tag.unwrap()
+
+
+
+
+
+
 
         print("cite is created")
+
 
     # creating numberical ol
     def create_numberical_ol(self):
