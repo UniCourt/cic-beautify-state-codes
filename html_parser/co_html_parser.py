@@ -170,6 +170,7 @@ class coParseHtml(ParserBase):
                         tag_name = "h2"
                         prev_id = None
                         chap_num = re.sub(r'[\s]+', '', header_tag.text.strip()).lower()
+
                         sub_tag = re.search(r'^[a-zA-Z]{2}', header_tag.text.strip()).group()
                         sub_tag = f'-{sub_tag.lower()}-'
                         class_name = f'{chap_num.lower()}h2'
@@ -194,7 +195,10 @@ class coParseHtml(ParserBase):
                     if re.search(r'^(ARTICLE)', header_tag.text.strip()):
                         tag_name = "h2"
 
-                        prev_id = header_tag.find_previous("h2", class_='amendmenth2').get("id")
+                        if header_tag.find_previous("h2", class_='amendmenth2'):
+                            prev_id = header_tag.find_previous("h2", class_='amendmenth2').get("id")
+                        else:
+                            prev_id = header_tag.find_previous("h1").get("id")
                         chap_num = re.search(r'^(ARTICLE\s*(?P<ar>[I,V,X]+))', header_tag.text.strip()).group(
                             "ar").zfill(2)
                         sub_tag = "-ar"
@@ -2496,6 +2500,7 @@ class coParseHtml(ParserBase):
         new_num = None
         innr_roman_ol = None
         cap_alpha_cur_tag = None
+        new_alpha = None
 
 
         for p_tag in self.soup.find_all():
@@ -2516,7 +2521,11 @@ class coParseHtml(ParserBase):
                         num_ol = self.soup.new_tag("ol")
                         p_tag.wrap(num_ol)
                         main_sec_alpha = "a"
-                    prev_head_id = p_tag.find_previous(["h4", "h3"]).get("id")
+                    if p_tag.find_previous(["h4", "h3"]):
+                        prev_head_id = p_tag.find_previous(["h4", "h3"]).get("id")
+                    else:
+                        prev_head_id = p_tag.find_previous(["h2", "h1"]).get("id")
+
                     if prev_head_id in ol_list:
                         ol_count += 1
                     else:
@@ -3043,7 +3052,7 @@ class coParseHtml(ParserBase):
 
 
 
-            if re.search(r'^Source|^Cross references:|^Editor\'s note', current_tag_text) or p_tag.name in ['h3', 'h4']:
+            if re.search(r'^Source|^Cross references:', current_tag_text) or p_tag.name in ['h3', 'h4']:
                 ol_head = 1
                 num_count = 1
                 num_cur_tag = None
@@ -3052,9 +3061,6 @@ class coParseHtml(ParserBase):
 
 
         print('ol tags added')
-
-
-
 
     def create_ul_tag(self):
         if re.search('constitution', self.html_file_name):
@@ -3111,8 +3117,8 @@ class coParseHtml(ParserBase):
         nav_count = 1
         for list_item in self.soup.find_all(class_=self.class_regex['ul']):
             if re.search('constitution', self.html_file_name):
-                if re.match(r'^ARTICLE', list_item.text.strip()):
-                    chap_num = re.search(r'^ARTICLE\s*(?P<ar>[A-Z]+)',list_item.text.strip()).group("ar").zfill(2)
+                if re.match(r'^ARTICLE|^Article', list_item.text.strip()):
+                    chap_num = re.search(r'^(ARTICLE|Article)\s*(?P<ar>[A-Z]+)',list_item.text.strip()).group("ar").zfill(2)
                     sub_tag = "-ar"
                     prev_id = None
                     self.set_chapter_section_nav(list_item, chap_num, sub_tag, prev_id, None)
@@ -3222,6 +3228,10 @@ class coParseHtml(ParserBase):
 
                                 prev_id = li_tag.find_previous("h4").get("id")
                                 ul_analy_tag = self.soup.new_tag("ul", **{"class": "leaders"})
+
+                                if li_tag.find_previous().name == "ul":
+                                    li_tag.find_previous().decompose()
+
                                 li_tag.wrap(ul_analy_tag)
                             else:
                                 innr_ul_analy_tag.append(li_tag)
@@ -3252,8 +3262,13 @@ class coParseHtml(ParserBase):
                     elif re.search(r'^[1-9]\.', li_tag.text.strip()):
                         if re.search(r'^1\.', li_tag.text.strip()):
                             num_ul_analy_tag = self.soup.new_tag("ul", **{"class": "leaders"})
+                            prev_li_tag = li_tag.find_previous("li")
+
+                            print(li_tag)
+                            print(prev_li_tag)
+
                             li_tag.wrap(num_ul_analy_tag)
-                            innr_ul_analy_tag.append(num_ul_analy_tag)
+                            prev_li_tag.append(num_ul_analy_tag)
                             chap_num = "1"
 
                         else:
@@ -3262,6 +3277,9 @@ class coParseHtml(ParserBase):
                         sub_tag = "-"
 
                         self.set_chapter_section_nav(li_tag, chap_num, sub_tag, prev_id2, None)
+
+
+
 
                 else:
                     if re.search(r'^[A-HJ-UW-Z]\.', li_tag.text.strip()):
@@ -4441,6 +4459,7 @@ class coParseHtml(ParserBase):
 
     def add_citation2(self):
         class_dict = {'co_code': 'Colo\.\s*\d+',
+                     'cocode':'Colo.+P\.\d\w\s\d+',
                       'co_law': 'Colo\.\s*Law\.\s*\d+|L\.\s*\d+,\s*p\.\s*\d+',
                       'denv_law': '\d+\s*Denv\.\s*L\.\s*Rev\.\s*\d+',
                       'COA': '\d{4}\s*COA\s*\d+'}
@@ -4449,7 +4468,9 @@ class coParseHtml(ParserBase):
         #     if re.search(r"§*\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+\))*(\s*\([a-z]\))*(\([I,V,X]+\))*",
         #                  tag.text.strip()):
         #         text = str(tag)
-        #
+
+
+
         cite_p_tags = []
         for tag in self.soup.findAll(lambda tag: re.search(r"(\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+\))(\s*\([a-z]\))(\([I,V,X]+\))|"
                         r"\s*\d+(\.\d+)*-\d+(\.\d+)*-\d+(\.\d+)*(\s*\(\d+\))(\s*\([a-z]\))|"
@@ -4471,6 +4492,8 @@ class coParseHtml(ParserBase):
                                          text, re.DOTALL)
                     if tag.get("class") == [self.class_regex["ul"]]:
                         continue
+
+
                     else:
                         tag.clear()
                         if re.search(
@@ -4662,7 +4685,8 @@ class coParseHtml(ParserBase):
             if re.search(r"Colo\.\s*\d+|Colo\.\s*Law\.\s*\d+|"
                          r"\d+\s*Denv\.\s*L\.\s*Rev\.\s*\d+|"
                          r"\d{4}\s*COA\s*\d+|"
-                         r"L\.\s*\d+,\s*p\.\s*\d+", tag.text.strip()):
+                         r"L\.\s*\d+,\s*p\.\s*\d+|"
+                         r"Colo.+P\.\d\w\s\d+", tag.text.strip()):
 
                 text = str(tag)
                 for key, value in class_dict.items():
@@ -4693,12 +4717,6 @@ class coParseHtml(ParserBase):
                     remove_tag.cite.decompose()
             if remove_tag.name == "body" and not remove_tag.find_previous().name == "meta":
                 remove_tag.unwrap()
-
-
-
-
-
-
 
         print("cite is created")
 
@@ -4860,9 +4878,9 @@ class coParseHtml(ParserBase):
         if re.search('constitution', self.html_file_name):
             self.class_regex = {
                                 'title': '^Declaration of Independence|^Constitution of the State of Colorado|^COLORADO COURT RULES',
-                                'ul': '^PREAMBLE','head2': '^PREAMBLE',
+                                'ul': '^Preamble','head2': '^PREAMBLE|^Preamble',
                                 'sec_head': r'^Section\s*[0-9a-z]+\.',
-                                'junk': '^Statute text', 'ol': r'^(\(1\))',
+                                'junk': '^Statute text', 'ol': r'^§',
                                 'head4': '^ANNOTATIONS', 'art_head': '^ARTICLE',
                                 'amd': '^AMENDMENTS', 'Analysis': '^I\.'}
 
