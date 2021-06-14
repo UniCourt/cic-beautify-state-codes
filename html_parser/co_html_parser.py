@@ -673,8 +673,9 @@ class coParseHtml(ParserBase):
                                         p_tag.string = num_text
 
 
-                    if re.search(r'^\(\d+\)\s*to\s*\(\d+\)\s*', current_p_tag):
-                        alpha = re.search(r'^(?P<text1>\((?P<num1>\d+)\)\s*to\s*)(?P<text2>\((?P<num2>\d+)\)\s*.+)',current_p_tag)
+                    if re.search(r'^\(\d+\)\s*(to|and)\s*\(\d+\)\s*', current_p_tag):
+
+                        alpha = re.search(r'^(?P<text1>\((?P<num1>\d+)\)\s*(to|and)\s*)(?P<text2>\((?P<num2>\d+)\)\s*.+)',current_p_tag)
                         if re.search(r'^\(\d+\)', p_tag.find_next_sibling().text.strip()):
 
                             nxt_alpha = re.search(r'^\((?P<num3>\d+)\)', p_tag.find_next_sibling().text.strip()).group(
@@ -716,10 +717,11 @@ class coParseHtml(ParserBase):
                                                 count +=1
 
 
-                    if re.search(r'^\([a-z]\)\s*to\s*\([a-z]\)\s*Repealed.', current_p_tag):
-                        alpha = re.search(r'^(?P<text1>\((?P<num1>[a-z])\)\s*to\s*)(?P<text2>\((?P<num2>[a-z])\)\s*Repealed.)',current_p_tag)
-                        if re.match(r'^\([a-z]\)', p_tag.find_next_sibling().text.strip()):
-                            nxt_alpha = re.search(r'^\((?P<num3>[a-z])\)', p_tag.find_next_sibling().text.strip()).group(
+                    if re.search(r'^\([a-zA-Z]\)\s*(to|and)\s*\([a-zA-Z]\)\s*(Repealed.|\()', current_p_tag):
+
+                        alpha = re.search(r'^(?P<text1>\((?P<num1>[a-zA-Z])\)\s*(to|and)\s*)(?P<text2>\((?P<num2>[a-zA-Z])\)\s*(Repealed.|\(.+))',current_p_tag)
+                        if re.match(r'^\([a-zA-Z]\)', p_tag.find_next_sibling().text.strip()):
+                            nxt_alpha = re.search(r'^\((?P<num3>[a-zA-Z])\)', p_tag.find_next_sibling().text.strip()).group(
                                 "num3")
                             if ord(alpha.group("num2")) == ord(alpha.group("num1")) + 1:
                                 if ord(nxt_alpha) == ord(alpha.group("num2")) + 1:
@@ -752,6 +754,27 @@ class coParseHtml(ParserBase):
                                         p_tag.insert_after(new_p_tag)
                                         p_tag = new_p_tag
                                         count +=1
+
+                        else:
+                            alpha_text = alpha.group("text2")
+                            num_text = alpha.group("text1")
+                            new_p_tag = self.soup.new_tag("p")
+                            new_p_tag.string = alpha_text
+                            new_p_tag["class"] = [self.class_regex['ol']]
+                            p_tag.insert_after(new_p_tag)
+                            p_tag.string = num_text
+
+                            range_from = ord(alpha.group("num1"))
+                            range_to = ord(alpha.group("num2"))
+                            count = range_from + 1
+
+                            for new_p_tag in range(range_from + 1, range_to):
+                                new_p_tag = self.soup.new_tag("p")
+                                new_p_tag.string = f'({chr(count)})'
+                                new_p_tag["class"] = [self.class_regex['ol']]
+                                p_tag.insert_after(new_p_tag)
+                                p_tag = new_p_tag
+                                count += 1
 
 
                     if re.search(r'^\([a-z]\).+\([a-z]\)\s*', current_p_tag):
@@ -1715,6 +1738,8 @@ class coParseHtml(ParserBase):
 
             # I
             elif re.search(r'^\([IVX]+\)',current_tag_text):
+                print(current_tag_text)
+                print(main_sec_alpha)
                 p_tag.name = "li"
                 rom_cur_tag = p_tag
                 cap_alpha = "A"
@@ -1782,6 +1807,8 @@ class coParseHtml(ParserBase):
                             cap_alpha = "B"
 
                 p_tag.string = re.sub(r'^\([IVX]+\)', '', current_tag_text)
+
+
 
 
             #  A
@@ -2506,7 +2533,6 @@ class coParseHtml(ParserBase):
         for p_tag in self.soup.find_all():
             current_tag_text = p_tag.text.strip()
 
-
             if re.search(rf'^\({ol_head}\)', current_tag_text):
                 p_tag.name = "li"
                 cap_alpha = 'A'
@@ -2568,6 +2594,7 @@ class coParseHtml(ParserBase):
                         inner_li_tag.append(current_tag_text)
                         li_tag["class"] = self.class_regex['ol']
                         rom_cur_tag = li_tag
+
                         cur_tag = re.search(r'^\((?P<id1>\d+)\)\s*\((?P<cid>\w)\)\s*\((?P<id2>[I,V,X]+)\)',
                                             current_tag_text)
                         prev_rom_id = f'{prev_head_id}ol{ol_count}{cur_tag.group("id1")}{cur_tag.group("cid")}{cur_tag.group("id2")}'
@@ -2660,8 +2687,7 @@ class coParseHtml(ParserBase):
                     else:
                         alpha_ol = self.soup.new_tag("ol", Class="alpha")
                         prev_tag = p_tag.find_previous_sibling()
-                        # print(alpha_ol)
-                        # print(p_tag)
+
                         p_tag.wrap(alpha_ol)
                         num_cur_tag.append(alpha_ol)
                         prev_alpha_id = f'{prev_num_id}{main_sec_alpha}'
@@ -2683,14 +2709,19 @@ class coParseHtml(ParserBase):
                 p_tag.string = re.sub(rf'^\({main_sec_alpha}\)', '', current_tag_text)
                 main_sec_alpha = chr(ord(main_sec_alpha) + 1)
 
+                # if re.search(r'\(j\) Has committed:', current_tag_text.strip()):
+                #     print(main_sec_alpha)
+
 
                 if re.search(r'^\(\w\)\s*\([I,V,X]+\)', current_tag_text):
+
                     roman_ol = self.soup.new_tag("ol", type="I")
                     li_tag = self.soup.new_tag("li")
                     li_tag.string = re.sub(r'^\(\w\)\s*\([I,V,X]+\)', '', current_tag_text)
                     li_tag.append(current_tag_text)
                     li_tag["class"] = self.class_regex['ol']
                     rom_cur_tag = li_tag
+
                     cur_tag = re.search(r'^\((?P<cid>\w+)\)\s*\((?P<pid>[I,V,X]+)\)', current_tag_text)
                     prev_rom_id = f'{prev_num_id}{cur_tag.group("cid")}{cur_tag.group("pid")}'
                     li_tag["id"] = f'{prev_num_id}{cur_tag.group("cid")}{cur_tag.group("pid")}'
@@ -2736,6 +2767,7 @@ class coParseHtml(ParserBase):
 
                     ol_head = 2
                     cap_alpha = "A"
+                    new_num = None
 
 
                 if re.search(r'^\(\w\)\s*\([ivx]+\)', current_tag_text):
@@ -2758,6 +2790,7 @@ class coParseHtml(ParserBase):
                 roman_count = 1
                 cur_tag = re.search(r'^\((?P<cid>\w+\.\d+)\)', current_tag_text).group("cid")
                 p_tag["id"] = f'{prev_alpha_id}-{cur_tag}'
+                prev_alpha_id = f'{prev_alpha_id}'
                 prev_alpha_tag = p_tag.find_previous(
                     lambda tag: tag.name in ['li'] and re.search(r'^\(\w+\)', tag.text.strip()))
 
@@ -2785,6 +2818,7 @@ class coParseHtml(ParserBase):
                     rom_cur_tag = li_tag
                     cur_tag = re.search(r'^\((?P<cid>\w+\.\d+)\)\s*\((?P<pid>[I,V,X]+)\)', current_tag_text)
                     prev_rom_id = f'{prev_head_id}ol{ol_count}{cur_tag.group("cid")}'
+                    prev_alpha_id = f'{prev_head_id}ol{ol_count}{cur_tag.group("cid")}'
                     li_tag["id"] = f'{prev_head_id}ol{ol_count}{cur_tag.group("cid")}{cur_tag.group("pid")}'
                     roman_ol.append(li_tag)
                     p_tag.contents = []
@@ -2822,8 +2856,8 @@ class coParseHtml(ParserBase):
                     if cap_alpha_cur_tag:
                         if not re.search(r'^H', cap_alpha1):
                             roman_ol = self.soup.new_tag("ol", type="I")
-                            # print(p_tag)
-                            # print(roman_ol)
+                            print(p_tag)
+                            print(roman_ol)
 
                             p_tag.wrap(roman_ol)
                             alpha_cur_tag.append(roman_ol)
@@ -2893,6 +2927,9 @@ class coParseHtml(ParserBase):
 
                 p_tag.string = re.sub(r'^\([IVX]+\)', '', current_tag_text)
 
+                # print(current_tag_text)
+                # print(main_sec_alpha)
+
 
             # #  A
 
@@ -2901,16 +2938,16 @@ class coParseHtml(ParserBase):
                 cap_alpha_cur_tag = p_tag
                 cap_alpha1 = cap_alpha
 
-
-
                 if re.search(r'^\(A\)', current_tag_text):
                     cap_alpha_ol = self.soup.new_tag("ol", type="A")
                     p_tag.wrap(cap_alpha_ol)
 
-                    if not new_num == None:
-                        new_num.append(cap_alpha_ol)
-                    else:
-                        rom_cur_tag.append(cap_alpha_ol)
+                    rom_cur_tag.append(cap_alpha_ol)
+                    # if not new_num == None:
+                    #     new_num.append(cap_alpha_ol)
+                    # else:
+                    #     rom_cur_tag.append(cap_alpha_ol)
+
 
                 else:
                     cap_alpha_ol.append(p_tag)
@@ -2922,8 +2959,10 @@ class coParseHtml(ParserBase):
                     pre_capalpha_id = f'{prev_rom_id}{cap_alpha}'
                     p_tag["id"] = f'{prev_rom_id}{cap_alpha}'
 
+                p_tag["id"] = f'{prev_rom_id}{cap_alpha}'
                 p_tag.string = re.sub(rf'^\({cap_alpha}\)', '', current_tag_text)
                 cap_alpha = chr(ord(cap_alpha) + 1)
+
 
             # # i
             elif re.search(r'^\([ivx]+\)',current_tag_text):
@@ -2933,8 +2972,8 @@ class coParseHtml(ParserBase):
 
 
                 if re.search(r'^\(i\)',current_tag_text):
-
                     innr_roman_ol = self.soup.new_tag("ol", type="i")
+                    print(current_tag_text)
                     p_tag.wrap(innr_roman_ol)
                     p_tag.find_previous("li").append(innr_roman_ol)
                     prev_alpha =  p_tag.find_previous("li")
@@ -2989,8 +3028,6 @@ class coParseHtml(ParserBase):
                 p_tag.name = "li"
                 num_tag = p_tag
 
-
-
                 if re.search(r'^1\.', current_tag_text):
                     num_ol1 = self.soup.new_tag("ol")
                     p_tag.wrap(num_ol1)
@@ -3002,9 +3039,7 @@ class coParseHtml(ParserBase):
                     ol_list.append(prev_head_id)
                 else:
                     num_ol1.append(p_tag)
-
                 prev_num_id1 = f'{prev_head_id}ol{ol_count}{num_count}'
-
                 p_tag["id"] = f'{prev_head_id}ol{ol_count}{num_count}'
                 p_tag.string = re.sub(rf'^{num_count}\.', '', current_tag_text)
                 num_count += 1
@@ -3061,6 +3096,7 @@ class coParseHtml(ParserBase):
 
 
         print('ol tags added')
+
 
     def create_ul_tag(self):
         if re.search('constitution', self.html_file_name):
@@ -3263,9 +3299,6 @@ class coParseHtml(ParserBase):
                         if re.search(r'^1\.', li_tag.text.strip()):
                             num_ul_analy_tag = self.soup.new_tag("ul", **{"class": "leaders"})
                             prev_li_tag = li_tag.find_previous("li")
-
-                            print(li_tag)
-                            print(prev_li_tag)
 
                             li_tag.wrap(num_ul_analy_tag)
                             prev_li_tag.append(num_ul_analy_tag)
@@ -4696,15 +4729,15 @@ class coParseHtml(ParserBase):
                         tag.clear()
                         text = re.sub(fr'\s{re.escape(match)}', f'<cite class="{key}">{match}</cite>', inside_text,
                                       re.I)
-                        tag.append(text)
+                        # tag.append(text)
 
-                        # tag.append(BeautifulSoup(text))
+                        tag.append(BeautifulSoup(text))
                         # if tag.html:
                         #     print(tag)
-                        # tag.html.unwrap()
-                        # tag.body.unwrap()
-                        # if tag.p:
-                        #     tag.p.unwrap()
+                        tag.html.unwrap()
+                        tag.body.unwrap()
+                        if tag.p:
+                            tag.p.unwrap()
 
 
 
@@ -4908,8 +4941,6 @@ class coParseHtml(ParserBase):
             self.add_citation2()
             self.convert_paragraph_to_alphabetical_ol_tags2()
             self.add_watermark_and_remove_class_name()
-
-
 
         self.write_soup_to_file()
 
