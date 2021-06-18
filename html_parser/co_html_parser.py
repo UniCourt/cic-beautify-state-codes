@@ -5,8 +5,6 @@ from parser_base import ParserBase
 import roman
 import warnings
 
-
-
 class coParseHtml(ParserBase):
     def __init__(self, input_file_name):
         super().__init__()
@@ -19,12 +17,10 @@ class coParseHtml(ParserBase):
         self.soup = None
         self.junk_tag_class = ['Apple-converted-space', 'Apple-tab-span']
         self.html_file_name = input_file_name
-
         self.watermark_text = """Release {0} of the Official Code of Colorado Annotated released {1}.
         Transformed and posted by Public.Resource.Org using cic-beautify-state-codes.py version 1.4 on {2}.
         This document is not subject to copyright and is in the public domain.
         """
-
         self.start_parse()
 
     def create_page_soup(self):
@@ -108,7 +104,6 @@ class coParseHtml(ParserBase):
     def replace_tags(self):
         sec_head_list = []
         ann_count = 1
-
         count = 1
         section_head = []
         sec_count = 1
@@ -655,7 +650,6 @@ class coParseHtml(ParserBase):
             else:
                 ans -= value[roman[num]]
             prev = value[roman[num]]
-
         return ans
 
     def convert_paragraph_to_alphabetical_ol_tags2(self):
@@ -824,11 +818,9 @@ class coParseHtml(ParserBase):
                         p_tag["id"] = f'{prev_head_id}ol{ol_count}{main_sec_alpha}'
                         ol_head = 1
                         new_alpha = p_tag
-
                     else:
                         alpha_ol = self.soup.new_tag("ol", Class="alpha")
                         prev_tag = p_tag.find_previous_sibling()
-
                         p_tag.wrap(alpha_ol)
                         num_cur_tag.append(alpha_ol)
                         prev_alpha_id = f'{prev_num_id}{main_sec_alpha}'
@@ -836,7 +828,6 @@ class coParseHtml(ParserBase):
 
                 else:
                     alpha_ol.append(p_tag)
-
                     if new_alpha == None:
                         prev_alpha_id = f'{prev_num_id}{main_sec_alpha}'
                         p_tag["id"] = f'{prev_num_id}{main_sec_alpha}'
@@ -911,7 +902,7 @@ class coParseHtml(ParserBase):
                     p_tag.contents = []
                     p_tag.append(innr_roman_ol)
 
-            # # a.5
+           # a.5
             elif re.search(r'^\(\w+\.\d+\)', current_tag_text):
                 roman_count = 1
                 cur_tag = re.search(r'^\((?P<cid>\w+\.\d+)\)', current_tag_text).group("cid")
@@ -946,7 +937,6 @@ class coParseHtml(ParserBase):
                         inner_li_tag = self.soup.new_tag("li")
                         inner_li_tag.append(current_tag_text)
                         li_tag["class"] = self.class_regex['ol']
-
                         cur_tag = re.search(
                             r'^\((?P<cid>\w\.\d+)\)\s*\((?P<id2>[I,V,X]+)\)\s*\((?P<id3>\w)\)',
                             current_tag_text)
@@ -958,8 +948,7 @@ class coParseHtml(ParserBase):
                         cap_alpha_ol.find_previous().string.replace_with(cap_alpha_ol)
                         cap_alpha = "B"
 
-
-            # # # I
+             # I
             elif re.search(r'^\([IVX]+\)', current_tag_text):
                 p_tag.name = "li"
                 rom_cur_tag = p_tag
@@ -1012,8 +1001,7 @@ class coParseHtml(ParserBase):
                     cap_alpha = "B"
                 p_tag.string = re.sub(r'^\([IVX]+\)', '', current_tag_text)
 
-            # #  A
-
+            #  A
             elif re.search(rf'^\({cap_alpha}\)', current_tag_text):
                 p_tag.name = "li"
                 cap_alpha_cur_tag = p_tag
@@ -1044,8 +1032,7 @@ class coParseHtml(ParserBase):
                 p_tag.string = re.sub(rf'^\({cap_alpha}\)', '', current_tag_text)
                 cap_alpha = chr(ord(cap_alpha) + 1)
 
-
-            # # i
+            # i
             elif re.search(r'^\([ivx]+\)',current_tag_text):
                 p_tag.name = "li"
                 rom_cur_tag = p_tag
@@ -1159,7 +1146,6 @@ class coParseHtml(ParserBase):
                             ul_tag.find_previous("nav").append(ul_tag)
                         else:
                             ul_tag.wrap(self.soup.new_tag("nav"))
-
 
         print("ul tag is created")
 
@@ -1454,6 +1440,7 @@ class coParseHtml(ParserBase):
                             print()
 
         print('wrapped div tags')
+
 
     def create_citation(self,t_id,c_id,s_id,p_id):
 
