@@ -10,7 +10,7 @@ from datetime import datetime
 from parser_base import ParserBase
 
 
-class gaParseHtml(ParserBase):
+class GAParseHtml(ParserBase):
     def __init__(self, input_file_name):
         super().__init__()
         self.html_file_name = input_file_name

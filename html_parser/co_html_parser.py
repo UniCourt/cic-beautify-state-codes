@@ -5,7 +5,7 @@ from parser_base import ParserBase
 import roman
 import warnings
 
-class coParseHtml(ParserBase):
+class COParseHtml(ParserBase):
     def __init__(self, input_file_name):
         super().__init__()
         self.class_regex = {'ul': '^Art.', 'head2': '^ARTICLE ',

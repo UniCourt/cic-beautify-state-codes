@@ -11,7 +11,7 @@ from parser_base import ParserBase
 import roman
 
 
-class tnParseHtml(ParserBase):
+class TNParseHtml(ParserBase):
     def __init__(self, input_file_name):
         super().__init__()
         self.html_file_name = input_file_name
