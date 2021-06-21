@@ -2236,7 +2236,7 @@ class COParseHtml(ParserBase):
         """
 
         soup_str = str(self.soup.prettify(formatter=None))
-        with open(f"/home/mis/cic-code-co/transforms/co/occo/r{self.release_number}/{self.html_file_name}",
+        with open(f"../transforms/co/occo/r{self.release_number}/{self.html_file_name}",
                   "w") as file:
             file.write(soup_str)
 

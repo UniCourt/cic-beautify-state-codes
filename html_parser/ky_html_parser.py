@@ -4205,7 +4205,7 @@ class KYParseHtml(ParserBase):
         """
 
         soup_str = str(self.soup.prettify(formatter=None))
-        with open(f"/home/mis/PycharmProjects/cic-code-ky/transforms/ky/ocky/r{self.release_number}/{self.html_file_name}", "w") as file:
+        with open(f"../transforms/ky/ocky/r{self.release_number}/{self.html_file_name}", "w") as file:
             file.write(soup_str)
 
     # add css file
@@ -4264,9 +4264,9 @@ class KYParseHtml(ParserBase):
             self.create_ul_tag_to_notes_to_decision()
             self.create_and_wrap_with_div_tag()
             self.wrap_with_ordered_tag()
-            # self.create_numberical_ol()
-            # self.add_citation1()
-            # self.add_watermark_and_remove_class_name()
+            self.create_numberical_ol()
+            self.add_citation1()
+            self.add_watermark_and_remove_class_name()
 
         self.write_soup_to_file()
         print(datetime.now() - start_time)

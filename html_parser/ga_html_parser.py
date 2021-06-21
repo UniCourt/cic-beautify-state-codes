@@ -962,7 +962,7 @@ class GAParseHtml(ParserBase):
             soup_str = re.sub(rf'{tag}', rf'{cleansed_tag}', soup_str, re.I)
         print("validating")
         # html5validate.validate(soup_str)
-        with open(f"/home/mis/cic-code-ga/transforms/ga/ocga/r{self.release_number}/{self.html_file_name}", "w") as file:
+        with open(f"../transforms/ga/ocga/r{self.release_number}/{self.html_file_name}", "w") as file:
             file.write(soup_str)
 
     def replace_tag_names_constitution(self):
