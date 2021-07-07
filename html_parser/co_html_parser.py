@@ -1260,7 +1260,6 @@ class coParseHtml(ParserBase):
 
 
     def create_chapter_section_nav(self):
-
         count = 0
         nav_head = []
         nav_count = 1
@@ -1345,7 +1344,10 @@ class coParseHtml(ParserBase):
                     # sub_tag = "-s"
                     # self.set_chapter_section_nav(list_item, chap_num, sub_tag, prev_id, None)
 
-                    if list_item.find_previous("h2", class_="parth2"):
+
+                    if list_item.find_previous("h2", class_="subparth2"):
+                        prev_id = list_item.find_previous("h2", class_="subparth2").get("id")
+                    elif list_item.find_previous("h2", class_="parth2"):
                         prev_id = list_item.find_previous("h2", class_="parth2").get("id")
                     else:
                         prev_id = list_item.find_previous("h2", class_="articleh2").get("id")
@@ -1358,6 +1360,16 @@ class coParseHtml(ParserBase):
                         prev_id1 = list_item.find_previous("h2", class_="articleh2").get("id")
                         prev_id2 = re.search(r'^Part\s*(?P<id>\d+)',list_item.text.strip()).group("id").zfill(2)
                         prev_id = f"{prev_id1}-p{prev_id2}"
+                        nav_list = []
+                        nav_link = self.soup.new_tag('a')
+                        nav_link.append(list_item.text)
+                        nav_link["href"] = f"#{prev_id}"
+                        nav_list.append(nav_link)
+                        list_item.contents = nav_list
+                    elif re.search(r'^Subpart\s*(?P<id>\d+)',list_item.text.strip()):
+                        prev_id1 = list_item.find_previous("h2", class_="parth2").get("id")
+                        prev_id2 = re.search(r'^Subpart\s*(?P<id>\d+)',list_item.text.strip()).group("id").zfill(2)
+                        prev_id = f"{prev_id1}-s{prev_id2}"
                         nav_list = []
                         nav_link = self.soup.new_tag('a')
                         nav_link.append(list_item.text)
