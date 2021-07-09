@@ -945,6 +945,7 @@ class coParseHtml(ParserBase):
                         cur_tag = re.search(
                             r'^\((?P<cid>\w)\)\s*\((?P<id2>[I,V,X]+)\)\s*\((?P<id3>\w)\)',
                             current_tag_text)
+                        prev_id = f'{prev_head_id}ol{ol_count}{cur_tag.group("cid")}{cur_tag.group("id2")}'
                         inner_li_tag[
                             "id"] = f'{prev_head_id}ol{ol_count}{cur_tag.group("cid")}{cur_tag.group("id2")}{cur_tag.group("id3")}'
                         cap_alpha_ol.append(inner_li_tag)
@@ -1014,7 +1015,6 @@ class coParseHtml(ParserBase):
                     p_tag.append(roman_ol)
 
                     if re.search(r'^\(\w\.\d+\)\s*\([I,V,X]+\)\s*\(\w\)', current_tag_text):
-                        print(current_tag_text)
                         cap_alpha_ol = self.soup.new_tag("ol", type="A")
                         inner_li_tag = self.soup.new_tag("li")
                         inner_li_tag.append(current_tag_text)
@@ -1205,6 +1205,7 @@ class coParseHtml(ParserBase):
                 p_tag.name = "li"
                 alpha_cur_tag = p_tag
                 alpha_ol.append(p_tag)
+                prev_alpha_id =f'{prev_num_id}{curr_id}'
                 p_tag["id"] = f'{prev_num_id}{curr_id}'
                 roman_count = 1
                 p_tag.string = re.sub(r'^\([a-z]{2,3}\)', '', current_tag_text)
