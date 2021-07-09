@@ -901,7 +901,6 @@ class coParseHtml(ParserBase):
                     else:
                         alpha_ol = self.soup.new_tag("ol", Class="alpha")
                         prev_tag = p_tag.find_previous_sibling()
-                        print(p_tag)
                         p_tag.wrap(alpha_ol)
                         num_cur_tag.append(alpha_ol)
                         prev_alpha_id = f'{prev_num_id}{main_sec_alpha}'
@@ -937,6 +936,7 @@ class coParseHtml(ParserBase):
                     p_tag.append(roman_ol)
 
                     if re.search(r'^\(\w\)\s*\([I,V,X]+\)\s*\(\w\)', current_tag_text):
+
                         cap_alpha_ol = self.soup.new_tag("ol", type="A")
                         inner_li_tag = self.soup.new_tag("li")
                         inner_li_tag.string = re.sub(r'^\(\w\)\s*\([I,V,X]+\)\s*\(\w\)', '', current_tag_text)
@@ -1014,6 +1014,7 @@ class coParseHtml(ParserBase):
                     p_tag.append(roman_ol)
 
                     if re.search(r'^\(\w\.\d+\)\s*\([I,V,X]+\)\s*\(\w\)', current_tag_text):
+                        print(current_tag_text)
                         cap_alpha_ol = self.soup.new_tag("ol", type="A")
                         inner_li_tag = self.soup.new_tag("li")
                         inner_li_tag.append(current_tag_text)
@@ -1072,24 +1073,17 @@ class coParseHtml(ParserBase):
                     cap_cur_tag = li_tag
                     cur_tag = re.search(r'^\((?P<cid>[I,V,X]+)\)\s*\((?P<pid>[A-Z])\)', current_tag_text)
                     prev_rom_id = f'{prev_head_id}ol{ol_count}{cur_tag.group("cid")}'
+                    prev_id = f'{prev_head_id}ol{ol_count}{cur_tag.group("cid")}'
                     li_tag["id"] = f'{prev_head_id}ol{ol_count}{cur_tag.group("cid")}{cur_tag.group("pid")}'
+
+                    if not re.search(r'^\(I\)', current_tag_text):
+                        prev_tag_id = p_tag.find_previous_sibling().get("id")
+                        cur_tag_id = re.search(r'^[^IVX]+', prev_tag_id).group()
+                        prev_rom_id = f'{cur_tag_id}{cur_tag.group("cid")}'
+                        li_tag["id"] = f'{cur_tag_id}{cur_tag.group("cid")}{cur_tag.group("pid")}'
                     cap_alpha_ol.append(li_tag)
-                    p_tag.insert(1, cap_alpha_ol)
-                    cap_alpha_ol.find_previous().string.replace_with(cap_alpha_ol)
-
-
-                    # if not re.search(r'^\(I\)', current_tag_text):
-                    #     print(current_tag_text)
-                    #     prev_tag_id = p_tag.find_previous_sibling().get("id")
-                    #     cur_tag_id = re.search(r'^[^IVX]+', prev_tag_id).group()
-                    #     prev_rom_id = f'{cur_tag_id}{cur_tag.group("cid")}'
-                    #     li_tag["id"] = f'{cur_tag_id}{cur_tag.group("cid")}{cur_tag.group("pid")}'
-                    # cap_alpha_ol.append(li_tag)
-                    # p_tag.insert(1, cap_alpha_ol)
-                    # cap_alpha_ol.find_previous().string.replace_with(cap_alpha_ol)
-
-                    # p_tag.contents = []
-                    # p_tag.append(cap_alpha_ol)
+                    p_tag.contents = []
+                    p_tag.append(cap_alpha_ol)
                     roman_count += 1
                     cap_alpha = "B"
                 p_tag.string = re.sub(r'^\([IVX]+\)', '', current_tag_text)
@@ -1215,9 +1209,7 @@ class coParseHtml(ParserBase):
                 roman_count = 1
                 p_tag.string = re.sub(r'^\([a-z]{2,3}\)', '', current_tag_text)
 
-            # if re.search(r'^\(\d+\)', current_tag_text) and p_tag.name == "p":
-            #     print(p_tag)
-            #     # num_ol.append(p_tag)
+
 
             if re.search(r'^Source|^Cross references:|^OFFICIAL COMMENT', current_tag_text) or p_tag.name in ['h3', 'h4']:
                 ol_head = 1
