@@ -4,7 +4,7 @@ from datetime import datetime
 from parser_base import ParserBase
 
 
-class coParseHtml(ParserBase):
+class COParseHtml(ParserBase):
     def __init__(self, input_file_name):
         super().__init__()
         self.class_regex = {'ul': '^Art.', 'head2': '^ARTICLE|^Article|^Part',
@@ -32,7 +32,7 @@ class coParseHtml(ParserBase):
         :return:/home/mis/cic-beautify-state-codes/transforms/co/occo
         """
 
-        with open(f'/home/mis/cic-beautify-state-codes/transforms/co/occo/r{self.release_number}/raw/{self.html_file_name}') as open_file:
+        with open(f'../transforms/co/occo/r{self.release_number}/raw/{self.html_file_name}') as open_file:
             html_data = open_file.read()
         self.soup = BeautifulSoup(html_data, features="lxml")
         self.soup.contents[0].replace_with(Doctype("html"))
@@ -2364,7 +2364,7 @@ class coParseHtml(ParserBase):
         """
 
         soup_str = str(self.soup.prettify(formatter=None))
-        with open(f"/home/mis/cic-code-co-1/transforms/co/occo/r{self.release_number}/{self.html_file_name}",
+        with open(f"../../cic-code-co-1/transforms/co/occo/r{self.release_number}/{self.html_file_name}",
                   "w") as file:
             file.write(soup_str)
 
