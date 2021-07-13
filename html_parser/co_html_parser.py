@@ -380,32 +380,32 @@ class coParseHtml(ParserBase):
                         subsec_count = 1
                         subsec_head = []
 
-                elif header_tag.get("class") == [self.class_regex["head4"]]:
-                    if re.search(r'^[I,V,X]+\.', header_tag.text.strip()):
-                        header_tag.name = "h5"
-                        prev_id = header_tag.find_previous("h4").get("id")
-                        chap_num = re.search(r'^(?P<id>[I,V,X]+)\.', header_tag.text.strip()).group("id")
-                        header_tag["id"] = f'{prev_id}-{chap_num}'
-                    elif re.search(r'^[A-HJ-UW-Z]\.', header_tag.text.strip()):
-                        header_tag.name = "h5"
-                        prev_id = header_tag.find_previous(lambda tag: tag.name in ['h5'] and re.search(r'^[I,V,X]+\.',
-                                                                         tag.text.strip())).get("id")
-                        chap_num = re.search(r'^(?P<id>[A-Z])\.', header_tag.text.strip()).group("id")
-                        header_tag["id"] = f'{prev_id}-{chap_num}'
-
-                    elif re.search(r'^[1-9]\.', header_tag.text.strip()):
-                        header_tag.name = "h5"
-                        if header_tag.find_previous(
-                                lambda tag: tag.name in ['h5'] and re.search(r'^[A-HJ-UW-Z]\.',
-                                                                             tag.text.strip())):
-
-                            prev_id = header_tag.find_previous(
-                                    lambda tag: tag.name in ['h5'] and re.search(r'^[A-HJ-UW-Z]\.',
-                                                                                 tag.text.strip())).get("id")
-                            chap_num = re.search(r'^(?P<id>[0-9])\.', header_tag.text.strip()).group("id")
-                            header_tag["id"] = f'{prev_id}-{chap_num}'
-                        else:
-                            header_tag["class"] = [self.class_regex['ol']]
+                # elif header_tag.get("class") == [self.class_regex["head4"]]:
+                #     if re.search(r'^[I,V,X]+\.', header_tag.text.strip()):
+                #         header_tag.name = "h5"
+                #         prev_id = header_tag.find_previous("h4").get("id")
+                #         chap_num = re.search(r'^(?P<id>[I,V,X]+)\.', header_tag.text.strip()).group("id")
+                #         header_tag["id"] = f'{prev_id}-{chap_num}'
+                #     elif re.search(r'^[A-HJ-UW-Z]\.', header_tag.text.strip()):
+                #         header_tag.name = "h5"
+                #         prev_id = header_tag.find_previous(lambda tag: tag.name in ['h5'] and re.search(r'^[I,V,X]+\.',
+                #                                                          tag.text.strip())).get("id")
+                #         chap_num = re.search(r'^(?P<id>[A-Z])\.', header_tag.text.strip()).group("id")
+                #         header_tag["id"] = f'{prev_id}-{chap_num}'
+                #
+                #     elif re.search(r'^[1-9]\.', header_tag.text.strip()):
+                #         header_tag.name = "h5"
+                #         if header_tag.find_previous(
+                #                 lambda tag: tag.name in ['h5'] and re.search(r'^[A-HJ-UW-Z]\.',
+                #                                                              tag.text.strip())):
+                #
+                #             prev_id = header_tag.find_previous(
+                #                     lambda tag: tag.name in ['h5'] and re.search(r'^[A-HJ-UW-Z]\.',
+                #                                                                  tag.text.strip())).get("id")
+                #             chap_num = re.search(r'^(?P<id>[0-9])\.', header_tag.text.strip()).group("id")
+                #             header_tag["id"] = f'{prev_id}-{chap_num}'
+                #         else:
+                #             header_tag["class"] = [self.class_regex['ol']]
 
 
                     else:
@@ -1126,7 +1126,6 @@ class coParseHtml(ParserBase):
                         innr_roman_ol.append(p_tag)
                         p_tag["id"] = f'{prev_alpha.get("id")}{cur_tag}'
 
-
                     else:
                         alpha_ol.append(p_tag)
                         alpha_cur_tag = p_tag
@@ -1278,12 +1277,9 @@ class coParseHtml(ParserBase):
                 else:
                     if re.search(r'^Section|^SECTION ', list_item.text.strip()):
                         prev_id = list_item.find_previous("h2").get("id")
-                        print(list_item)
                         chap_num = re.search(r'^(Section|SECTION)\s?(?P<ar>[0-9a-z]+)\.', list_item.text.strip()).group("ar").zfill(2)
                         sub_tag = "-s"
                         self.set_chapter_section_nav(list_item, chap_num, sub_tag, prev_id, None)
-
-
 
 
                     elif not re.search(r'^Section|^Article|^SECTION', list_item.text.strip()):
@@ -1297,7 +1293,7 @@ class coParseHtml(ParserBase):
             #title
             else:
                 if re.match(r'^Art\.\s*\d+\.|^Article\s?\d+\.', list_item.text.strip()):
-                    chap_num = re.search(r'^(Art|Article)\.?\s?(?P<id>\d+)\.',
+                    chap_num = re.search(r'^(Art|Article)\.?\s?(?P<id>\d+(\.\d+)*)\.',
                                          list_item.text.strip()).group(
                         "id").zfill(2)
                     if list_item.find_previous("p", class_="nav_head"):
@@ -1956,40 +1952,53 @@ class coParseHtml(ParserBase):
                    'GAMING AND RACING': ['30', '31', '32', '33'], 'LOTTERY': ['40']}
 
         title_part_01 = ['01', '02', '04', '05', '07', '09', '10', '11', '12', '13', '13.5']
+        title_part_02 = ['02','03','04','07']
         title_part_04 = ['01','02','2.5','03','04','4.5','07','08','09']
         title_part_05 = ['01','02','03','3.5','04','05','06','19']
+        title_part_08 = ['2','5','20','20.5']
         title_part_10 = ['01', '02', '03', '04', '07', '08', '11', '12', '14', '16', '17']
-        title_part_12 = ['10', '20', '30', '135', '215', '220', '230', '280', '285', '290']
+        title_part_12 = ['10', '20', '30', '135', '215', '220', '230','245', '280', '285', '290']
         title_part_13 = ['01', '05', '06', '17', '20', '21', '22', '56', '64', '90', '93']
+        title_part_14 = ['2','5']
         title_part_15 = ['01', '02', '2.5', '05', '10', '11', '12', '13', '14', '14.5', '15', '16', '18.7', '19']
         title_part_16 = ['02', '2.5', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13']
         title_part_17 = ['01', '02', '22.5']
-        title_part_18 = []
-        title_part_19 = []
-        title_part_20 = []
+        title_part_18 = ['1','1.3','2','3','4','5','6','7','8','9','11','12','18']
+        title_part_19 = ['1','2','3','5','7']
+        title_part_20 = ['1']
         title_part_22 = ['02', '07', '11', '13', '20', '30', '30.5', '33', '63', '81', '95.5']
+        title_part_23 = ['60','71','78']
+        title_part_24 = ['4','6']
         title_part_25 = ['01', '1.5', '03', '3.5', '04', '05', '5.5', '06', '6.5', '07', '08', '11', '14', '15', '16',
                          '17', '20.5']
         title_part_255 = ['01','2.5','03','04','05','06','10']
         title_part_26 = ['01', '02', '3.1', '06', '6.2', '6.5', '11', '12']
+        title_part_27 = ['60','80','82']
+        title_part_28 = ['03']
         title_part_29 = ['01', '04', '05', '11', '20', '27']
         title_part_31 = ['01', '02', '03', '04', '10', '12', '15', '16', '20', '21', '23', '25', '30', '30.5', '31',
                          '32', '35']
         title_part_32 = ['01', '04', '11', '11.5']
+        title_part_33 = ['03','06']
         title_part_34 = ['01']
+        title_part_35 = ['07','21','31','75']
+        title_part_36 = ['07']
         title_part_38 = ['01', '06', '12', '20', '29', '31', '33.3', '35', '36', '41']
+        title_part_39 = ['03','05']
+        title_part_41 = ['04']
         title_part_42 = ['01', '02', '03', '04', '05', '06', '07', '12', '20']
         title_part_43 = ['01', '02', '03', '04', '05 ']
+        title_part_44 = ['03','10','20','30','32']
+
 
         if t_id == '25.5':
-
             if t_id not in ['04', '18', '19', '20', '21', '26', '25.5']:
                 title_no = f'title{t_id}'
                 for key, value in title255.items():
                     if c_id in value:
                         title = key
                         header = re.sub(r'[\s]+', '', title).lower()
-                        if t_id in ['01','04','05', '10', '12', '13', '15', '16', '17', '18', '19', '20', '22', '25', '26', '29',
+                        if t_id in ['01','02','04','05', '10', '12', '13', '15', '16', '17', '18', '19', '20', '22', '25', '26', '29',
                                     '31', '32', '34', '38', '42', '43']:
                             title_part_id = f'title_part_{t_id}'
                             if c_id.zfill(2) in eval(title_part_id):
@@ -2003,7 +2012,7 @@ class coParseHtml(ParserBase):
                         tag_id = f'gov.co.crs.title.{t_id}.html#t{t_id}-ar{c_id}-s{s_id}'
 
             else:
-                if t_id in ['01','04', '05', '10', '12', '13', '15', '16', '17', '18', '19', '20', '22', '25', '26', '29',
+                if t_id in ['01','02','04', '05', '10', '12', '13', '15', '16', '17', '18', '19', '20', '22', '25', '26', '29',
                             '31', '32', '34', '38', '42', '43']:
                     title_part_id = f'title_part_{t_id}'
                     if c_id.zfill(2) in title_part_255:
@@ -2020,7 +2029,7 @@ class coParseHtml(ParserBase):
                     if c_id in value:
                         title = key
                         header = re.sub(r'[\s]+', '', title).lower()
-                        if t_id in ['01','04','05', '10', '12', '13', '15', '16', '17', '18', '19', '20', '22', '25', '26', '29',
+                        if t_id in ['01','02','04','05', '10', '12', '13', '15', '16', '17', '18', '19', '20', '22', '25', '26', '29',
                                     '31', '32', '34', '38', '42', '43']:
                             title_part_id = f'title_part_{t_id}'
                             if c_id.zfill(2) in eval(title_part_id):
@@ -2033,7 +2042,7 @@ class coParseHtml(ParserBase):
                     else:
                         tag_id = f'gov.co.crs.title.{t_id}.html#t{t_id}-ar{c_id}-s{s_id}'
             else:
-                if t_id in ['01','04', '05', '10', '12', '13', '15', '16', '17', '18', '19', '20', '22', '25', '26', '29',
+                if t_id in ['01','02','04', '05', '10', '12', '13', '15', '16', '17', '18', '19', '20', '22', '25', '26', '29',
                             '31', '32', '34', '38', '42', '43']:
                     title_part_id = f'title_part_{t_id}'
                     if c_id.zfill(2) in eval(title_part_id):
