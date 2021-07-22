@@ -80,15 +80,13 @@ class idParseHtml(ParserBase):
         [text_junk.decompose() for text_junk in self.soup.find_all("p", class_=self.tag_type_dict["junk"])
          if re.search(r'^(Licensed to the People of Idaho, Public Resource|^[« •]Title \d+[«•]*)',text_junk.text.strip())]
         [text_junk.decompose() for text_junk in self.soup.find_all("p", class_=self.tag_type_dict["ul"])
-         if re.search(r'^Idaho Code (Title|Ch\.|§)|^Idaho Code Pt\. \d+',text_junk.text.strip())]
+         if re.search(r'^Idaho Code (Title|Ch\.|§)|^Idaho Code Pt\. (\d+)?([IVX]+)?',text_junk.text.strip())]
 
 
         if title := re.search(r'Title\s(?P<title>\d+)',
                               self.soup.find('p', class_=self.tag_type_dict['head1']).get_text(), re.I):
 
             self.title = title.group('title')
-
-
 
         for key, value in {'viewport': "width=device-width, initial-scale=1",
                            'description': self.watermark_text.format(self.release_number, self.release_date,
@@ -97,6 +95,7 @@ class idParseHtml(ParserBase):
             new_meta.attrs['name'] = key
             new_meta.attrs['content'] = value
             self.soup.head.append(new_meta)
+
 
 
     def replace_tags(self):
@@ -127,7 +126,7 @@ class idParseHtml(ParserBase):
                     self.snav_count = 1
                     header_tag.wrap(self.soup.new_tag("nav"))
 
-                elif chap_head := re.search(r'Part\s?(?P<c_title>\d+)', header_tag.get_text()):
+                elif chap_head := re.search(r'Part\s?(?P<c_title>(\d+)?([IVX]+)?)', header_tag.get_text()):
                     header_tag.name = "h2"
                     if header_tag.find_previous("h2"):
                         prev_id = header_tag.find_previous("h2").get("id")
@@ -141,7 +140,7 @@ class idParseHtml(ParserBase):
 
                 elif chap_head := re.search(r'Chapter\s(?P<c_title>\d+[a-zA-Z]?)',header_tag.get_text()):
                     header_tag.name = "h2"
-                    header_tag["id"] = f't{self.title}p{chap_head.group("c_title").zfill(2)}'
+                    header_tag["id"] = f't{self.title}c{chap_head.group("c_title").zfill(2)}'
                     sec_count = 1
                     header_tag["class"] = "parth2"
                     self.snav_count = 1
@@ -188,21 +187,24 @@ class idParseHtml(ParserBase):
                     cite_count = 1
 
                 else:
-                    header_tag.name = "h5"
+
                     if re.search(r'^History\.', header_tag.get_text()):
+                        header_tag.name = "h5"
                         header_tag["id"] = f'{header_tag.find_previous(["h4", "h3"]).get("id")}-history'
-                    else:
+                    elif not re.search(r'^Part|^I\.C\.|^Chapter|^Sec\.',header_tag.get_text()):
+                        header_tag.name = "h5"
                         header_tag_text = re.sub(r'[\s.]*', '', header_tag.get_text()).lower()
-                        subsec_head_id = f'{header_tag.find_previous("h4").get("id")}-{header_tag_text}'
-                        if subsec_head_id in sub_sec_id:
-                            header_tag[
-                                "id"] = f'{header_tag.find_previous("h4").get("id")}-{header_tag_text}{sub_sec_count}'
-                            sub_sec_count += 1
-                        else:
-                            header_tag["id"] = f'{header_tag.find_previous("h4").get("id")}-{header_tag_text}'
-                        sub_sec_id.append(subsec_head_id)
-                        sub_sec_count = 1
-                        self.case_note_head.append(header_tag.get_text().lower())
+                        if header_tag.find_previous("h4"):
+                            subsec_head_id = f'{header_tag.find_previous("h4").get("id")}-{header_tag_text}'
+                            if subsec_head_id in sub_sec_id:
+                                header_tag[
+                                    "id"] = f'{header_tag.find_previous("h4").get("id")}-{header_tag_text}{sub_sec_count}'
+                                sub_sec_count += 1
+                            else:
+                                header_tag["id"] = f'{header_tag.find_previous("h4").get("id")}-{header_tag_text}'
+                            sub_sec_id.append(subsec_head_id)
+                            sub_sec_count = 1
+                            self.case_note_head.append(header_tag.get_text().lower())
 
 
             if header_tag.get("class") == [self.tag_type_dict['ul']]:
@@ -227,8 +229,10 @@ class idParseHtml(ParserBase):
                         sub_sec_count = 1
                         self.case_note_head.append(header_tag.get_text().lower())
 
-                elif re.search(r'^Chapter',header_tag.get_text()):
+                elif header_tag.get_text() == 'Chapter':
                     header_tag.find_previous("nav").append(header_tag)
+
+
 
                 elif re.search(r'^Cited', header_tag.get_text()):
                     header_tag.name = "h4"
@@ -246,35 +250,35 @@ class idParseHtml(ParserBase):
                     sub_sec_count = 1
                     cite_id.append(cite_head_id)
 
-            elif header_tag.get("class") == [self.tag_type_dict['head']]:
-                header_tag.name = "h5"
-
-                if re.search(r'^History\.', header_tag.get_text()):
-                    header_tag["id"] = f'{header_tag.find_previous(["h4", "h3"]).get("id")}-history'
-                else:
-                    header_tag_text = re.sub(r'[\s.]*', '', header_tag.get_text()).lower()
-                    if header_tag.find_previous("h4"):
-                        subsec_head_id = f'{header_tag.find_previous("h4").get("id")}-{header_tag_text}'
-                        if subsec_head_id in sub_sec_id:
-                            header_tag[
-                                "id"] = f'{header_tag.find_previous("h4").get("id")}-{header_tag_text}{sub_sec_count}'
-                            sub_sec_count += 1
-                        else:
-                            header_tag["id"] = f'{header_tag.find_previous("h4").get("id")}-{header_tag_text}'
-                    else:
-                        subsec_head_id = f'{header_tag.find_previous(["h2","h1"]).get("id")}-{header_tag_text}'
-
-                        if subsec_head_id in sub_sec_id:
-                            header_tag[
-                                    "id"] = f'{subsec_head_id}{sub_sec_count}'
-                            sub_sec_count += 1
-                        else:
-                            header_tag["id"] = f'{subsec_head_id}'
-
-                    sub_sec_id.append(subsec_head_id)
-                    sub_sec_count = 1
-                    self.case_note_head.append(header_tag.get_text().lower())
-
+            # elif header_tag.get("class") == [self.tag_type_dict['head4']]:
+            #     header_tag.name = "h5"
+            #
+            #     if re.search(r'^History\.', header_tag.get_text()):
+            #         header_tag["id"] = f'{header_tag.find_previous(["h4", "h3"]).get("id")}-history'
+            #     else:
+            #         header_tag_text = re.sub(r'[\s.]*', '', header_tag.get_text()).lower()
+            #         if header_tag.find_previous("h4"):
+            #             subsec_head_id = f'{header_tag.find_previous("h4").get("id")}-{header_tag_text}'
+            #             if subsec_head_id in sub_sec_id:
+            #                 header_tag[
+            #                     "id"] = f'{header_tag.find_previous("h4").get("id")}-{header_tag_text}{sub_sec_count}'
+            #                 sub_sec_count += 1
+            #             else:
+            #                 header_tag["id"] = f'{header_tag.find_previous("h4").get("id")}-{header_tag_text}'
+            #         else:
+            #             subsec_head_id = f'{header_tag.find_previous(["h2","h1"]).get("id")}-{header_tag_text}'
+            #
+            #             if subsec_head_id in sub_sec_id:
+            #                 header_tag[
+            #                         "id"] = f'{subsec_head_id}{sub_sec_count}'
+            #                 sub_sec_count += 1
+            #             else:
+            #                 header_tag["id"] = f'{subsec_head_id}'
+            #
+            #         sub_sec_id.append(subsec_head_id)
+            #         sub_sec_count = 1
+            #         self.case_note_head.append(header_tag.get_text().lower())
+            #
 
 
             if len(header_tag.get_text(strip=True)) == 0:
@@ -284,9 +288,10 @@ class idParseHtml(ParserBase):
 
 
     def create_ul_tag_and_case_note_nav(self):
-        for case_note_tag in self.soup.findAll(class_="p2"):
-            if case_note_tag.get_text().lower() in self.case_note_head and not case_note_tag.get("id"):
-                case_note_tag.name = "li"
+        # for case_note_tag in self.soup.findAll(class_="p2"):
+        #     if case_note_tag.get_text().lower() in self.case_note_head and not case_note_tag.get("id"):
+        #         case_note_tag.name = "li"
+
 
         ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
         for list_item in self.soup.find_all("li"):
@@ -296,16 +301,41 @@ class idParseHtml(ParserBase):
                 ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
                 list_item.wrap(ul_tag)
 
-                if re.search(r'^(Chapter\s?)*\d+\.',list_item.get_text()):
+                if ul_tag.find_previous().find_previous().name == "h1":
                     ul_tag.find_previous("nav").append(ul_tag)
                 else:
-                    if ul_tag.find_previous().find_previous().name == "h1":
-                        ul_tag.find_previous("nav").append(ul_tag)
-                    else:
-                        ul_tag.wrap(self.soup.new_tag("nav"))
+                    ul_tag.wrap(self.soup.new_tag("nav"))
 
         print("ul tag is created")
 
+    def case_note_nav(self):
+
+        ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
+        inr_ultag = self.soup.new_tag("ul", **{"class": "leaders"})
+        for case_note_tag in self.soup.findAll(class_="p2"):
+            if case_note_tag.get_text().lower() in self.case_note_head and not case_note_tag.get("id"):
+                case_note_tag.name = "li"
+
+                if case_note_tag.find_previous().name == "li" and not case_note_tag.parent.name == "ul":
+                    if re.search(r'^—',case_note_tag.get_text().strip()):
+                        if not re.search(r'^—',case_note_tag.find_previous("li").get_text().strip()):
+                            inr_ultag = self.soup.new_tag("ul", **{"class": "leaders"})
+                            case_note_tag.wrap(inr_ultag)
+                            case_note_tag.find_previous("li").append(inr_ultag)
+                        else:
+                            inr_ultag.append(case_note_tag)
+
+
+                    else:
+                     ul_tag.append(case_note_tag)
+                else:
+                    ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
+                    case_note_tag.wrap(ul_tag)
+
+
+
+
+        print("case note tag is created")
 
     def create_chapter_section_nav(self):
         for list_item in self.soup.find_all("li", class_=self.tag_type_dict['ul']):
@@ -536,15 +566,16 @@ class idParseHtml(ParserBase):
 
 
         for p_tag in self.soup.find_all():
+
             if p_tag.b:
                 p_tag.b.unwrap()
             if p_tag.i:
                 p_tag.i.unwrap()
 
             current_tag_text = p_tag.text.strip()
-
             if p_tag.name == "h3":
                 num_cur_tag = None
+
 
 
             if re.search(rf'^\({ol_head}\)', current_tag_text):
@@ -552,6 +583,7 @@ class idParseHtml(ParserBase):
                 num_cur_tag = p_tag
                 if re.search(r'^\(1\)', current_tag_text):
                     num_ol = self.soup.new_tag("ol")
+
                     p_tag.wrap(num_ol)
                     main_sec_alpha = "a"
                     prev_head_id = p_tag.find_previous(["h4", "h3"]).get("id")
@@ -583,6 +615,40 @@ class idParseHtml(ParserBase):
                     p_tag.append(alpha_ol)
                     main_sec_alpha = "b"
 
+            #i
+            elif re.search(r'^\([ivx]+\)',current_tag_text):
+                p_tag.name = "li"
+                alpha_cur_tag = p_tag
+                cap_alpha = "A"
+                if re.search(r'^\(i\)',current_tag_text):
+                    innr_roman_ol = self.soup.new_tag("ol", type="i")
+
+                    if p_tag.find_next_sibling():
+                        if re.search(r'^\(j\)', p_tag.find_next_sibling().get_text().strip()):
+                            alpha_ol.append(p_tag)
+                            p_tag["id"] = f'{prevnum_id}{main_sec_alpha}'
+                            main_sec_alpha = "j"
+                        else:
+                            p_tag.wrap(innr_roman_ol)
+                            p_tag.find_previous("li").append(innr_roman_ol)
+                            prev_alpha =  p_tag.find_previous("li")
+                            p_tag["id"] = f'{prev_alpha.get("id")}i'
+                    else:
+                        p_tag.wrap(innr_roman_ol)
+                        p_tag.find_previous("li").append(innr_roman_ol)
+                        prev_alpha = p_tag.find_previous("li")
+                        p_tag["id"] = f'{prev_alpha.get("id")}i'
+
+                else:
+                    cur_tag = re.search(r'^\((?P<cid>[ivx]+)\)', current_tag_text).group("cid")
+                    innr_roman_ol.append(p_tag)
+                    p_tag["id"] = f'{prev_alpha.get("id")}{cur_tag}'
+
+                p_tag.string = re.sub(r'^\((?P<cid>[ivx]+)\)','', current_tag_text)
+                num_count = 1
+
+
+
             # a
             elif re.search(rf'^\(\s*{main_sec_alpha}\s*\)|^{main_sec_alpha}\.', current_tag_text):
                 p_tag.name = "li"
@@ -613,39 +679,23 @@ class idParseHtml(ParserBase):
                     inner_li_tag = self.soup.new_tag("li")
                     inner_li_tag.string = re.sub(r'^\(\w\)\s?\([ivx]+\)', '', current_tag_text)
                     inner_li_tag.append(current_tag_text)
-
+                    alpha_cur_tag = inner_li_tag
                     cur_tag = re.search(r'^\((?P<cid>\w)\)\s*\((?P<pid>[ivx]+)\)', current_tag_text)
-                    innr_roman_ol["id"] = f'{prev_head_id}ol{ol_count}{cur_tag.group("cid")}{cur_tag.group("pid")}'
+                    inner_li_tag["id"] = f'{prev_head_id}ol{ol_count}{ol_head-1}{cur_tag.group("cid")}{cur_tag.group("pid")}'
                     innr_roman_ol.append(inner_li_tag)
                     p_tag.string = ""
                     p_tag.insert(0, innr_roman_ol)
                     prev_alpha = p_tag
-
-            # i
-            elif re.search(r'^\([ivx]+\)',current_tag_text):
-                 p_tag.name = "li"
-                 rom_cur_tag = p_tag
-                 cap_alpha = "A"
-                 if re.search(r'^\(i\)',current_tag_text):
-                     innr_roman_ol = self.soup.new_tag("ol", type="i")
-                     p_tag.wrap(innr_roman_ol)
-                     p_tag.find_previous("li").append(innr_roman_ol)
-                     prev_alpha =  p_tag.find_previous("li")
-                     p_tag["id"] = f'{prev_alpha.get("id")}i'
-                 else:
-                     cur_tag = re.search(r'^\((?P<cid>[ivx]+)\)', current_tag_text).group("cid")
-                     innr_roman_ol.append(p_tag)
-                     p_tag["id"] = f'{prev_alpha.get("id")}{cur_tag}'
-
-                 p_tag.string = re.sub(r'^\((?P<cid>[ivx]+)\)','', current_tag_text)
 
 
             # 1
             elif re.search(rf'^{num_count}\.', current_tag_text) and p_tag.get('class') == [self.tag_type_dict['ul']] and p_tag.name != "li":
                 p_tag.name = "li"
                 num_tag = p_tag
+                cap_alpha = "A"
 
                 if re.search(r'^1\.', current_tag_text):
+
                     num_ol1 = self.soup.new_tag("ol")
                     p_tag.wrap(num_ol1)
                     prev_id = p_tag.find_previous(["h4", "h3"]).get("id")
@@ -653,13 +703,8 @@ class idParseHtml(ParserBase):
                     if alpha_cur_tag:
                         prev_id = alpha_cur_tag.get("id")
                         alpha_cur_tag.append(num_ol1)
-
-
-
-
                 else:
                     num_ol1.append(p_tag)
-
                 if alpha_cur_tag:
                     p_tag["id"] = f'{prev_id}{num_count}'
                 else:
@@ -667,6 +712,23 @@ class idParseHtml(ParserBase):
                 p_tag.string = re.sub(rf'^{num_count}\.', '', current_tag_text)
                 num_count += 1
 
+            #A
+            elif re.search(rf'^\({cap_alpha}\)', current_tag_text):
+                p_tag.name = "li"
+                cap_alpha_cur_tag = p_tag
+                cap_alpha1 = cap_alpha
+
+                if re.search(r'^\(A\)', current_tag_text):
+                    cap_alpha_ol = self.soup.new_tag("ol", type="A")
+                    p_tag.wrap(cap_alpha_ol)
+                    prev_id = p_tag.find_previous("li").get("id")
+                    p_tag.find_previous("li").append(cap_alpha_ol)
+
+                else:
+                    cap_alpha_ol.append(p_tag)
+                p_tag["id"] = f'{prev_id}{cap_alpha}'
+                p_tag.string = re.sub(rf'^\({cap_alpha}\)', '', current_tag_text)
+                cap_alpha = chr(ord(cap_alpha) + 1)
 
 
 
@@ -697,7 +759,7 @@ class idParseHtml(ParserBase):
         titleid = ""
 
         for tag in self.soup.find_all(["p"]):
-            if re.search(r"§*\s?\d+-\d+\s*[A-Z]?|"
+            if re.search(r"§*\s?\d+-\d{3,4}\s*[A-Z]?|"
                          r"OAG \d+-\d+|"
                          r"Idaho Const\., Art\. [IXV][.,](\s§\s\d+\.)?"
                         , tag.text.strip()):
@@ -710,9 +772,9 @@ class idParseHtml(ParserBase):
                                                     tag.get_text())]:
                     inside_text = re.sub(r'<p\sclass="\w\d+">|</p>|^<li\sclass="\w\d+"\sid=".+">|</li>$', '',
                                          text, re.DOTALL)
-                    tag.clear()
 
                     if re.search(r"§*\s?\d+-\d{3,4}\s*[A-Z]?", match.strip()):
+                        tag.clear()
                         cite_num = re.search(r'§*\s?(?P<title>\d+)-(?P<chap>\d+\s*[A-Z]?)', match.strip())
                         if len(cite_num.group('chap')) == 3:
                             chap_num = cite_num.group('chap')[:1]
@@ -733,18 +795,16 @@ class idParseHtml(ParserBase):
                         tag.append(text)
 
                     else:
+                        tag.clear()
                         if re.search(r'OAG \d+-\d+',match.strip()):
                             class_name = "OAG"
                         elif re.search(r'Idaho Const\., Art\. [IXV][.,](\s§\s\d+\.)?',match.strip()):
                             class_name = "id_code"
-                        else:
-                            continue
+
 
                         format_text = f'<cite class="{class_name}">{match}</cite>'
                         text = re.sub(fr'\s{re.escape(match)}', format_text, inside_text, re.I)
                         tag.append(text)
-
-
 
 
         print("citation added")
@@ -815,11 +875,12 @@ class idParseHtml(ParserBase):
         self.replace_tags()
         self.create_main_tag()
         self.create_ul_tag_and_case_note_nav()
+        self.case_note_nav()
         self.create_chapter_section_nav()
-        # self.wrap_div_tags()
-        # self.add_citation()
-        # self.convert_paragraph_to_alphabetical_ol_tags2()
-        # self.add_watermark_and_remove_class_name()
+        self.wrap_div_tags()
+        self.add_citation()
+        self.convert_paragraph_to_alphabetical_ol_tags2()
+        self.add_watermark_and_remove_class_name()
 
 
         self.write_soup_to_file()
