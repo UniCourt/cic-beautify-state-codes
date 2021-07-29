@@ -339,18 +339,24 @@ class idParseHtml(ParserBase):
                         else:
                             inr_ultag.append(case_note_tag)
                     else:
-                     ul_tag.append(case_note_tag)
+
+                        ul_tag.append(case_note_tag)
                 else:
                     ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
                     case_note_tag.wrap(ul_tag)
-
-
+                case_note_tag["class"] = "case_note"
 
         print("case note tag is created")
 
 
 
     def create_chapter_section_nav(self):
+        for case_note_tag in self.soup.findAll(class_="p2"):
+            if case_note_tag.get_text().lower() in self.case_note_head and not case_note_tag.get("id"):
+                case_note_tag.name = "li"
+
+
+
         for list_item in self.soup.find_all("li", class_=self.tag_type_dict['ul']):
             if sec_list := re.search(r'^(?P<chap_id>\d+-\d+[a-zA-Z]?)\s*[.—,]', list_item.get_text()) :
                 nav_list = []
@@ -359,10 +365,8 @@ class idParseHtml(ParserBase):
                 nav_link["href"] = f"#{list_item.find_previous('h2').get('id')}s{sec_list.group('chap_id')}"
                 nav_list.append(nav_link)
                 list_item.contents = nav_list
-
                 if list_item.find_previous().name == "ul":
                     self.snav_count = 1
-
                 list_item[
                     "id"] = f"{list_item.find_previous('h2').get('id')}s{sec_list.group('chap_id')}-snav{self.snav_count:02}"
                 self.snav_count += 1
@@ -374,14 +378,10 @@ class idParseHtml(ParserBase):
                 nav_link["href"] = f"#{list_item.find_previous('h2').get('id')}p{sec_list.group('p_id').zfill(2)}s{sec_list.group('chap_id')}"
                 nav_list.append(nav_link)
                 list_item.contents = nav_list
-
                 if list_item.find_previous().name == "ul":
                     self.snav_count =1
-
                 list_item["id"] = f"{list_item.find_previous('h2').get('id')}p{sec_list.group('p_id').zfill(2)}s{sec_list.group('chap_id')}-snav{self.snav_count:02}"
                 self.snav_count += 1
-
-
 
             elif chap_list := re.search(r'^(Chapter\s?)*(?P<chap_id>\d+[a-zA-Z]?)\.', list_item.get_text()):
                 if not list_item.find_previous("h3"):
@@ -395,15 +395,16 @@ class idParseHtml(ParserBase):
                     self.snav_count += 1
 
             else:
-
                 list_item_text = re.sub(r'[\s.]*', '', list_item.get_text()).lower()
                 nav_list = []
                 nav_link = self.soup.new_tag('a')
                 nav_link.append(list_item.text)
-
                 nav_link["href"] = f"#{list_item.find_previous('h4').get('id')}-{list_item_text}"
                 nav_list.append(nav_link)
                 list_item.contents = nav_list
+
+
+
 
 
 
@@ -1380,7 +1381,7 @@ class idParseHtml(ParserBase):
         self.replace_tags()
         self.create_main_tag()
         self.create_ul_tag_and_case_note_nav()
-        self.case_note_nav()
+        # self.case_note_nav()
         self.create_chapter_section_nav()
         # # self.wrap_div_tags()
         # self.create_and_wrap_with_div_tag()
