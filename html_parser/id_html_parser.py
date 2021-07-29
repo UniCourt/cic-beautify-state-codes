@@ -327,26 +327,56 @@ class idParseHtml(ParserBase):
     def case_note_nav(self):
         ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
         inr_ultag = self.soup.new_tag("ul", **{"class": "leaders"})
-        for case_note_tag in self.soup.findAll(class_="p2"):
-            if case_note_tag.get_text().lower() in self.case_note_head and not case_note_tag.get("id"):
-                case_note_tag.name = "li"
-                if case_note_tag.find_previous().name == "li" and not case_note_tag.parent.name == "ul":
-                    if re.search(r'^—',case_note_tag.get_text().strip()):
-                        if not re.search(r'^—',case_note_tag.find_previous("li").get_text().strip()):
-                            inr_ultag = self.soup.new_tag("ul", **{"class": "leaders"})
-                            case_note_tag.wrap(inr_ultag)
-                            case_note_tag.find_previous("li").append(inr_ultag)
-                        else:
-                            inr_ultag.append(case_note_tag)
-                    else:
+        for case_note_tag in self.soup.findAll("li", class_="case_note"):
+            if case_note_tag.find_previous_sibling().name == "li" and not case_note_tag.parent.name == "ul":
+                case_note_prev_tag = case_note_tag.find_previous_sibling()
+                print("1",case_note_tag.a.get_text())
+                print("2",case_note_prev_tag.get_text())
 
-                        ul_tag.append(case_note_tag)
-                else:
-                    ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
-                    case_note_tag.wrap(ul_tag)
-                case_note_tag["class"] = "case_note"
+                # if re.search(r'^—', case_note_tag.get_text().strip()):
+                #     print()
+                #
+
+            #     if re.search(r'^—',case_note_tag.get_text().strip()):
+            #         if not re.search(r'^—',case_note_tag.case_note_prev_tag):
+            #                 inr_ultag = self.soup.new_tag("ul", **{"class": "leaders"})
+            #                 case_note_tag.wrap(inr_ultag)
+            #                 case_note_tag.find_previous("li").append(inr_ultag)
+            #         else:
+            #                 inr_ultag.append(case_note_tag)
+            #     else:
+            #
+            #         ul_tag.append(case_note_tag)
+            # else:
+            #     ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
+            #     case_note_tag.wrap(ul_tag)
+
+
+
+
+                # if case_note_tag.find_previous().name == "li" and not case_note_tag.parent.name == "ul":
+                #     if re.search(r'^—',case_note_tag.get_text().strip()):
+                #         if not re.search(r'^—',case_note_tag.find_previous("li").get_text().strip()):
+                #             inr_ultag = self.soup.new_tag("ul", **{"class": "leaders"})
+                #             case_note_tag.wrap(inr_ultag)
+                #             case_note_tag.find_previous("li").append(inr_ultag)
+                #         else:
+                #             inr_ultag.append(case_note_tag)
+                #     else:
+                #
+                #         ul_tag.append(case_note_tag)
+                # else:
+                #     ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
+                #     case_note_tag.wrap(ul_tag)
+                # case_note_tag["class"] = "case_note"
 
         print("case note tag is created")
+
+
+
+
+
+
 
 
 
@@ -354,10 +384,10 @@ class idParseHtml(ParserBase):
         for case_note_tag in self.soup.findAll(class_="p2"):
             if case_note_tag.get_text().lower() in self.case_note_head and not case_note_tag.get("id"):
                 case_note_tag.name = "li"
+                case_note_tag["class"] = "case_note"
 
 
-
-        for list_item in self.soup.find_all("li", class_=self.tag_type_dict['ul']):
+        for list_item in self.soup.find_all("li", class_=["self.tag_type_dict['ul']","case_note"]):
             if sec_list := re.search(r'^(?P<chap_id>\d+-\d+[a-zA-Z]?)\s*[.—,]', list_item.get_text()) :
                 nav_list = []
                 nav_link = self.soup.new_tag('a')
@@ -1381,8 +1411,8 @@ class idParseHtml(ParserBase):
         self.replace_tags()
         self.create_main_tag()
         self.create_ul_tag_and_case_note_nav()
-        # self.case_note_nav()
         self.create_chapter_section_nav()
+        self.case_note_nav()
         # # self.wrap_div_tags()
         # self.create_and_wrap_with_div_tag()
         # self.add_citation()
