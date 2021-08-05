@@ -1153,7 +1153,7 @@ class idParseHtml(ParserBase):
 
 
                 p_tag.string = re.sub(r'^\((?P<cid>[ivx]+)\)','', current_tag_text)
-                num_count = 1
+                # num_count = 1
 
 
             # 1
@@ -1243,7 +1243,7 @@ class idParseHtml(ParserBase):
 
                 if re.search(r'^A\.', current_tag_text):
                     cap_alpha_ol = self.soup.new_tag("ol", type="A")
-                    print(current_tag_text)
+
                     p_tag.wrap(cap_alpha_ol)
                     prev_id = p_tag.find_previous("h3").get("id")
                     # p_tag.find_previous("li").append(cap_alpha_ol)
@@ -1682,7 +1682,7 @@ class idParseHtml(ParserBase):
 
     def add_watermark_and_remove_class_name(self):
         for tag in self.soup.find_all():
-            if tag.name in ['li', 'h4', 'h3', 'p']:
+            if tag.name in ['li', 'h4', 'h3', 'p','h5']:
                 del tag["class"]
 
         watermark_tag = self.soup.new_tag('p', Class='transformation')

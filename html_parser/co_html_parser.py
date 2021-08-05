@@ -2298,24 +2298,6 @@ class coParseHtml(ParserBase):
 
 
 
-    def create_numberical_ol(self):
-        pattern = re.compile(
-            r'^\(\d+\)|^\(\d+\)\s\(\D\)|^\(\d+\)\s*\(\D\)\s*\([I,V,X]+\)|^\(\d+\.\d+\)|^\(\d+\.\d+\)\s*\(\w\)|'
-            r'^\(\s*[a-z]\s*\)|^\(\w+\)\s*\([I,V,X]+\)|^\([a-z]\.\d+\)|'
-            r'^\([I,V,X]+\)|^\([I,V,X]+\)\s*\([A-Z]\)|'
-            r'^\(\s*[A-Z]\s*\)')
-        Num_bracket_pattern = re.compile(r'^\(\d+\)')
-        alpha_pattern = re.compile(r'^\(\s*[a-z]\s*\)')
-        rom_pattern = re.compile(r'^\([I,V,X]+\)')
-        Alpha_pattern = re.compile(r'^\(\s*[A-Z]\s*\)')
-
-        for tag in self.soup.findAll("li", class_=self.class_regex["ol"]):
-            if re.match(pattern, tag.text.strip()):
-                if re.match(Num_bracket_pattern, tag.text.strip()) or re.match(alpha_pattern, tag.text.strip()) or \
-                        re.match(Alpha_pattern, tag.text.strip()) or re.match(rom_pattern, tag.text.strip()):
-                    if tag.span:
-                        if re.search(pattern, tag.span.text.strip()):
-                            tag.span.string = ""
 
     def add_watermark_and_remove_class_name(self):
         for tag in self.soup.find_all():
