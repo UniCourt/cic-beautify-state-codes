@@ -1323,7 +1323,7 @@ class idParseHtml(ParserBase):
                     roman_count = 1
                     p_tag.string = re.sub(r'^\([a-z]{2,3}\)', '', current_tag_text)
 
-            if re.search(r'^History|^Cross references:|^OFFICIAL COMMENT', current_tag_text) or p_tag.name in ['h3', 'h4']:
+            if re.search(r'^History|^Cross references:|^OFFICIAL COMMENT', current_tag_text) or p_tag.name in ['h3', 'h4','h5']:
                 ol_head = 1
                 ol_head1 = 1
                 num_count = 1
