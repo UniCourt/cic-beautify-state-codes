@@ -136,7 +136,7 @@ class idParseHtml(ParserBase):
                 elif chap_head := re.search(r'Part\s?(?P<c_title>(\d+)?([IVX]+)?)', header_tag.get_text()):
                     header_tag.name = "h2"
                     if header_tag.find_previous("h2"):
-                        prev_id = header_tag.find_previous("h2").get("id")
+                        prev_id = header_tag.find_previous("h2",class_='chapterh2').get("id")
                     else:
                         prev_id = header_tag.find_previous("h1").get("id")
 
@@ -235,6 +235,7 @@ class idParseHtml(ParserBase):
                         header_tag["id"] = f'{header_tag.find_previous(["h4","h3"]).get("id")}-history'
                     else:
                         header_tag_text = re.sub(r'[\s]*','',header_tag.b.get_text()).lower()
+
                         subsec_head_id = f'{header_tag.find_previous("h4").get("id")}-{header_tag_text}'
                         if subsec_head_id in sub_sec_id :
                             header_tag["id"] = f'{header_tag.find_previous("h4").get("id")}-{header_tag_text}{sub_sec_count}'
@@ -684,6 +685,39 @@ class idParseHtml(ParserBase):
                 p_tag.insert_before(new_p_tag)
                 p_tag.string = p_text
                 p_tag["class"] = []
+
+
+            if re.search(r'^\(\d+\).+\(\d\)\s*', p_tag.get_text().strip()):
+                alpha = re.search(r'^(?P<text1>\((?P<alpha1>\d+)\).+)(?P<text2>\((?P<alpha2>\d+)\)\s*.+)',
+                                  p_tag.get_text().strip())
+
+                if re.match(r'^\(\d+\)', p_tag.find_next_sibling().text.strip()):
+                    nxt_alpha = re.search(r'^\((?P<alpha3>\d+)\)', p_tag.find_next_sibling().text.strip()).group(
+                        "alpha3")
+                    if int(alpha.group("alpha2")) == int(alpha.group("alpha1")) + 1:
+                        if int(nxt_alpha) == int(alpha.group("alpha2")) + 1:
+                            alpha_text = alpha.group("text2")
+                            num_text = alpha.group("text1")
+                            new_p_tag = self.soup.new_tag("p")
+                            new_p_tag.string = alpha_text
+                            new_p_tag["class"] = [self.tag_type_dict["ul"]]
+                            p_tag.insert_after(new_p_tag)
+                            p_tag.string = num_text
+
+        for p_tag in self.soup.findAll("p", class_=self.tag_type_dict["head4"]):
+            if p_tag.b:
+                p_text = str(p_tag)
+
+                if re.search(r'<p class="p7">.+<b>.+</b></p>$',p_text):
+                    p_tag["class"] = [self.tag_type_dict["ul"]]
+                    new_p_tag = self.soup.new_tag("p")
+                    new_p_tag.string = p_tag.b.get_text().strip()
+                    new_p_tag["class"] = [self.tag_type_dict["head4"]]
+                    p_tag.insert_after(new_p_tag)
+                    head_text = re.search(r'<p class="p7">(?P<h_text>.+)<b>.+</b></p>$', p_text).group('h_text')
+                    p_tag.string = head_text
+
+
 
         print('tags are recreated')
 
