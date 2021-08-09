@@ -45,7 +45,7 @@ class idParseHtml(ParserBase):
         - add attribute 'lang' to html tag with value 'en'
         :return:
         """
-        with open(f'/home/mis/cic-beautify-state-codes/transforms/id/ocid/r{self.release_number}/raw/{self.html_file_name}') as open_file:
+        with open(f'../transforms/id/ocid/r{self.release_number}/raw/{self.html_file_name}') as open_file:
             html_data = open_file.read()
         self.soup = BeautifulSoup(html_data, features="lxml")
         self.soup.contents[0].replace_with(Doctype("html"))
