@@ -354,7 +354,7 @@ class kyParseHtml(ParserBase):
                              '143A', '144'],
                       'XII': ['146', '147', '147A', '147B', '148', '149', '150', '151', '151B', '152', '152A', '153',
                               '154', '154A', '154B', '155'],
-                      'XIII': ['156', '157', '157A', '158', '159', '160', '161', '162', '163', '164A', '165', '165A',
+                      'XIII': ['156', '157', '157A', '158', '159', '160', '161', '162', '163','164', '164A', '165', '165A',
                                '166', '167', '168'], 'XIV': ['171', '172', '173'],
                       'XV': ['174', '175', '175A', '175B', '176', '177', '178', '179', '180', '181', '182', '183',
                              '184'],
@@ -411,7 +411,7 @@ class kyParseHtml(ParserBase):
                     chapter_list = chapter_list + [chap_list]
 
             else:
-                if re.match(r'^(CHAPTER)', chap_tag.a.text.strip()):
+                if re.match(r'^CHAPTER', chap_tag.text.strip()):
                     # print(chap_tag)
                     chap_list = re.search(r'^(CHAPTER\s*(?P<chap_num>\d+))', chap_tag.a.text.strip()).group("chap_num")
                     chapter_list = chapter_list + [chap_list]
