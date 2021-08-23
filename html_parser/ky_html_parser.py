@@ -1404,7 +1404,7 @@ class kyParseHtml(ParserBase):
         for note_tag in self.soup.find_all(class_=tag_class):
             nd_tag_text = re.sub(r'[\W]', '', note_tag.get_text()).lower()
             if re.match(note_nav_pattern, note_tag.text.strip()) and nd_tag_text in self.nd_list:
-
+            # if re.match(note_nav_pattern, note_tag.text.strip()):
                 note_tag.name = "li"
 
                 # parent
@@ -1520,6 +1520,7 @@ class kyParseHtml(ParserBase):
             nd_tag_text = re.sub(r'[\W]', '', nd_tag.get_text()).lower()
             if re.match(r'^\d+\.', nd_tag.text.strip()) and nd_tag_text in self.nd_list:
 
+            # if re.match(r'^\d+\.', nd_tag.text.strip()):
 
                 if re.search(r'^(\d+\.(\d+\.)?\s*“*[a-zA-Z0-9]+)', nd_tag.get_text().strip()):
 
@@ -4336,6 +4337,8 @@ class kyParseHtml(ParserBase):
         ol_list = []
         ol_head1 = 1
         sec_alpha = 'a'
+        sec_alpha1 = 'a'
+        alpha_cur_tag2 =None
 
 
         for p_tag in self.soup.find_all():
@@ -4469,6 +4472,14 @@ class kyParseHtml(ParserBase):
                     sec_alpha = 'a'
 
 
+            elif re.search(r'^\(\s*\d\d\s*\)', current_tag_text):
+                p_tag.name = "li"
+                p_tag_text = re.search(r'^\(\s*(?P<id>\d\d)\s*\)',current_tag_text).group("id")
+                alpha_ol.append(p_tag)
+                p_tag["id"] = f'{prevnum_id}{p_tag_text}'
+                p_tag.string = re.sub(r'^\(\s*\d\d\s*\)', '', current_tag_text)
+
+
             elif re.search(rf'^{num_count}\.', current_tag_text) and p_tag.name == "p" :
                 p_tag.name = "li"
                 num_tag = p_tag
@@ -4486,11 +4497,6 @@ class kyParseHtml(ParserBase):
                         prev_id = cap_alpha_cur_tag.get("id")
                         cap_alpha_cur_tag.append(num_ol1)
 
-                    elif alpha_cur_tag1:
-                        prev_id = alpha_cur_tag1.get("id")
-                        alpha_cur_tag1.append(num_ol1)
-
-
                     else:
 
                         prev_id = f'{p_tag.find_previous("h3").get("id")}ol{ol_count}'
@@ -4498,15 +4504,9 @@ class kyParseHtml(ParserBase):
                     num_ol1.append(p_tag)
 
 
-                # if not alpha_cur_tag1:
-                #     sec_alpha = 'a'
-
-
                 p_tag["id"] = f'{prev_id}{num_count}'
                 p_tag.string = re.sub(rf'^{num_count}\.', '', current_tag_text)
                 num_count += 1
-
-
 
                 if re.search(r'^\d+\.\s?a\.', current_tag_text):
 
@@ -4526,40 +4526,21 @@ class kyParseHtml(ParserBase):
 
 
 
-
-
-
             elif re.search(rf'^{sec_alpha}\.', current_tag_text):
                 p_tag.name = "li"
                 alpha_cur_tag1 = p_tag
                 roman_count = 1
                 ol_head1 = 1
 
+
                 if re.search(r'^a\.', current_tag_text) :
-
-
-
 
                     innr_alpha_ol = self.soup.new_tag("ol", Class="alpha")
                     previd = p_tag.find_previous("li")
-
-
-                    if  re.search(r'^ARTICLE',p_tag.find_previous("h3").get_text().strip()) and not num_tag:
-                        p_tag.wrap(innr_alpha_ol)
-                        prevnum_id1 = p_tag.find_previous("h3").get("id")
-                    else:
-                        p_tag.wrap(innr_alpha_ol)
-                        prevnum_id1 = previd.get("id")
-                        previd.append(innr_alpha_ol)
-
+                    p_tag.wrap(innr_alpha_ol)
+                    prevnum_id1 = previd.get("id")
+                    previd.append(innr_alpha_ol)
                     p_tag["id"] = f'{prevnum_id1}{sec_alpha}'
-
-
-
-
-
-
-
 
                 else:
                     innr_alpha_ol.append(p_tag)
@@ -4582,6 +4563,8 @@ class kyParseHtml(ParserBase):
                     roman_ol.append(inner_li_tag)
                     p_tag.string = ""
                     p_tag.insert(0, roman_ol)
+
+
 
 
 
@@ -4626,9 +4609,9 @@ class kyParseHtml(ParserBase):
                 p_tag.name = "li"
                 roman_cur_tag = p_tag
 
-
                 if re.search(r'^i\.', current_tag_text):
                     roman_ol = self.soup.new_tag("ol", type="i")
+
                     p_tag.wrap(roman_ol)
                     alpha_cur_tag1.append(roman_ol)
                     prev_id1 = alpha_cur_tag1.get("id")
@@ -4657,6 +4640,7 @@ class kyParseHtml(ParserBase):
                 cap_alpha_cur_tag = None
                 cap_roman_cur_tag = None
                 alpha_cur_tag1 = None
+                sec_alpha1 = 'a'
 
 
 
