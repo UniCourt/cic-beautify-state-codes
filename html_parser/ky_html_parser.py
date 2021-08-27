@@ -1306,13 +1306,12 @@ class kyParseHtml(ParserBase):
         if re.search('constitution', self.html_file_name):
             tag_class = self.class_regex["sec_head"]
         else:
-            tag_class = self.class_regex["ol"]
+            tag_class = self.class_regex["nd_nav"]
 
 
         for note_tag in self.soup.find_all(class_=tag_class):
             nd_tag_text = re.sub(r'[\W]', '', note_tag.get_text()).lower()
             if re.match(note_nav_pattern, note_tag.text.strip()) and nd_tag_text in self.nd_list:
-            # if re.match(note_nav_pattern, note_tag.text.strip()):
                 note_tag.name = "li"
 
                 # parent
@@ -1422,14 +1421,11 @@ class kyParseHtml(ParserBase):
         if re.search('constitution', self.html_file_name):
             nd_class_name = self.class_regex['sec_head']
         else:
-            nd_class_name = self.class_regex['ol']
+            nd_class_name = self.class_regex['nd_nav']
 
         for nd_tag in self.soup.find_all(class_=nd_class_name):
             nd_tag_text = re.sub(r'[\W]', '', nd_tag.get_text()).lower()
             if re.match(r'^\d+\.', nd_tag.text.strip()) and nd_tag_text in self.nd_list:
-
-            # if re.match(r'^\d+\.', nd_tag.text.strip()):
-
                 if re.search(r'^(\d+\.(\d+\.)?\s*“*[a-zA-Z0-9]+)', nd_tag.get_text().strip()):
 
                     prev_head_tag = nd_tag.find_previous("h4").get("id")
