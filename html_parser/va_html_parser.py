@@ -112,38 +112,53 @@ class vaParseHtml(ParserBase):
 
     def recreate_tag(self):
         for p_tag in self.soup.find_all():
-            if p_tag.get("class") == [self.class_regex["article"]]:
-                if re.search(r'^Article\s*\d+\.|^Subtitle\s*[IVX]+\.|^Part\s*[A-Z]+', p_tag.text.strip()):
-                   p_tag["class"] = "navhead"
-
-            if p_tag.get("class") == [self.class_regex["ul"]]:
-                if re.search(r'^(\d+(\.\d+)*[A-Z]*-\d{1,4}(\.\d+)*\..+\.\s*){1}', p_tag.text.strip()):
-                    if p_tag.br:
-                        string = p_tag.text.strip()
-
+            if re.search('constitution', self.html_file_name):
+                if p_tag.get("class") == [self.class_regex["casenav"]]:
+                    if p_tag.br and re.search(r'^[IA1]\.', p_tag.text.strip()) and re.search(r'^CASE NOTES', p_tag.find_previous().text.strip()):
+                        p_tag_text = p_tag.text.strip()
                         p_tag.clear()
-                        rept_tag = re.split('(\d+(\.\d+)*[A-Z]*-\d{1,4}(\.\d+)*\..+\.\s*)', string)
+                        rept_tag = re.split('\n', p_tag_text)
                         for tag_text in rept_tag:
-                            if tag_text:
-                                if re.search('^(\d+(\.\d+)*[A-Z]*-\d{1,4}(\.\d+)*\..+\.\s*)', tag_text):
-                                    new_tag = self.soup.new_tag("p")
-                                    new_tag.string = tag_text
-                                    new_tag["class"] = [self.class_regex["ul"]]
-                                    p_tag.append(new_tag)
+                            new_tag = self.soup.new_tag("p")
+                            new_tag.string = tag_text
+                            p_tag.append(new_tag)
+                            new_tag["class"] = "casenote"
                         p_tag.unwrap()
 
+            else:
 
-            if p_tag.get("class") == [self.class_regex["ol"]]:
-                if p_tag.br and re.search(r'^[IA1]\.', p_tag.text.strip()) and re.search(r'^CASE NOTES', p_tag.find_previous().text.strip()):
-                    p_tag_text = p_tag.text.strip()
-                    p_tag.clear()
-                    rept_tag = re.split('\n', p_tag_text)
-                    for tag_text in rept_tag:
-                        new_tag = self.soup.new_tag("p")
-                        new_tag.string = tag_text
-                        p_tag.append(new_tag)
-                        new_tag["class"] = "casenote"
-                    p_tag.unwrap()
+                if p_tag.get("class") == [self.class_regex["article"]]:
+                    if re.search(r'^Article\s*\d+\.|^Subtitle\s*[IVX]+\.|^Part\s*[A-Z]+', p_tag.text.strip()):
+                       p_tag["class"] = "navhead"
+
+                if p_tag.get("class") == [self.class_regex["ul"]]:
+                    if re.search(r'^(\d+(\.\d+)*[A-Z]*-\d{1,4}(\.\d+)*\..+\.\s*){1}', p_tag.text.strip()):
+                        if p_tag.br:
+                            string = p_tag.text.strip()
+
+                            p_tag.clear()
+                            rept_tag = re.split('(\d+(\.\d+)*[A-Z]*-\d{1,4}(\.\d+)*\..+\.\s*)', string)
+                            for tag_text in rept_tag:
+                                if tag_text:
+                                    if re.search('^(\d+(\.\d+)*[A-Z]*-\d{1,4}(\.\d+)*\..+\.\s*)', tag_text):
+                                        new_tag = self.soup.new_tag("p")
+                                        new_tag.string = tag_text
+                                        new_tag["class"] = [self.class_regex["ul"]]
+                                        p_tag.append(new_tag)
+                            p_tag.unwrap()
+
+
+                if p_tag.get("class") == [self.class_regex["ol"]]:
+                    if p_tag.br and re.search(r'^[IA1]\.', p_tag.text.strip()) and re.search(r'^CASE NOTES', p_tag.find_previous().text.strip()):
+                        p_tag_text = p_tag.text.strip()
+                        p_tag.clear()
+                        rept_tag = re.split('\n', p_tag_text)
+                        for tag_text in rept_tag:
+                            new_tag = self.soup.new_tag("p")
+                            new_tag.string = tag_text
+                            p_tag.append(new_tag)
+                            new_tag["class"] = "casenote"
+                        p_tag.unwrap()
 
 
     def replace_tags(self):
@@ -199,12 +214,47 @@ class vaParseHtml(ParserBase):
                         sec_id = re.search(r'^Section (?P<sec_id>\d+)\.', header_tag.text.strip()).group('sec_id')
                         header_tag[
                             'id'] = f"{header_tag.find_previous('h3').get('id')}-sub{sec_id.zfill(2)}"
+
                 if header_tag.get("class") == [self.class_regex["ol"]]:
                     if re.search(r'^CASE NOTES', header_tag.text.strip()):
                         header_tag.name = "h4"
                         sec_id = re.sub(r'[\W]','',header_tag.text.strip()).lower()
                         header_tag[
                             'id'] = f"{header_tag.find_previous('h3').get('id')}-{sec_id}"
+
+
+                    if re.search(r'^[IVX]+\.', header_tag.text.strip()):
+                            header_tag.name = "h5"
+                            tag_text = re.search('^(?P<c_id>[IVX]+)\.', header_tag.text.strip()).group('c_id').lower()
+                            header_tag['id'] = f"{header_tag.find_previous('h4').get('id')}-{tag_text}"
+                            header_tag['class'] = 'casehead'
+
+                    elif re.search(r'^[A-Z]\.', header_tag.text.strip()):
+                            header_tag.name = "h5"
+                            tag_text = re.search('^(?P<c_id>[A-Z])\.', header_tag.text.strip()).group('c_id').lower()
+                            header_tag[
+                                'id'] = f"{header_tag.find_previous('h5', class_='casehead').get('id')}-{tag_text}"
+                            header_tag['class'] = 'casesub'
+
+                    elif re.search(r'^[0-9]+\.', header_tag.text.strip()):
+                            header_tag.name = "h5"
+                            tag_text = re.search('^(?P<c_id>[0-9]+)\.', header_tag.text.strip()).group('c_id').lower()
+                            header_tag[
+                                'id'] = f"{header_tag.find_previous('h5', class_='casesub').get('id')}-{tag_text}"
+                            header_tag['class'] = 'casedigit'
+
+                    elif re.search(r'^[ivx]+\.', header_tag.text.strip()):
+                            header_tag.name = "h5"
+                            tag_text = re.search('^(?P<c_id>[ivx]+)\.', header_tag.text.strip()).group('c_id').lower()
+                            header_tag[
+                                'id'] = f"{header_tag.find_previous('h5', class_='casealpha').get('id')}-{tag_text}"
+
+                    elif re.search(r'^[a-z]\.', header_tag.text.strip()):
+                            header_tag.name = "h5"
+                            tag_text = re.search('^(?P<c_id>[a-z])\.', header_tag.text.strip()).group('c_id').lower()
+                            header_tag[
+                                'id'] = f"{header_tag.find_previous('h5', class_='casedigit').get('id')}-{tag_text}"
+                            header_tag['class'] = 'casealpha'
 
                 if header_tag.get("class") == [self.class_regex["ul"]] and not re.search('^PREAMBLE|^Sec\.|^Article|^Amend\.',header_tag.text.strip()):
                     header_tag.name = "li"
@@ -1985,7 +2035,7 @@ class vaParseHtml(ParserBase):
             - write html str to an output file
         """
         soup_str = str(self.soup.prettify(formatter=None))
-        with open(f"/home/mis/PycharmProjects/code-vt/transforms/va/ocva/r{self.release_number}/{self.html_file_name}", "w") as file:
+        with open(f"/home/mis/PycharmProjects/cic-code-va/transforms/va/ocva/r{self.release_number}/{self.html_file_name}", "w") as file:
             file.write(soup_str)
 
 
@@ -2006,15 +2056,17 @@ class vaParseHtml(ParserBase):
         if re.search('constitution', self.html_file_name):
             self.class_regex = {'ul':'^I\.','head2': '^Chapter \d+\.', 'head1': '^The Constitution of the United States|Constitution of Virginia',
                             'head3': r'^§ 1\.|^Section \d+\.','junk': '^Statute text','article':'——————————', 'ol': r'^A\.\s', 'head4': '^CASE NOTES', \
-                            'amdhead':'^AMENDMENTS TO THE CONSTITUTION'}
+                            'amdhead':'^AMENDMENTS TO THE CONSTITUTION','casenav':'^I\.'}
 
             self.get_class_name()
             self.remove_junk()
-
+            self.recreate_tag()
             self.replace_tags()
             self.create_main_tag()
             self.create_ul_tag()
             self.create_chapter_section_nav()
+            self.create_case_note_nav()
+            self.create_case_note_ul()
             self.create_and_wrap_with_div_tag()
             self.convert_paragraph_to_alphabetical_ol_tags1()
             self.add_watermark_and_remove_class_name()
