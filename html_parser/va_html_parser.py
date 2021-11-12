@@ -574,7 +574,6 @@ class vaParseHtml(ParserBase):
         list_item.contents = nav_list
 
 
-
     def create_chapter_section_nav(self):
 
         count = 0
