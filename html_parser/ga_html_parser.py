@@ -31,7 +31,6 @@ class GAParseHtml(ParserBase):
         self.headers_class_dict = {'JUDICIAL DECISIONS': 'jdecisions',
                                    'OPINIONS OF THE ATTORNEY GENERAL': 'opinionofag',
                                    'RESEARCH REFERENCES': 'rreferences'}
-        self.start_parse()
 
     def create_page_soup(self):
         """
