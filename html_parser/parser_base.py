@@ -29,6 +29,8 @@ class ParserBase:
             class_name = f'{state_key}ParseHtml'
             parser_obj = getattr(importlib.import_module(script), class_name)
             parser_obj(input_file_name)
+            # parser_obj(input_file_name).start_parse()
+
         else:
             self.folder_ = """
                       - if input file name is not passed get all the file name present in the raw files folder
@@ -45,9 +47,10 @@ class ParserBase:
             - call wrapper function with one file name at a time
         """
         with multiprocessing.Pool(self.cpu_count) as pool:
-            pool.map_async(self.wrapper_function, files_list)
-            pool.close()
-            pool.join()
+                pool.map_async(self.wrapper_function, files_list)
+                pool.close()
+                pool.join()
+
 
     def wrapper_function(self, files_list):
         """
