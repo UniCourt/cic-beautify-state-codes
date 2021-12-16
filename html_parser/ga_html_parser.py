@@ -19,7 +19,7 @@ class GAParseHtml(ParserBase):
         self.previous = None
         self.junk_tag_class = ['Apple-converted-space', 'Apple-tab-span']
         self.tag_type_dict = {'head1': r'TITLE \d', 'head2': r'^CHAPTER \d|^ARTICLE \d', 'ul': r'^Chap\.|^Art\.|^Sec\.',
-                              'head4': 'OPINIONS OF THE ATTORNEY GENERAL|RESEARCH REFERENCES',
+                              'head4': '^JUDICIAL DECISIONS|OPINIONS OF THE ATTORNEY GENERAL',
                               'ol_p': r'^\([a-z]\)', 'junk1': '^Annotations$', 'normalp': '^Editor\'s note',
                               'article': r'^Article \d$|^Part \d$'}
         self.watermark_text = """Release {0} of the Official Code of Georgia Annotated released {1}. 
@@ -31,6 +31,7 @@ class GAParseHtml(ParserBase):
         self.headers_class_dict = {'JUDICIAL DECISIONS': 'jdecisions',
                                    'OPINIONS OF THE ATTORNEY GENERAL': 'opinionofag',
                                    'RESEARCH REFERENCES': 'rreferences'}
+        self.start_parse()
 
     def create_page_soup(self):
         """
@@ -42,10 +43,12 @@ class GAParseHtml(ParserBase):
         """
         with open(f'../transforms/ga/ocga/r{self.release_number}/raw/{self.html_file_name}') as open_file:
             html_data = open_file.read()
-        self.soup = BeautifulSoup(html_data, features="lxml")
-        self.soup.contents[0].replace_with(Doctype("html"))
-        self.soup.html.attrs['lang'] = 'en'
+
+            self.soup = BeautifulSoup(html_data, features="lxml")
+            self.soup.contents[0].replace_with(Doctype("html"))
+            self.soup.html.attrs['lang'] = 'en'
         print('created soup')
+
 
     def get_class_name(self):
         """
@@ -81,6 +84,7 @@ class GAParseHtml(ParserBase):
 
         # self.junk_tag_class.append(
         #     self.soup.find(lambda tag: tag.name == 'p' and tag.get_text().strip() == '')['class'][0])
+        print(self.tag_type_dict)
         print('updated class dict')
 
     def remove_junk(self):
@@ -1160,6 +1164,7 @@ class GAParseHtml(ParserBase):
             self.add_anchor_constitution()
             self.wrap_div_tags()
         else:
+
             self.get_class_name()
             self.remove_junk()
             self.replace_tags()
