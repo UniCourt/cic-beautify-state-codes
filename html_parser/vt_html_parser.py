@@ -1268,7 +1268,7 @@ class VTParseHtml(ParserBase):
             - write html str to an output file
         """
         soup_str = str(self.soup.prettify(formatter=None))
-        with open(f"/home/mis/PycharmProjects/code-vt-1/transforms/vt/ocvt/r{self.release_number}/{self.html_file_name}", "w") as file:
+        with open(f"../transforms/vt/ocvt/r{self.release_number}/{self.html_file_name}", "w") as file:
             file.write(soup_str)
 
 
