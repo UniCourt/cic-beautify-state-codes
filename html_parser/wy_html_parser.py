@@ -25,13 +25,6 @@ class WYParseHtml(ParserBase):
                             'head': '^Law reviews\. —',
                             'junk1': '^Annotations$', }
 
-        # self.class_regex = {'head1': r'Title \d+', 'ul': r'^Article \d+',
-        #                     'head2': r'^Chapter \d |^Article \d+ ',
-        #                     'head4': 'History\.', 'head3': '^§ \d+(\.\d+)*-\d+-\d+', 'ol_p': r'^\(\d\)',
-        #                     'head': '^Law reviews\. —',
-        #                     'junk1': '^Annotations$', }
-
-
 
         self.watermark_text = """Release {0} of the Official Code of Wyoming Annotated released {1}. 
         Transformed and posted by Public.Resource.Org using cic-beautify-state-codes version v1.3 on {2}. 
@@ -148,11 +141,6 @@ class WYParseHtml(ParserBase):
                     del p_tag["class"]
                     p_tag.b.clear()
 
-
-
-
-
-
     def replace_tags(self):
         watermark_p = None
         title_tag = None
@@ -166,21 +154,16 @@ class WYParseHtml(ParserBase):
 
         for header_tag in self.soup.body.find_all():
             if re.search('constitution', self.html_file_name):
-
                 if re.search('constitution\.wy', self.html_file_name):
                     self.title_id  = 'constitution-wy'
                 elif re.search('constitution\.us', self.html_file_name):
                     self.title_id  = 'constitution-us'
-
                 Article_pattern = re.compile(r'^Article\s(?P<chap_id>\d+([A-Z])*) ')
-
-
                 if header_tag.get("class") == [self.class_regex["head1"]]:
                     if re.search(r'^Constitution of the State of Wyoming|^THE CONSTITUTION OF THE UNITED STATES OF AMERICA',header_tag.text.strip()):
                         header_tag.name = "h1"
                         header_tag.wrap(self.soup.new_tag("nav"))
                         header_tag['id'] =  self.title_id
-
                         watermark_p = self.soup.new_tag('p', Class='transformation')
                         watermark_p.string = self.watermark_text.format(self.release_number, self.release_date,
                                                                         datetime.now().date())
@@ -211,7 +194,6 @@ class WYParseHtml(ParserBase):
                             'id'] = f"{header_tag.find_previous('h2').get('id')}am{sec_id.zfill(2)}"
                         header_tag['class'] = "amend"
 
-
                 elif header_tag.get("class") == [self.class_regex["head3"]]:
                     if re.search(r'^§ \d+\.', header_tag.text.strip()):
                         header_tag.name = "h3"
@@ -227,7 +209,6 @@ class WYParseHtml(ParserBase):
                         else:
                             header_tag[
                                 'id'] = f"{header_tag.find_previous('h3',class_='amend').get('id')}s{sec_id.zfill(2)}"
-
 
                 elif header_tag.get("class") == [self.class_regex["head4"]] or \
                         header_tag.get("class") == [self.class_regex["head"]]:
@@ -271,7 +252,6 @@ class WYParseHtml(ParserBase):
                         header_tag['class'] = 'casehead'
                         alpha = 'A'
 
-
                     elif alpha:
                         if re.search(fr'^{alpha}\.', header_tag.text.strip()):
                             header_tag.name = "h5"
@@ -286,26 +266,18 @@ class WYParseHtml(ParserBase):
                         tag_text = re.search('^(?P<c_id>[0-9])\.', header_tag.text.strip()).group('c_id').lower()
                         header_tag[
                             'id'] = f"{header_tag.find_previous('h5', class_='casesub').get('id')}-{tag_text}"
-                        # header_tag['class'] = 'casehead'
 
-
-
-            #titlefiles
             else:
                 title_pattern = re.compile(r'^(Title)\s(?P<title_id>\d+)')
                 chapter_pattern = re.compile(r'^(Chapter)\s(?P<chap_id>\d+([A-Z])*) ')
                 section_pattern = re.compile(r'^§*\s*(?P<sec_id>\d+(\.\d+)*-\d+(\.[A-Z]+)*-\d+(\.\d+)*)')
                 SUBCHAPTER_pattern = re.compile(r'^(?P<ar_id>[A-Z])\. ')
                 SUBCHAPTER_pattern1 = re.compile(r'^Division (?P<ar_id>\d+)\. ')
-
                 part_pattern = re.compile(r'^Part\s*(?P<p_id>\d+([A-Z])*)')
                 article_pattern = re.compile(r'^(ARTICLE|Article) (?P<s_id>[IVX]+)')
                 article_pattern1 = re.compile(r'^(Article|Revised Article|Articles)\s(?P<s_id>\d+([A-Z])*(\.*[A-Z])*)[\.\s]')
                 section_pattern1 = re.compile(r'^Section (?P<s_id>[0-9]+)')
                 section_pattern2 = re.compile(r'^Section (?P<s_id>[A-Z])')
-
-
-
 
                 if header_tag.get("class") == [self.class_regex["head1"]]:
                     if title_pattern.search(header_tag.text.strip()):
@@ -319,65 +291,48 @@ class WYParseHtml(ParserBase):
                                                                         datetime.now().date())
                         self.soup.find("nav").insert(0, watermark_p)
 
-
                 elif header_tag.get("class") == [self.class_regex["head2"]] or \
                         header_tag.get("class") == [self.class_regex["head"]]:
                     self.head3_count = 1
-
                     if chapter_pattern.search(header_tag.text.strip()):
                         header_tag.name = "h2"
                         chapter_id = chapter_pattern.search(header_tag.text.strip()).group('chap_id')
                         header_tag['id'] = f"t{self.title_id.zfill(2)}c{chapter_id.zfill(2)}"
                         header_tag["class"] = "chapter"
-
                     elif re.search(r'^Revised Article \d',header_tag.text.strip()):
                         header_tag.name = "h2"
                         chapter_id = re.search(r'^Revised Article (?P<s_id>\d)',header_tag.text.strip()).group('s_id')
                         header_tag[
                             'id'] = f"{header_tag.find_previous('h1').get('id')}a{chapter_id.zfill(2)}"
                         header_tag["class"] = "article"
-
                     elif article_pattern1.search(header_tag.text.strip()):
                         header_tag.name = "h2"
                         chapter_id = article_pattern1.search(header_tag.text.strip()).group('s_id')
-
-                        # header_tag[
-                        #     'id'] = f"{header_tag.find_previous('h1').get('id')}a{chapter_id.zfill(2)}"
                         header_tag['id'] = f"{header_tag.find_previous('h2',class_='chapter').get('id')}a{chapter_id.zfill(2)}"
-
                         header_tag["class"] = "article"
-
-
                     elif re.search(r'^Part \d+\.',header_tag.text.strip()):
                         header_tag.name = "h2"
                         chapter_id = re.search(r'^Part (?P<s_id>\d+)\.',header_tag.text.strip()).group('s_id')
                         header_tag[
                             'id'] = f"{header_tag.find_previous('h2',class_='article').get('id')}p{chapter_id.zfill(2)}"
                         header_tag["class"] = "part"
-
                     elif SUBCHAPTER_pattern.search(header_tag.text.strip()) or \
                             SUBCHAPTER_pattern1.search(header_tag.text.strip()):
                         if header_tag.b:
                             header_tag.name = "h2"
-
                             if SUBCHAPTER_pattern.search(header_tag.text.strip()):
                                 chapter_id = SUBCHAPTER_pattern.search(header_tag.text.strip()).group('ar_id')
                             elif SUBCHAPTER_pattern1.search(header_tag.text.strip()):
                                 chapter_id = SUBCHAPTER_pattern1.search(header_tag.text.strip()).group('ar_id')
-
                             header_tag[
                                 'id'] = f"{header_tag.find_previous('h2',class_='article').get('id')}s{chapter_id.zfill(2)}"
                             header_tag["class"] = "sub"
-
-
                     if re.search(r'^[IVX]+\.', header_tag.text.strip()):
                         header_tag.name = "h5"
                         tag_text = re.search('^(?P<c_id>[IVX]+)\.', header_tag.text.strip()).group('c_id').lower()
                         header_tag['id'] = f"{header_tag.find_previous({'h4','h3'}).get('id')}-{tag_text}"
                         header_tag['class'] = 'casehead'
                         alpha ='A'
-
-
                     elif alpha:
                         if re.search(fr'^{alpha}\.', header_tag.text.strip()):
                             header_tag.name = "h5"
@@ -386,14 +341,10 @@ class WYParseHtml(ParserBase):
                                 'id'] = f"{header_tag.find_previous('h5', class_='casehead').get('id')}-{tag_text}"
                             header_tag['class'] = 'casesub'
                             alpha = chr(ord(alpha) + 1)
-
                         elif re.search(r'^[0-9]\.', header_tag.text.strip()):
                             header_tag.name = "h5"
                             tag_text = re.search('^(?P<c_id>[0-9])\.', header_tag.text.strip()).group('c_id').lower()
                             header_tag['id'] = f"{header_tag.find_previous('h5', class_='casesub').get('id')}-{tag_text}"
-                            # header_tag['class'] = 'casehead'
-
-
                     self.a_nav_count = 0
                     self.s_nav_count = 0
 
@@ -439,11 +390,9 @@ class WYParseHtml(ParserBase):
                             'id'] = f"{header_tag.find_previous('h3',class_='section').get('id')}a{chapter_id.zfill(2)}"
                         header_tag["class"] = "article"
 
-
                     elif section_pattern1.search(header_tag.text.strip()) or section_pattern2.search(header_tag.text.strip()):
                         self.head4_count = 1
                         header_tag.name = "h3"
-
 
                         if section_pattern1.search(header_tag.text.strip()):
                             chapter_id = section_pattern1.search(header_tag.text.strip()).group('s_id')
@@ -455,7 +404,6 @@ class WYParseHtml(ParserBase):
                             header_tag[
                                 'id'] = f"{header_tag.find_previous('h3', class_='article').get('id')}s{chapter_id.zfill(2)}"
 
-
                 elif header_tag.get("class") == [self.class_regex["ul"]]:
                     if chapter_pattern.search(header_tag.text.strip()) or \
                             article_pattern1.search(header_tag.text.strip()) or \
@@ -465,10 +413,8 @@ class WYParseHtml(ParserBase):
                             part_pattern.search(header_tag.text.strip()) :
 
                         header_tag.name = "li"
-
                         if header_tag.find_previous().name == "li":
                             ul_tag.append(header_tag)
-
                         else:
                             ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
                             header_tag.wrap(ul_tag)
@@ -479,16 +425,12 @@ class WYParseHtml(ParserBase):
                                 nav_tag = self.soup.new_tag("nav")
                                 ul_tag.wrap(nav_tag)
 
-
         stylesheet_link_tag = self.soup.new_tag('link')
         stylesheet_link_tag.attrs = {'rel': 'stylesheet', 'type': 'text/css',
                                      'href': 'https://unicourt.github.io/cic-code-ga/transforms/ga/stylesheet/ga_code_stylesheet.css'}
         self.soup.style.replace_with(stylesheet_link_tag)
 
-
         print('tags replaced')
-
-
 
     def set_chapter_section_nav(self, list_item, chap_num, sub_tag, prev_id, sec_num,cnav):
         nav_list = []
@@ -502,7 +444,6 @@ class WYParseHtml(ParserBase):
             else:
                 nav_link["href"] = f"#{self.title_id}{sub_tag}{chap_num}"
                 list_item["id"] = f"#{self.title_id}{sub_tag}{chap_num}-{cnav}"
-
         else:
             if prev_id:
                 nav_link["href"] = f"#{prev_id}{sub_tag}{chap_num}"
@@ -520,9 +461,7 @@ class WYParseHtml(ParserBase):
 
 
     def create_chapter_section_nav(self):
-
         count = 0
-
         chapter_pattern = re.compile(r'^(Chapter)\s(?P<chap_id>\d+([A-Z])*)')
         section_pattern = re.compile(r'^§*\s*(?P<sec_id>\d+(\.\d+)*-\d+(\.[A-Z]+)*-\d+(\.\d+)*)')
         subchapter_pattern = re.compile(r'(?P<s_id>[A-Z])\.')
@@ -581,7 +520,6 @@ class WYParseHtml(ParserBase):
                         self.set_chapter_section_nav(list_item, chap_num.zfill(2), sub_tag, prev_id, None, cnav)
 
                 else:
-
                     if chapter_pattern.search(list_item.text.strip()):
                         chap_id = chapter_pattern.search(list_item.text.strip()).group('chap_id')
                         sub_tag = "c"
@@ -603,7 +541,6 @@ class WYParseHtml(ParserBase):
                         self.s_nav_count += 1
                         cnav = f'snav{self.s_nav_count:02}'
                         self.set_chapter_section_nav(list_item, chap_id.zfill(2), sub_tag, prev_id, None,cnav)
-
                     elif subchapter_pattern.search(list_item.text.strip()) or \
                             subchapter_pattern1.search(list_item.text.strip()):
                         if subchapter_pattern.search(list_item.text.strip()):
@@ -624,12 +561,10 @@ class WYParseHtml(ParserBase):
                         cnav = f'snav{self.s_nav_count:02}'
                         self.set_chapter_section_nav(list_item, chap_id.zfill(2), sub_tag, prev_id, None,cnav)
 
-
             elif list_item.name in ['h1','h2']:
                 self.c_nav_count = 0
                 self.a_nav_count = 0
                 self.s_nav_count = 0
-
 
 
     def convert_paragraph_to_alphabetical_ol_tags(self):
@@ -640,43 +575,30 @@ class WYParseHtml(ParserBase):
             - append each li to respective ol accordingly
         """
         main_sec_alpha = 'a'
-
         cap_alpha = 'A'
         ol_head = 1
         num_count = 1
         cap_alpha_ol = self.soup.new_tag("ol", type="A")
+        sec_alpha_ol = self.soup.new_tag("ol", type="a")
         num_ol = self.soup.new_tag("ol")
         ol_count = 1
         cap_alpha_cur_tag = None
         main_sec_alpha1 = 'a'
         sec_alpha_cur_tag = None
-        num_cur_tag = None
-        num_cur_tag1 = None
-        cap_alpha_cur_tag1 = None
         cap_alpha1 = 'A'
         cap_alpha2 = 'a'
-        n_tag = None
         cap_alpha1_cur_tag = None
-        sec_alpha_cur_tag1 = None
         ol_head_tag = None
 
         for p_tag in self.soup.body.find_all(['h3', 'h4', 'h5','p']):
-
             current_tag_text = p_tag.text.strip()
-
-
-
-
             if re.search(rf'^\({main_sec_alpha}\)', current_tag_text) and p_tag.name == "p":
                 p_tag.name = "li"
                 sec_alpha_cur_tag = p_tag
-
                 if re.search(r'^\(a\)', current_tag_text):
                     sec_alpha_ol = self.soup.new_tag("ol", type="a")
                     p_tag.wrap(sec_alpha_ol)
                     sec_alpha_id = f"{p_tag.find_previous({'h5', 'h4', 'h3', 'h2'}).get('id')}ol{ol_count}"
-
-
                 else:
                     sec_alpha_ol.append(p_tag)
 
@@ -701,8 +623,6 @@ class WYParseHtml(ParserBase):
                     p_tag.string = ""
                     p_tag.append(roman_ol)
 
-
-
             elif re.search(r'^\([ivxl]+\)', current_tag_text) and p_tag.name == "p":
                 p_tag.name = "li"
                 roman_cur_tag = p_tag
@@ -725,7 +645,6 @@ class WYParseHtml(ParserBase):
                 p_tag["id"] = f'{prev_id1}{rom_head.group("rom")}'
                 p_tag.string = re.sub(r'^\([ivxl]+\)', '', current_tag_text)
 
-
                 if re.search(rf'^\([ivx]+\)\s*\(A\)', current_tag_text):
                     cap_alpha_ol = self.soup.new_tag("ol", type="A")
                     li_tag = self.soup.new_tag("li")
@@ -739,8 +658,6 @@ class WYParseHtml(ParserBase):
                     p_tag.string = ""
                     p_tag.append(cap_alpha_ol)
                     cap_alpha = 'B'
-
-
 
             elif re.search(rf'^\({cap_alpha}\)', current_tag_text) and p_tag.name == "p":
                 p_tag.name = "li"
@@ -827,10 +744,7 @@ class WYParseHtml(ParserBase):
                 p_tag.string = re.sub(rf'^\({num_count}\)', '', current_tag_text)
                 num_count += 1
 
-
-
             elif re.search(rf'^\([a-z]\)', current_tag_text) and p_tag.name == "p":
-
                 if sec_alpha_cur_tag:
                     p_tag.name = "li"
                     sec_alpha_id = f"{p_tag.find_previous({'h5', 'h4', 'h3', 'h2'}).get('id')}ol{ol_count}"
@@ -900,26 +814,18 @@ class WYParseHtml(ParserBase):
                 p_tag.string = re.sub(rf'^{main_sec_alpha1}\.', '', current_tag_text)
                 main_sec_alpha1 = chr(ord(main_sec_alpha1) + 1)
 
-
-
-
-
             if re.search(r'^CASE NOTES', current_tag_text) or p_tag.name in ['h3', 'h4', 'h5']:
                 ol_head = 1
                 cap_alpha = 'A'
                 cap_alpha_cur_tag = None
                 num_count = 1
-                num_cur_tag = None
                 main_sec_alpha = 'a'
                 main_sec_alpha1 = 'a'
-                num_cur_tag1 = None
                 sec_alpha_cur_tag = None
                 cap_alpha1 = "A"
-                n_tag = None
                 cap_alpha2 = 'a'
                 cap_roman_tag = None
                 cap_alpha1_cur_tag = None
-                sec_alpha_cur_tag1 = None
                 ol_head_tag = None
         print('ol tags added')
 
@@ -1013,9 +919,6 @@ class WYParseHtml(ParserBase):
                             print()
 
         print('wrapped div tags')
-
-
-
 
 
     def clean_html_and_add_cite(self):
@@ -1128,8 +1031,6 @@ class WYParseHtml(ParserBase):
                 tag.clear()
                 text = re.sub(re.escape(match), f'<cite class="wy_code">{match}</cite>', inside_text, re.I)
                 tag.append(text)
-
-
 
 
         main_tag = self.soup.new_tag('main')
@@ -1297,10 +1198,8 @@ class WYParseHtml(ParserBase):
             self.create_case_note_ul()
             self.wrap_div_tags()
 
-
         self.clean_html_and_add_cite()
         self.write_soup_to_file()
         print(f'finished {self.html_file_name}')
         print(datetime.now() - start_time)
 
-        #--input_file_name gov.wy.code.title.10.html
