@@ -89,11 +89,11 @@ Currently this code supports following states:
 
 10. ###Wyoming (WY):
    
-   **Code repo:** https://github.com/UniCourt/cic-code-wy
-   
-   **Code pages:** https://unicourt.github.io/cic-code-wy
-   
-   **Original RTF:** https://archive.org/details/gov.wy.code/
+      **Code repo:** https://github.com/UniCourt/cic-code-wy
+      
+      **Code pages:** https://unicourt.github.io/cic-code-wy
+      
+      **Original RTF:** https://archive.org/details/gov.wy.code/
 
 
 In subsequent months, we intend to add two more features:
