@@ -82,6 +82,8 @@ class TNParseHtml(ParserBase):
                 'class'][
                 0]
             self.tag_type_dict['head3'] = h3_class
+
+        print(self.tag_type_dict)
         print('updated class dict')
 
     def remove_junk(self):
@@ -137,7 +139,7 @@ class TNParseHtml(ParserBase):
                     if p_tag.findNext().has_attr('class') and \
                             p_tag.findNext()['class'][0] != self.tag_type_dict['ul']:
                         new_nav = self.soup.new_tag('nav')
-                        if re.search(r'sec\.|chap\.|Art\.', ul.contents[0].get_text(), re.I):
+                        if re.search(r'sec\.|chap\.|^Art\.', ul.contents[0].get_text(), re.I):
                             ul.contents[0].name = 'p'
                             ul.contents[0]['class'] = 'navheader'
                             new_nav.append(ul.contents[0])
@@ -191,10 +193,15 @@ class TNParseHtml(ParserBase):
                     elif section_match := re.search(r'^(?P<sec>\w+)\.', p_tag.get_text()):
                         p_tag.name = 'h3'
                         chap_tag = p_tag.find_previous(lambda tag: tag.name == 'h2'
-                                                                   and re.search(r'chapter \w+', tag.get_text(), re.I))
-                        chap_id = re.search(r'chapter (?P<chap_id>\w+)', chap_tag.get_text(), re.I).group('chap_id')
-                        section_id = f'{self.title.zfill(2)}-{chap_id.zfill(2)}-{section_match.group("sec")}'
-                        p_tag['id'] = f'{chap_tag["id"]}s{section_id}'
+                                                                   and re.search(r'(Part|chapter) \w+', tag.get_text(), re.I))
+
+                        if re.search(r'chapter \w+', chap_tag.get_text(), re.I):
+                            chap_id = re.search(r'chapter (?P<chap_id>\w+)', chap_tag.get_text(), re.I).group(
+                                'chap_id')
+                            section_id = f'{self.title.zfill(2)}-{chap_id.zfill(2)}-{section_match.group("sec")}'
+                            p_tag['id'] = f'{chap_tag["id"]}s{section_id}'
+                        elif re.search(r'Part \w+', chap_tag.get_text(), re.I):
+                            p_tag['id'] = f'{chap_tag["id"]}s{section_match.group("sec").zfill(2)}'
                     else:
                         p_tag.name = 'h5'
                 elif value == 'h4':
@@ -202,13 +209,21 @@ class TNParseHtml(ParserBase):
                     if self.headers_class_dict.get(p_tag.get_text()):
                         p_tag['class'] = self.headers_class_dict.get(p_tag.get_text())
                     p_tag['id'] = re.sub(r'\s+|\'', '', f't{self.title.zfill(2)}-{p_tag.get_text()}')
+
                     part_tag = p_tag.find_previous(
                         lambda tag: re.search(r'h\d', tag.name) and tag.name != 'h5' and tag.has_attr('class')
                                     and tag['class'] not in self.headers_class_dict.values())
                     if re.search(r'^\d', p_tag.get_text()):
-                        chap_id = p_tag.find_previous_sibling(lambda tag: re.search('^[a-zA-Z]', tag.get_text())
+
+
+                        # chap_id = p_tag.find_previous_sibling(lambda tag: re.search('^[a-zA-Z]', tag.get_text())
+                        #                                                   and tag.name != 'h5' and re.search(r'h\d',
+                        #                                                                                      tag.name))
+                        chap_id = p_tag.find_previous_sibling(lambda tag: re.search('^NOTES TO DECISIONS', tag.get_text())
                                                                           and tag.name != 'h5' and re.search(r'h\d',
                                                                                                              tag.name))
+
+
                     elif part_tag and part_tag.has_attr('class') and part_tag['class'] == 'part_header':
                         chap_id = part_tag
                     elif not p_tag.has_attr('class') or p_tag['class'] not in self.headers_class_dict.values():
@@ -217,7 +232,7 @@ class TNParseHtml(ParserBase):
                     else:
                         chap_id = p_tag.find_previous(lambda tag: tag.name in ['h2', 'h3'])
                     if chap_id and chap_id.has_attr('id'):
-                        id_text = re.sub(r'\s|"|\'', '', p_tag.get_text())
+                        id_text = re.sub(r'[\s\'—]+|\s|"|\'', '', p_tag.get_text())
                         p_tag['id'] = f'{chap_id["id"]}-{id_text}'
                     if self.tag_type_dict.get('part') and key == self.tag_type_dict['part']:
                         part_num = re.search(r'^part\s(?P<num>\w+(\.\w+)?)', p_tag.get_text().strip(), re.I).group(
@@ -301,7 +316,7 @@ class TNParseHtml(ParserBase):
         for p_tag in self.soup.find_all(lambda tag: tag.name == 'p' and re.search(r'\w+', tag.get_text())):
             if not re.search(r'\w+', p_tag.get_text()):
                 continue
-            if chap_id := p_tag.findPrevious(lambda tag: tag.name in ['h2', 'h3']):
+            if chap_id := p_tag.findPrevious(lambda tag: tag.name in ['h2', 'h3','h4']):
                 sec_id = chap_id["id"]
                 if sec_id != prev_chap_id:
                     ol_count = 0
@@ -632,10 +647,10 @@ class TNParseHtml(ParserBase):
                               'Cross references.': ['crnotes', 0],
                               'Law reviews.': ['lrnotes', 0]}
         for tag in self.soup.findAll():
-            if tag.name and re.search(r'^h\d', tag.name, re.I):
-                for br_tag in tag.findAll('br'):
-                    new_span = self.soup.new_tag('span', Class='headbreak')
-                    br_tag.replace_with(new_span)
+            # if tag.name and re.search(r'^h\d', tag.name, re.I):
+            #     for br_tag in tag.findAll('br'):
+            #         new_span = self.soup.new_tag('span', Class='headbreak')
+            #         br_tag.replace_with(new_span)
 
             if len(tag.contents) == 0:
                 if tag.name == 'meta':
@@ -692,6 +707,7 @@ class TNParseHtml(ParserBase):
                 tag.unwrap()
         print('removed class names')
 
+
     def create_notes_decision_to_nav(self):
         for notes_head in self.soup.find_all(lambda tag: tag.name == 'h4' and re.search('NOTESTODECISIONS', tag.get('id', ''))):
             if notes_head.find_next_sibling('p') and re.search('^\d\.', notes_head.find_next_sibling('p').get_text().strip()):
@@ -699,13 +715,28 @@ class TNParseHtml(ParserBase):
                 new_ul = self.soup.new_tag("ul", Class="leaders")
                 for headers_text in [s for s in notes_head.find_next_sibling('p').get_text().splitlines() if re.search('^\d', s)]:
                     new_li = self.soup.new_tag('li')
-                    header_id = re.sub(r'\s+', '', f'#{notes_head.get("id")}-{headers_text.strip()}')
+                    header_id = re.sub(r'[\s\'—]+', '', f'#{notes_head.get("id")}-{headers_text.strip()}')
                     new_ul.append(new_li)
                     new_a = self.soup.new_tag('a', href=header_id)
                     new_a.string = headers_text
                     new_li.append(new_a)
                 nav_tag.append(new_ul)
                 notes_head.find_next_sibling('p').replace_with(nav_tag)
+
+        # for notes_head in self.soup.find_all(lambda tag: tag.name == 'h4' and re.search('^Decisions Under Prior Law', tag.get('id', ''))):
+        #     if notes_head.find_next_sibling('p') and re.search('^\d\.', notes_head.find_next_sibling('p').get_text().strip()):
+        #         nav_tag = self.soup.new_tag('nav')
+        #         new_ul = self.soup.new_tag("ul", Class="leaders")
+        #         for headers_text in [s for s in notes_head.find_next_sibling('p').get_text().splitlines() if re.search('^\d', s)]:
+        #             new_li = self.soup.new_tag('li')
+        #             header_id = re.sub(r'\s+', '', f'#{notes_head.get("id")}-{headers_text.strip()}')
+        #             new_ul.append(new_li)
+        #             new_a = self.soup.new_tag('a', href=header_id)
+        #             new_a.string = headers_text
+        #             new_li.append(new_a)
+        #         nav_tag.append(new_ul)
+        #         notes_head.find_next_sibling('p').replace_with(nav_tag)
+
 
 
 
@@ -722,6 +753,7 @@ class TNParseHtml(ParserBase):
         self.soup = BeautifulSoup(self.soup.prettify(formatter=None), features='lxml')
         [tag.unwrap() for tag in self.soup.find_all('key')]
         for ul in self.soup.findAll('nav'):
+
             id_num = 0
             li_num = 0
             if re.search(r'^Subtitle \d', ul.li.get_text().strip()):
@@ -808,6 +840,8 @@ class TNParseHtml(ParserBase):
                         else:
                             li.contents = []
                             li.append(anchor)
+
+
             elif re.search('^Part \d', ul.get_text().strip()):
                 for li in ul.findAll('li'):
                     li_num += 1
@@ -826,6 +860,49 @@ class TNParseHtml(ParserBase):
                         else:
                             li.contents = []
                             li.append(anchor)
+
+        for ul_tag in self.soup.findAll('nav'):
+            li_num = 0
+            for li_tag in ul_tag.findAll('li'):
+               if not li_tag.a:
+                   if re.search('^Part \d', li_tag.get_text().strip()):
+                       li_num += 1
+                       if chap_no := re.search(r'^Part\s(?P<sub_chap_num>\d+)', li_tag.get_text().strip()):
+                           previous_head = ul_tag.find_previous(
+                               lambda tag: tag.name == 'h2' and re.search('^Chapter', tag.get_text().strip()))
+                           header_id = f'#{previous_head["id"]}p{chap_no.group("sub_chap_num").zfill(2)}'
+                           header_id = re.sub(r'\s+', '', header_id)
+                           anchor = self.soup.new_tag('a', href=header_id)
+                           cleansed_header_id = header_id.strip("#")
+                           cleansed_header_id = re.sub(r'\s+', '', cleansed_header_id)
+                           anchor.attrs['aria-describedby'] = cleansed_header_id
+                           li_tag['id'] = f'{cleansed_header_id}-cnav{str(li_num).zfill(2)}'
+                           anchor.string = li_tag.text
+                           if li_tag.string:
+                               li_tag.string.replace_with(anchor)
+                           else:
+                               li_tag.contents = []
+                               li_tag.append(anchor)
+
+                   elif re.search('^\d', li_tag.get_text().strip()):
+                       li_num += 1
+                       if chap_no := re.search(r'^(?P<sub_chap_num>\d+)', li_tag.get_text().strip()):
+                           previous_head = ul_tag.find_previous(
+                               lambda tag: tag.name == 'h2' and re.search('^Part', tag.get_text().strip()))
+                           header_id = f'#{previous_head["id"]}s{chap_no.group("sub_chap_num").zfill(2)}'
+                           header_id = re.sub(r'\s+|\'|[\s\']', '', header_id)
+                           anchor = self.soup.new_tag('a', href=header_id)
+                           cleansed_header_id = header_id.strip("#")
+                           cleansed_header_id = re.sub(r'\s+|\'|[\s\']', '', cleansed_header_id)
+                           anchor.attrs['aria-describedby'] = cleansed_header_id
+                           li_tag['id'] = f'{cleansed_header_id}-cnav{str(li_num).zfill(2)}'
+                           anchor.string = li_tag.text
+                           if li_tag.string:
+                               li_tag.string.replace_with(anchor)
+                           else:
+                               li_tag.contents = []
+                               li_tag.append(anchor)
+
 
         print('added anchor tags')
 
@@ -940,7 +1017,7 @@ class TNParseHtml(ParserBase):
             text = str(tag)
             for match in set(
                     x[0] for x in re.findall(r'\b(\d{1,2}-\d(\w+)?-\d+(\.\d+)?(\s*(\(\w+\))+)?)', tag.get_text())):
-                inside_text = re.sub(r'<p\sclass="\w\d+">|</p>|<b>|</b>', '', text, re.DOTALL)
+                inside_text = re.sub(r'<p\sclass="\w\d+">|</p>|<b>|</b>|<p>', '', text, re.DOTALL)
                 tag.clear()
                 id_reg = re.search(r'(?P<title>\w+)-(?P<chap>\w+)-(?P<sec>\d+(\.\d+)?)', match.strip())
                 title = id_reg.group("title").strip()
@@ -955,13 +1032,13 @@ class TNParseHtml(ParserBase):
                     ol_num = re.sub(r'\(|\)', '', ol_reg.group())
                     a_id = f'{a_id}ol1{ol_num}'
                 text = re.sub(fr'\s{re.escape(match)}',
-                              f'<cite class="octn"><a href="{a_id}" target="{target}">{match}</a></cite>', inside_text,
+                              f' <cite class="octn"><a href="{a_id}" target="{target}">{match}</a></cite>', inside_text,
                               re.I)
                 tag.append(text)
 
             for key, value in reg_dict.items():
                 for match in set(x[0] for x in re.findall(value, tag.get_text(), re.I)):
-                    inside_text = re.sub(r'<p\sclass="\w\d+">|</p>|<b>|</b>', '', text, re.DOTALL)
+                    inside_text = re.sub(r'<p\sclass="\w\d+">|</p>|<b>|</b>|<p>', '', text, re.DOTALL)
                     tag.clear()
                     text = re.sub(re.escape(match),
                                   f'<cite class="{key}">{match}</cite>',
@@ -1223,8 +1300,6 @@ class TNParseHtml(ParserBase):
             self.remove_or_replace_class_names()
             self.add_anchor_tags()
             self.wrap_div_tags()
-
-
 
         self.clean_html_and_add_cite()
         self.write_soup_to_file()
