@@ -33,11 +33,7 @@ class VTParseHtml(ParserBase):
         self.headers_class_dict = {'CASE NOTES': 'casenotes'}
         self.start_parse()
 
-
-
-
     def create_page_soup(self):
-
         """
         - Read the input html to parse and convert it to Beautifulsoup object
         - Input Html will be html 4 so replace html tag which is self.soup.contents[0] with <html>
@@ -52,8 +48,6 @@ class VTParseHtml(ParserBase):
             self.soup.contents[0].replace_with(Doctype("html"))
             self.soup.html.attrs['lang'] = 'en'
         print('created soup')
-
-
 
     def generate_class_name(self):
 
@@ -71,7 +65,6 @@ class VTParseHtml(ParserBase):
 
         print(self.class_regex)
         print('updated class dict')
-
 
     def remove_junk(self):
         """
@@ -136,14 +129,12 @@ class VTParseHtml(ParserBase):
                         p_tag.unwrap()
 
             else:
-
                 if p_tag.get("class") == [self.class_regex["article"]]:
                     if re.search(r'^SUBCHAPTER\s*\d+([A-Z])*\.', p_tag.text.strip()):
                        p_tag["class"] = "navhead"
 
                     if re.search(r'^PART\s*\d+([A-Z])*',p_tag.text.strip()):
                         p_tag["class"] = "navhead"
-
 
                 if p_tag.get("class") == [self.class_regex["ol"]]:
                     if p_tag.br and re.search(r'^Analysis', p_tag.text.strip()):
@@ -164,7 +155,6 @@ class VTParseHtml(ParserBase):
 
                         p_tag.unwrap()
 
-
     def replace_tags(self):
         cur_id_list = []
         cur_head_list = []
@@ -175,7 +165,6 @@ class VTParseHtml(ParserBase):
                     self.title_id  = 'constitution-vt'
                 elif re.search('constitution\.us', self.html_file_name):
                     self.title_id  = 'constitution-us'
-
 
                 if header_tag.get("class") == [self.class_regex["head1"]]:
                     if re.search(r'^Constitution of the United States|^CONSTITUTION OF THE STATE OF VERMONT',header_tag.text.strip()):
@@ -207,15 +196,12 @@ class VTParseHtml(ParserBase):
                         head_tag_text = re.sub(r'[\W\s]', '', header_tag.text.strip()).lower()
                         header_tag['id'] = f"{header_tag.find_previous('h2').get('id')}a{head_tag_text}"
 
-
-
                 elif header_tag.get("class") == [self.class_regex["head2"]]:
                     if re.search(r'^CHAPTER [IVX]+',header_tag.text.strip()):
                         header_tag.name = "h2"
                         article_id = re.search(r'^CHAPTER (?P<ar_id>[IVX]+)', header_tag.text.strip()).group('ar_id')
                         header_tag[
                             'id'] = f"{header_tag.find_previous('h1').get('id')}c{article_id.zfill(2)}"
-
 
                 elif header_tag.get("class") == [self.class_regex["analysis"]]:
                     if re.search(r'^\d+\.', header_tag.text.strip()):
@@ -265,14 +251,9 @@ class VTParseHtml(ParserBase):
                         header_tag[
                             'id'] = f"{header_tag.find_previous({'h3','h2','h1'}).get('id')}-{sec_id}"
 
-
-
-
                 elif header_tag.get("class") == [self.class_regex["ul"]] and not re.search('^PREAMBLE|^Section|^Article|^Amendment$|^Chapter',header_tag.text.strip()):
                     header_tag.name = "li"
 
-
-            #titlefiles
             else:
                 title_pattern = re.compile(r'^(TITLE)\s(?P<title_id>\d+)')
                 Subchapter_pattern = re.compile(r'^Subchapter\s*(?P<s_id>\d+([A-Z])*)\.')
@@ -286,10 +267,7 @@ class VTParseHtml(ParserBase):
                 article_pattern = re.compile(r'ARTICLE (?P<s_id>\d+([A-Z])*)')
                 article_pattern1 = re.compile(r'Article\s(?P<s_id>\d+([A-Z])*)')
 
-
-
                 if header_tag.get("class") == [self.class_regex["head1"]]:
-
                     if title_pattern.search(header_tag.text.strip()):
                         header_tag.name = "h1"
                         header_tag.attrs = {}
@@ -304,18 +282,13 @@ class VTParseHtml(ParserBase):
                         article_id = Subchapter_pattern.search(header_tag.text.strip()).group('s_id')
                         header_tag['id'] = f"{header_tag.find_previous('h2',class_='chapter').get('id')}sub{article_id.zfill(2)}"
                         self.snav_count = 1
-
-                    elif  article_pattern.search(header_tag.text.strip()):
-
+                    elif article_pattern.search(header_tag.text.strip()):
                         header_tag.name = "h2"
                         article_id = article_pattern.search(header_tag.text.strip()).group('s_id')
                         header_tag['id'] = f"{header_tag.find_previous('h1').get('id')}c{article_id.zfill(2)}"
 
-
-
                 elif header_tag.get("class") == [self.class_regex["head2"]]:
                     if chapter_pattern.search(header_tag.text.strip()):
-
                         if not re.search(r'\[RESERVED FOR FUTURE USE\.\]|\[RESERVED\]',header_tag.text.strip()) :
                             header_tag.name = "h2"
                         chapter_id = chapter_pattern.search(header_tag.text.strip()).group('chap_id')
@@ -348,19 +321,13 @@ class VTParseHtml(ParserBase):
                             'id'] = f"{header_tag.find_previous(class_='navhead').get('id')}a{a_id.zfill(2)}"
                         header_tag["class"] = "navhead"
 
-
-
-
                 elif header_tag.get("class") == [self.class_regex["head3"]]:
-
-
                     if section_pattern.search(header_tag.text.strip()):
                         if  re.search(r'\[Reserved for future use(\.)?\](\.)?$|^§+\s\d+(-\d+)?(-\d+)?\.\sRepealed\.|\[Reserved\.\]\.$', header_tag.text.strip())\
                                 and re.search(r'^§|^PART|^CHAPTER|^SUBCHAPTER',header_tag.find_next_sibling().text.strip()):
                             header_tag.name = "p"
                         else:
                             header_tag.name = "h3"
-
 
                     if section_pattern.search(header_tag.text.strip()):
                         if re.search(r'^§*\s*(?P<sec_id>\d+([a-z])*([A-Z])*(\.\d+)*(-\d+([a-z])*)*(\.\d+)*)\.*\s*Repealed',header_tag.text.strip()):
@@ -391,8 +358,6 @@ class VTParseHtml(ParserBase):
 
                         cur_id_list.append(header_tag['id'])
 
-
-
                 elif header_tag.get("class") == "navhead":
                     if SUBCHAPTER_pattern.search(header_tag.text.strip()):
                         article_id = SUBCHAPTER_pattern.search(header_tag.text.strip()).group('ar_id')
@@ -406,13 +371,9 @@ class VTParseHtml(ParserBase):
                             'id'] = f"{header_tag.find_previous('h1').get('id')}p{article_id.zfill(2)}"
                         header_tag["class"] = "navhead"
 
-
-
                 elif header_tag.get("class") == [self.class_regex["ul"]]:
                     if not re.search('^Chapter|^Sec\.|^Executive Orders|^Orders',header_tag.text.strip()) and not len(header_tag.get_text(strip=True)) == 0 :
                         header_tag.name = "li"
-
-
                 elif header_tag.get("class") == [self.class_regex["analysishead"]]:
                     if analysis_pattern.search(header_tag.text.strip()):
                         header_tag.name = "h5"
@@ -434,6 +395,7 @@ class VTParseHtml(ParserBase):
                         header_tag["class"] = "subsection"
 
         print('tags replaced')
+
 
     def create_main_tag(self):
         """
@@ -471,7 +433,6 @@ class VTParseHtml(ParserBase):
                         continue
                     else:
                         section_nav_tag.append(main_tag)
-
 
 
     def create_ul_tag(self):
@@ -544,7 +505,6 @@ class VTParseHtml(ParserBase):
                             sub_tag = "c"
                         else:
                             sub_tag = "a"
-
                         if list_item.find_previous("p"):
                             if re.search(r'^Amendment', list_item.find_previous("p").text.strip()):
 
@@ -554,13 +514,10 @@ class VTParseHtml(ParserBase):
                                 prev_id = None
                         else:
                             prev_id = None
-
-
                     elif re.search(r'^Amendments', list_item.text.strip()):
                         chap_num = re.sub(r'[\W]', '', list_item.text.strip()).lower()
                         sub_tag = "a"
                         prev_id = None
-
 
                     self.set_chapter_section_nav(list_item, chap_num, sub_tag, prev_id, None)
 
@@ -570,8 +527,6 @@ class VTParseHtml(ParserBase):
                     prev_id = list_item.find_previous("h2").get("id")
                     self.set_chapter_section_nav(list_item, chap_num, sub_tag, prev_id, None)
 
-
-            # title files
             else:
                 sec_pattern = re.compile(r'^(?P<sec_id>\d+([a-z])*([A-Z])*(\.\d+)*(-\d+([a-z])*)*(\.\d+)*(\.-\d+)*)\.*')
                 sec_pattern1 = re.compile(r'^(?P<sec_id>\d[A-Z]*-\d{3}[A-Z]*)\.')
@@ -593,16 +548,12 @@ class VTParseHtml(ParserBase):
 
                     self.set_chapter_section_nav(list_item, chap_id.zfill(2), sub_tag, prev_id, None)
 
-
-
                 elif sec_pattern.search(list_item.text.strip()):
                     if sec_pattern2.search(list_item.text.strip()):
                         chap_id = sec_pattern2.search(list_item.text.strip()).group('sec_id')
                     else:
                         chap_id = sec_pattern.search(list_item.text.strip()).group('sec_id')
                         chap_id = re.sub(r'\.$','',chap_id)
-
-
 
                     if list_item.find_previous(class_={'navhead','chapter'}):
                         if re.search(r'^PART \d+',list_item.find_previous(class_={'navhead','chapter'}).text.strip()):
@@ -614,8 +565,6 @@ class VTParseHtml(ParserBase):
                         sub_tag = "c"
                         prev_id = list_item.find_previous("h1").get("id")
                     self.set_chapter_section_nav(list_item, chap_id.zfill(2), sub_tag, prev_id, None)
-
-
 
     def set_chapter_section_nav(self, list_item, chap_num, sub_tag, prev_id, sec_num):
         nav_list = []
@@ -644,11 +593,7 @@ class VTParseHtml(ParserBase):
         salpha_ul = self.soup.new_tag("ul", **{"class": "leaders"})
 
         if self.soup.find("p", class_='analysisnote'):
-
-
             for analysis_tag in self.soup.find_all("p", class_='analysisnote'):
-
-                # case_tag.name = "li"
                 if re.search(r'^\d+\.*|^-', analysis_tag.text.strip()):
                     nav_list = []
                     nav_link = self.soup.new_tag('a')
@@ -768,92 +713,6 @@ class VTParseHtml(ParserBase):
 
         print('wrapped div tags')
 
-    def wrap_div_tags1(self):
-        """
-            - for each h2 in html
-            - create new div and append h2 to that div
-            - find next tag, if next tag is h3
-                - create new div and append h3 to it
-                - append that new div to h2 div
-                - find next tag of h3, if next tag is h4
-                    - create new div and append h4 to that div
-                    - append that new div to h3 div
-                    - find next tag, if next tag is h5
-                        - create new div and append h5 to that div
-                        - append that new div to h4 div
-                    - if not h5 append that tag to h2 div and so on
-                - if not h4 append that tag to h2 div and so on
-            - if not h3 append that tag to h2 div and so on
-        """
-        self.soup = BeautifulSoup(self.soup.prettify(formatter=None), features='lxml')
-        for header in self.soup.findAll('h2'):
-            new_chap_div = self.soup.new_tag('div')
-            sec_header = header.find_next_sibling()
-            header.wrap(new_chap_div)
-            while True:
-                if sec_header:
-                    next_sec_tag = sec_header.find_next_sibling()
-
-
-                    if sec_header.name == 'h3':
-                        new_sec_div = self.soup.new_tag('div')
-                        tag_to_wrap = sec_header.find_next_sibling()
-                        sec_header.wrap(new_sec_div)
-                        while True:
-                            next_tag = tag_to_wrap.find_next_sibling()
-                            if tag_to_wrap.name == 'h4':
-                                new_sub_sec_div = self.soup.new_tag('div')
-                                inner_tag = tag_to_wrap.find_next_sibling()
-                                tag_to_wrap.wrap(new_sub_sec_div)
-
-                                while True:
-                                    inner_next_tag = inner_tag.find_next_sibling()
-                                    if inner_tag.name == 'h5':
-                                        new_h5_div = self.soup.new_tag('div')
-                                        inner_h5_tag = inner_tag.find_next_sibling()
-                                        inner_tag.wrap(new_h5_div)
-                                        while True:
-                                            next_h5_child_tag = inner_h5_tag.find_next_sibling()
-                                            new_h5_div.append(inner_h5_tag)
-                                            inner_next_tag = next_h5_child_tag
-                                            if not next_h5_child_tag or next_h5_child_tag.name in ['h3', 'h2', 'h4', 'h5']:
-                                                break
-                                            inner_h5_tag = next_h5_child_tag
-                                        inner_tag = new_h5_div
-                                    new_sub_sec_div.append(inner_tag)
-                                    next_tag = inner_next_tag
-                                    if not inner_next_tag or inner_next_tag.name in ['h3',
-                                                                                     'h2'] or inner_next_tag.name == 'h4' \
-                                            and inner_next_tag.get('class'):
-                                        break
-                                    inner_tag = inner_next_tag
-                                tag_to_wrap = new_sub_sec_div
-                            elif tag_to_wrap.name == 'h5':
-                                new_sub_sec_div = self.soup.new_tag('div')
-                                inner_tag = tag_to_wrap.find_next_sibling()
-                                tag_to_wrap.wrap(new_sub_sec_div)
-                                while True:
-                                    inner_next_tag = inner_tag.find_next_sibling()
-                                    new_sub_sec_div.append(inner_tag)
-                                    next_tag = inner_next_tag
-                                    if not inner_next_tag or inner_next_tag.name in ['h3', 'h2', 'h4', 'h5']:
-                                        break
-                                    inner_tag = inner_next_tag
-                                tag_to_wrap = new_sub_sec_div
-                            if not re.search(r'h\d', tag_to_wrap.name):
-                                new_sec_div.append(tag_to_wrap)
-                            next_sec_tag = next_tag
-                            if not next_tag or next_tag.name in ['h3', 'h2']:
-                                break
-                            tag_to_wrap = next_tag
-                        sec_header = new_sec_div
-                    new_chap_div.append(sec_header)
-                    if not next_sec_tag or next_sec_tag.name == 'h2':
-                        break
-                    sec_header = next_sec_tag
-
-            print('wrapped div tags')
-
 
     def convert_paragraph_to_alphabetical_ol_tags1(self):
         """
@@ -883,9 +742,6 @@ class VTParseHtml(ParserBase):
 
             if p_tag.i:
                 p_tag.i.unwrap()
-
-
-
 
             if re.search(r'^\([ivx]+\)', current_tag_text) and main_sec_alpha not in ['i','v','x'] :
                 p_tag.name = "li"
@@ -920,76 +776,6 @@ class VTParseHtml(ParserBase):
                     p_tag["id"] = f'{prev_id1}{rom_head}'
                     p_tag.string = re.sub(r'^\([ivx]+\)', '', current_tag_text)
 
-
-
-                # if re.search(r'^\(i\)', current_tag_text):
-                #     if p_tag.find_next_sibling():
-                #         if re.search(r'^\(ii\)', p_tag.find_next_sibling().text.strip()):
-                #             roman_ol = self.soup.new_tag("ol", type="i")
-                #             p_tag.wrap(roman_ol)
-                #             prev_class = p_tag.find_previous('h4').get("class")
-                #
-                #             if prev_class == ['subsection']:
-                #                 if sec_alpha_cur_tag:
-                #                     sec_alpha_cur_tag.append(roman_ol)
-                #                     prev_id1 = sec_alpha_cur_tag.get('id')
-                #                     p_tag["id"] = f'{prev_id1}i'
-                #                     p_tag.string = re.sub(r'^\(i\)', '', current_tag_text)
-                #                     main_sec_alpha = 'j'
-                #                 else:
-                #                     prev_id1 = f"{p_tag.find_previous('h4',class_='subsection').get('id')}ol{ol_count}"
-                #                     p_tag["id"] = f'{prev_id1}i'
-                #                     p_tag.string = re.sub(r'^\(i\)', '', current_tag_text)
-                #             else:
-                #                 prev_li = p_tag.find_previous("li")
-                #                 prev_li.append(roman_ol)
-                #                 prev_id1 = prev_li.get("id")
-                #                 p_tag["id"] = f'{prev_li.get("id")}i'
-                #                 p_tag.string = re.sub(r'^\(i\)', '', current_tag_text)
-                #
-                #         else:
-                #
-                #             sec_alpha_ol.append(p_tag)
-                #             sec_alpha_id = f"{p_tag.find_previous({'h5', 'h4', 'h3', 'h2'}).get('id')}ol{ol_count}"
-                #             p_tag["id"] = f'{sec_alpha_id}i'
-                #             p_tag.string = re.sub(rf'^\(i\)', '', current_tag_text)
-                #
-                #             sec_alpha_cur_tag = p_tag
-                #             num_count = 1
-                #
-                #     else:
-                #         sec_alpha_ol.append(p_tag)
-                #         sec_alpha_id = f"{p_tag.find_previous({'h5', 'h4', 'h3', 'h2'}).get('id')}ol{ol_count}"
-                #         p_tag["id"] = f'{sec_alpha_id}i'
-                #         p_tag.string = re.sub(rf'^\(i\)', '', current_tag_text)
-                #         main_sec_alpha = 'j'
-                #         sec_alpha_cur_tag = p_tag
-                #         num_count = 1
-                #
-                #     if re.search(rf'^\(i\)\s*\(1\)', current_tag_text):
-                #             num_ol1 = self.soup.new_tag("ol")
-                #             li_tag = self.soup.new_tag("li")
-                #             li_tag.string = re.sub(r'^\(i\)\s*\(1\)', '', current_tag_text)
-                #             li_tag.append(current_tag_text)
-                #             num_cur_tag1 = li_tag
-                #             cur_tag = re.search(r'^\((?P<cid>[a-z])\)\s*\((?P<pid>\d+)\)', current_tag_text)
-                #             num_id1 = f'{sec_alpha_id}{cur_tag.group("cid")}'
-                #             sec_alpha_id = f'{sec_alpha_id}'
-                #             li_tag["id"] = f'{num_id1}{cur_tag.group("pid")}'
-                #             num_ol1.append(li_tag)
-                #             p_tag.string = ""
-                #             p_tag.append(num_ol1)
-                #             num_count = 2
-                #             cap_alpha1 = 'A'
-                #             main_sec_alpha = 'j'
-                #
-                # else:
-                #     roman_ol.append(p_tag)
-                #     rom_head = re.search(r'^\((?P<rom>[ivx]+)\)', current_tag_text).group("rom")
-                #     p_tag["id"] = f'{prev_id1}{rom_head}'
-                #     p_tag.string = re.sub(r'^\([ivx]+\)', '', current_tag_text)
-
-
                 if re.search(rf'^\([ivx]+\)\s*\(I\)', current_tag_text):
                     cap_roman_ol = self.soup.new_tag("ol", type="I")
                     li_tag = self.soup.new_tag("li")
@@ -1002,7 +788,6 @@ class VTParseHtml(ParserBase):
                     cap_roman_ol.append(li_tag)
                     p_tag.string = ""
                     p_tag.append(cap_roman_ol)
-
 
             elif re.search(r'^\d\.\d+(\.\d+)*',current_tag_text) and p_tag.name == 'p':
                 p_tag.name = "li"
@@ -1117,7 +902,6 @@ class VTParseHtml(ParserBase):
                     p_tag.append(cap_alpha_ol1)
                     cap_alpha1 = 'B'
 
-
                     if re.search(r'^\(\d+\)\s?\([A-Z]\)\s?\(i\)', current_tag_text):
                         roman_ol = self.soup.new_tag("ol", type="i")
                         inner_li_tag = self.soup.new_tag("li")
@@ -1228,7 +1012,7 @@ class VTParseHtml(ParserBase):
                 p_tag.string = re.sub(r'^\([a-z][a-z]\)', '', current_tag_text)
 
 
-            #
+
             if re.search(r'^CASE NOTES', current_tag_text) or p_tag.name in ['h3','h4','h5']:
                 ol_head = 1
                 cap_alpha ='A'
@@ -1326,12 +1110,8 @@ class VTParseHtml(ParserBase):
             - convert html to str
             - write html str to an output file
         """
-        # soup_str = str(self.soup.prettify(formatter=None))
-        # with open(f"../transforms/vt/ocvt/r{self.release_number}/{self.html_file_name}", "w") as file:
-        #     file.write(soup_str)
-
         soup_str = str(self.soup.prettify(formatter=None))
-        with open(f"/home/mis/PycharmProjects/cic-code-vt/transforms/vt/ocvt/r{self.release_number}/{self.html_file_name}", "w") as file:
+        with open(f"../transforms/vt/ocvt/r{self.release_number}/{self.html_file_name}", "w") as file:
             file.write(soup_str)
 
 
@@ -1382,7 +1162,5 @@ class VTParseHtml(ParserBase):
             self.add_citation()
             self.convert_paragraph_to_alphabetical_ol_tags1()
             self.add_watermark_and_remove_class_name()
-
-
         self.write_soup_to_file()
         print(datetime.now() - start_time)

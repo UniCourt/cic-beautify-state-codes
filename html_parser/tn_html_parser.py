@@ -216,9 +216,7 @@ class TNParseHtml(ParserBase):
                     if re.search(r'^\d', p_tag.get_text()):
 
 
-                        # chap_id = p_tag.find_previous_sibling(lambda tag: re.search('^[a-zA-Z]', tag.get_text())
-                        #                                                   and tag.name != 'h5' and re.search(r'h\d',
-                        #                                                                                      tag.name))
+
                         chap_id = p_tag.find_previous_sibling(lambda tag: re.search('^NOTES TO DECISIONS', tag.get_text())
                                                                           and tag.name != 'h5' and re.search(r'h\d',
                                                                                                              tag.name))
@@ -647,10 +645,10 @@ class TNParseHtml(ParserBase):
                               'Cross references.': ['crnotes', 0],
                               'Law reviews.': ['lrnotes', 0]}
         for tag in self.soup.findAll():
-            # if tag.name and re.search(r'^h\d', tag.name, re.I):
-            #     for br_tag in tag.findAll('br'):
-            #         new_span = self.soup.new_tag('span', Class='headbreak')
-            #         br_tag.replace_with(new_span)
+            if tag.name and re.search(r'^h\d', tag.name, re.I):
+                for br_tag in tag.findAll('br'):
+                    new_span = self.soup.new_tag('span', Class='headbreak')
+                    br_tag.replace_with(new_span)
 
             if len(tag.contents) == 0:
                 if tag.name == 'meta':
@@ -722,24 +720,6 @@ class TNParseHtml(ParserBase):
                     new_li.append(new_a)
                 nav_tag.append(new_ul)
                 notes_head.find_next_sibling('p').replace_with(nav_tag)
-
-        # for notes_head in self.soup.find_all(lambda tag: tag.name == 'h4' and re.search('^Decisions Under Prior Law', tag.get('id', ''))):
-        #     if notes_head.find_next_sibling('p') and re.search('^\d\.', notes_head.find_next_sibling('p').get_text().strip()):
-        #         nav_tag = self.soup.new_tag('nav')
-        #         new_ul = self.soup.new_tag("ul", Class="leaders")
-        #         for headers_text in [s for s in notes_head.find_next_sibling('p').get_text().splitlines() if re.search('^\d', s)]:
-        #             new_li = self.soup.new_tag('li')
-        #             header_id = re.sub(r'\s+', '', f'#{notes_head.get("id")}-{headers_text.strip()}')
-        #             new_ul.append(new_li)
-        #             new_a = self.soup.new_tag('a', href=header_id)
-        #             new_a.string = headers_text
-        #             new_li.append(new_a)
-        #         nav_tag.append(new_ul)
-        #         notes_head.find_next_sibling('p').replace_with(nav_tag)
-
-
-
-
 
     def add_anchor_tags(self):
         """
