@@ -61,6 +61,41 @@ Currently this code supports following states:
    **Original RTF:** https://archive.org/download/gov.co.crs.bulk
 
 
+7. ###Idaho (ID):
+   
+   **Code repo:** https://github.com/UniCourt/cic-code-id
+   
+   **Code pages:** https://unicourt.github.io/cic-code-id
+   
+   **Original files can be found here:** https://archive.org/details/govlaw?and%5B%5D=subject%3A%22idaho.gov%22+AND+subject%3A%222020+Code%22&sin=&sort=titleSorter
+
+
+8. ###Virginia (VA):
+   
+   **Code repo:** https://github.com/UniCourt/cic-code-va
+   
+   **Code pages:** https://unicourt.github.io/cic-code-va
+   
+   **Original RTF:**  https://archive.org/download/gov.va.code/
+
+
+9. ###Vermont (VT):
+   
+   **Code repo:** https://github.com/UniCourt/cic-code-vt
+   
+   **Code pages:** https://unicourt.github.io/cic-code-vt
+   
+   **Original RTF:** https://archive.org/download/gov.vt.code
+
+10. ###Wyoming (WY):
+   
+      **Code repo:** https://github.com/UniCourt/cic-code-wy
+      
+      **Code pages:** https://unicourt.github.io/cic-code-wy
+      
+      **Original RTF:** https://archive.org/details/gov.wy.code/
+
+
 In subsequent months, we intend to add two more features:
 
 1. Extend the code to handle the official codes Colorado and Idaho.

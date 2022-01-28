@@ -92,6 +92,7 @@ class ARParseHtml(ParserBase):
                                                                   and tag.get('class')[0] not in self.tag_type_dict.values()):
             self.tag_type_dict['ol_p'] = [self.tag_type_dict['ol_p'], ol_p_2_tag['class'][0]]
 
+        print(self.tag_type_dict)
         print('updated class dict')
 
     def remove_junk(self):
@@ -307,6 +308,7 @@ class ARParseHtml(ParserBase):
         prev_chap_id = None
         p_tag = self.soup.find('p', {'class': self.tag_type_dict['ol_p']})
         while p_tag:
+
             set_p_tag = True
             if not re.search(r'\w+', p_tag.get_text()):
                 continue
@@ -547,6 +549,9 @@ class ARParseHtml(ParserBase):
             if set_p_tag:
                 p_tag = p_tag.find_next_sibling(lambda tag: tag.name == 'p' and re.search('.+', tag.get_text()))
         print('ol tags added')
+
+
+
 
     def create_case_notes_nav_tag(self):
         """
@@ -916,7 +921,7 @@ class ARParseHtml(ParserBase):
                     ol_num = re.sub(r'\(|\)', '', ol_reg.group())
                     a_id = f'{a_id}ol1{ol_num}'
                 text = re.sub(fr'\s{re.escape(match)}',
-                              f'<cite class="ocar"><a href="{a_id}" target="{target}">{match}</a></cite>', inside_text,
+                              f' <cite class="ocar"><a href="{a_id}" target="{target}">{match}</a></cite>', inside_text,
                               re.I)
                 tag.append(text)
 
