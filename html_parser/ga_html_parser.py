@@ -244,7 +244,9 @@ class GAParseHtml(ParserBase):
                         p_tag['id'] = f'{p_tag["id"]}{str(previous_id_num + 1).zfill(2)}'
                 elif value == 'h5':
                     if re.search(r'\w+', p_tag.get_text()):
-                        break_span = self.soup.new_tag('span', Class='headbreak')
+
+                        # break_span = self.soup.new_tag('span', Class='headbreak')
+                        break_span = self.soup.new_tag('br')
                         article_title = p_tag.findNext(
                             lambda tag: tag.name == 'p' and re.search(r'\w+', tag.get_text()))
                         article_title.string = re.sub(r'^\W+', '', article_title.get_text())
@@ -303,9 +305,11 @@ class GAParseHtml(ParserBase):
         sub_alpha_ol = None
         prev_chap_id = None
         for p_tag in self.soup.findAll('p', {'class': self.tag_type_dict['ol_p']}):
+
             if not re.search('\w+', p_tag.get_text()):
                 continue
             chap_id = p_tag.findPrevious(lambda tag: tag.name in ['h2', 'h3'])
+
             sec_id = chap_id["id"]
             if sec_id != prev_chap_id:
                 ol_count = 0
@@ -358,6 +362,23 @@ class GAParseHtml(ParserBase):
                             cap_alpha = 'A'
                         else:
                             cap_alpha = chr(ord(cap_alpha) + 1)
+
+            elif re.search(r'^\([IVX]+\)', p_tag.text.strip()) and cap_alpha not in ['I','V','X']:
+                p_tag.name = "li"
+
+                if re.search(r'^\(I\)', p_tag.text.strip()):
+                    cap_roman_ol = self.soup.new_tag("ol", type="I")
+                    p_tag.wrap(cap_roman_ol)
+                    prev_rom_id = p_tag.find_previous("li").get("id")
+                    p_tag.find_previous("li").append(cap_roman_ol)
+                else:
+
+                    cap_roman_ol.append(p_tag)
+
+                rom_head = re.search(r'^\((?P<rom>[IVX]+)\)', p_tag.text.strip())
+                p_tag["id"] = f'{prev_rom_id}{rom_head.group("rom")}'
+                p_tag.string = re.sub(r'^\([IVX]+\)', '', p_tag.text.strip())
+
             elif re.search(r'^\(\w+(\.\d)?\)', p_tag.text.strip()):
                 if re.search(r'^\(\d+\.\d\)', p_tag.text.strip()):
                     if previous_num_li:
@@ -615,10 +636,10 @@ class GAParseHtml(ParserBase):
                               'Cross references.': ['crnotes', 0],
                               'Law reviews.': ['lrnotes', 0]}
         for tag in self.soup.findAll():
-            if tag.name and re.search(r'^h\d', tag.name, re.I):
-                for br_tag in tag.findAll('br'):
-                    new_span = self.soup.new_tag('span', Class='headbreak')
-                    br_tag.replace_with(new_span)
+            # if tag.name and re.search(r'^h\d', tag.name, re.I):
+            #     for br_tag in tag.findAll('br'):
+            #         new_span = self.soup.new_tag('span', Class='headbreak')
+            #         br_tag.replace_with(new_span)
 
             if len(tag.contents) == 0:
                 if tag.name == 'meta':
@@ -912,7 +933,7 @@ class GAParseHtml(ParserBase):
             text = str(tag)
             for match in set(
                     x[0] for x in re.findall(r'\b(\d{1,2}-\d(\w+)?-\d+(\.\d+)?(\s?(\(\w+\))+)?)', tag.get_text())):
-                inside_text = re.sub(r'<p\sclass="\w\d+">|</p>|<b>|</b>', '', text, re.DOTALL)
+                inside_text = re.sub(r'<p\sclass="\w\d+">|</p>|<b>|</b>|<p>', '', text, re.DOTALL)
                 tag.clear()
                 id_reg = re.search(r'(?P<title>\w+)-(?P<chap>\w+)-(?P<sec>\d+(\.\d+)?)', match.strip())
                 title = id_reg.group("title").strip()
@@ -933,7 +954,7 @@ class GAParseHtml(ParserBase):
 
             for key, value in reg_dict.items():
                 for match in set(x[0] for x in re.findall(value, tag.get_text(), re.I)):
-                    inside_text = re.sub(r'<p\sclass="\w\d+">|</p>|<b>|</b>', '', text, re.DOTALL)
+                    inside_text = re.sub(r'<p\sclass="\w\d+">|</p>|<b>|</b>|<p>', '', text, re.DOTALL)
                     tag.clear()
                     text = re.sub(re.escape(match),
                                   f'<cite class="{key}">{match}</cite>',
@@ -965,8 +986,9 @@ class GAParseHtml(ParserBase):
             soup_str = re.sub(rf'{tag}', rf'{cleansed_tag}', soup_str, re.I)
         print("validating")
         # html5validate.validate(soup_str)
-        with open(f"../transforms/ga/ocga/r{self.release_number}/{self.html_file_name}", "w") as file:
-            file.write(soup_str)
+        with open(f"/home/mis/PycharmProjects/cic-code-ga/transforms/ga/ocga/r{self.release_number}/{self.html_file_name}", "w") as file:
+            # file.write(soup_str)
+            file.write(soup_str.replace('<br/>', '<br />'))
 
     def replace_tag_names_constitution(self):
         """
