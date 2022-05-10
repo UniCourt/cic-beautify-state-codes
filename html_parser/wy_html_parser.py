@@ -309,6 +309,8 @@ class WYParseHtml(ParserBase):
                         header_tag.name = "h2"
                         chapter_id = article_pattern1.search(header_tag.text.strip()).group('s_id')
                         header_tag['id'] = f"{header_tag.find_previous('h2',class_='chapter').get('id')}a{chapter_id.zfill(2)}"
+
+
                         header_tag["class"] = "article"
                     elif re.search(r'^Part \d+\.',header_tag.text.strip()):
                         header_tag.name = "h2"
@@ -324,6 +326,7 @@ class WYParseHtml(ParserBase):
                                 chapter_id = SUBCHAPTER_pattern.search(header_tag.text.strip()).group('ar_id')
                             elif SUBCHAPTER_pattern1.search(header_tag.text.strip()):
                                 chapter_id = SUBCHAPTER_pattern1.search(header_tag.text.strip()).group('ar_id')
+
                             header_tag[
                                 'id'] = f"{header_tag.find_previous('h2',class_='article').get('id')}s{chapter_id.zfill(2)}"
                             header_tag["class"] = "sub"

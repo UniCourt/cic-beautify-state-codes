@@ -50,6 +50,8 @@ class KYParseHtml(ParserBase):
         self.soup.html.attrs['lang'] = 'en'
         print('created soup')
 
+
+
     def generate_class_name(self):
 
         """
@@ -59,12 +61,14 @@ class KYParseHtml(ParserBase):
         for key, value in self.class_regex.items():
             tag_class = self.soup.find(
                 lambda tag: tag.name == 'p' and re.search(self.class_regex.get(key), tag.get_text().strip()) and
-                            tag.attrs["class"][0] not in self.class_regex.values())
+                            tag.attrs["class"][0] not in self.class_regex.values() )
             if tag_class:
                 self.class_regex[key] = tag_class.get('class')[0]
 
         print(self.class_regex)
         print('updated class dict')
+
+
 
     def remove_junk(self):
         """
@@ -78,14 +82,14 @@ class KYParseHtml(ParserBase):
                 junk_tag.unwrap()
             elif junk_tag.get("class") == ['Apple-tab-span']:
                 junk_tag.decompose()
-            elif junk_tag.name == "br":
-                if junk_tag.parent.name == "p":
-                    junk_tag.parent.name = "span"
-                    junk_tag.parent["class"] = "gnrlbreak"
-                    junk_tag.decompose()
-                else:
-                    junk_tag.name = "span"
-                    junk_tag["class"] = "headbreak"
+            # elif junk_tag.name == "br":
+                # if junk_tag.parent.name == "p":
+                #     junk_tag.parent.name = "span"
+                #     junk_tag.parent["class"] = "gnrlbreak"
+                #     junk_tag.decompose()
+                # else:
+                #     junk_tag.name = "span"
+                #     junk_tag["class"] = "headbreak"
 
         [text_junk.decompose() for text_junk in self.soup.find_all("p", class_=self.class_regex["junk"])]
 
@@ -264,8 +268,13 @@ class KYParseHtml(ParserBase):
     def add_watermark_and_remove_class_name(self):
 
         for tag in self.soup.find_all():
-            if tag.name in ['li', 'h4', 'h3', 'p']:
+            if tag.name in ['li','h2', 'h4', 'h3','h5']:
                 del tag["class"]
+            if tag.name == 'p':
+                if len(tag.get_text(strip=True)) == 0:
+                    tag.decompose()
+                else:
+                    del tag["class"]
 
         watermark_tag = self.soup.new_tag('p', Class='transformation')
         watermark_tag.string = self.watermark_text.format(self.release_number, self.release_date,
@@ -279,12 +288,13 @@ class KYParseHtml(ParserBase):
             if meta.get('http-equiv') == "Content-Style-Type":
                 meta.decompose()
 
-        for all_tag in self.soup.findAll():
-            if all_tag.get("class"):
-                all_tag_class = str(all_tag.get("class"))
-                # print(all_tag_class)
-                if re.match(r'^\[\'p\d\'\]',all_tag_class.strip()):
-                    del all_tag["class"]
+        # for all_tag in self.soup.findAll():
+        #     if all_tag.get("class"):
+        #         all_tag_class = str(all_tag.get("class"))
+        #         # print(all_tag_class)
+        #         if re.match(r'^\[\'p\d\'\]',all_tag_class.strip()):
+        #             del all_tag["class"]
+
 
 
         for all_li in self.soup.find_all("li"):
@@ -396,20 +406,30 @@ class KYParseHtml(ParserBase):
             cite_p_tags.append(tag)
 
             text = str(tag)
-            for match in set(
-                    x[0] for x in re.findall(r'((Ky.\s*(L. Rptr.\s*)*\d+)|'
-                                                       r'(Ky.\s?(App\.)?\s?LEXIS\s?\d+)|'
-                                                       r'(U.S.C.\s*secs*\.\s*\d+(\([a-zA-Z]\))*(\(\d+\))*)|'
-                                                       r'(KRS\s?\d+[a-zA-Z]*\.\d+(\(\d+\))*(\(\D\))*)(-\d+)*|'
-                                                       r'(Chapter \d+[a-zA-Z]*)|'
-                                                       r'(Title\s+?\D+,\s+?Chapter\s+?\D+?,)|'
-                                                       r'(\d+?\w?\.\d+\s+?\(\d\)+?)|'
-                                                       r'(\d+\.\d{3}[^\d])|'
-                                                       r'(\d+\.\d{3}\(\d+\))|'
-                                                       r'(KRS\s*\d+[a-zA-Z]*\.\d+\(\d+\))|'
-                                                       r'(OAG \d+-\d+))', tag.get_text())):
+            # for match in set(
+            #         x[0] for x in re.findall(r'((Ky.\s*(L. Rptr.\s*)*\d+)|'
+            #                                            r'(Ky.\s?(App\.)?\s?LEXIS\s?\d+)|'
+            #                                            r'(U.S.C.\s*secs*\.\s*\d+(\([a-zA-Z]\))*(\(\d+\))*)|'
+            #                                            r'(KRS\s?\d+[a-zA-Z]*\.\d+(\(\d+\))*(\(\D\))*)(-\d+)*|'
+            #                                            r'(Chapter \d+[a-zA-Z]*)|'
+            #                                            r'(Title\s+?\D+,\s+?Chapter\s+?\D+?,)|'
+            #                                            r'(\d+?\w?\.\d+\s+?\(\d\)+?)|'
+            #                                            r'(\d+\.\d{3}[^\d])|'
+            #                                            r'(\d+\.\d{3}\(\d+\))|'
+            #                                            r'(KRS\s*\d+[a-zA-Z]*\.\d+\(\d+\))|'
+            #                                            r'(OAG \d+-\d+))', tag.get_text())):
 
-                inside_text = re.sub(r'<p\sclass="\w\d+">|</p>|<b>|</b>', '', text, re.DOTALL)
+            for match in set(
+                        x[0] for x in re.findall(r'((Ky.\s*(L. Rptr.\s*)*\d+)|'
+                                                 r'(Ky.\s?(App\.)?\s?LEXIS\s?\d+)|'
+                                                 r'(U.S.C.\s*secs*\.\s*\d+(\([a-zA-Z]\))*(\(\d+\))*)|'
+                                                 r'(KRS*\s?\d+[a-zA-Z]*\.\d+(\(\d+\))*(\(\D\))*)(-\d+)*|'
+                                                 r'(Chapter \d+[a-zA-Z]*)|'
+                                                 r'(Title\s+?\D+,\s+?Chapter\s+?\D+?,)|'
+                                                 r'(KRS*\s*\d+[a-zA-Z]*\.\d+\(\d+\))|'
+                                                 r'(OAG \d+-\d+))', tag.get_text())):
+
+                inside_text = re.sub(r'<p\sclass="\w\d+">|</p>|<b>|</b>|<p>', '', text, re.DOTALL)
                 tag.clear()
                 if re.search(r'(\d+[a-zA-Z]*\.\d+)(-\d+)*', match.strip()):
 
@@ -810,7 +830,7 @@ class KYParseHtml(ParserBase):
                     else:
                         header_tag.name = "h2"
                         prev_id = header_tag.find_previous('h2',class_='chapterh2').get("id")
-                        header_id = re.sub(r'\s+', '', header_tag.get_text()).lower()
+                        header_id = re.sub(r'[\s\.\[\]]', '', header_tag.get_text()).lower()
                         header_tag["id"] = f"{prev_id}{header_id}"
                         inc_count = 1
 
@@ -1033,7 +1053,8 @@ class KYParseHtml(ParserBase):
                         header_tag["id"] = f"{header_tag.find_previous('h3').get('id')}a{section.group('sec').zfill(2)}"
 
                 elif header_tag.get('class') == [self.class_regex["head4"]]:
-                    if re.match(r'^\d+\.', header_tag.text.strip()):
+                    if re.match(r'^\d+\.(\d\.)*', header_tag.text.strip()) \
+                            and not re.match(r'^(\d+\D*\.\d\d+)', header_tag.text.strip()) :
                         header_tag.name = "h5"
                     elif header_tag.span:
                         header_tag.name = "h4"
@@ -1306,11 +1327,11 @@ class KYParseHtml(ParserBase):
             if re.match(note_nav_pattern, note_tag.text.strip()) and nd_tag_text in self.nd_list:
                 note_tag.name = "li"
                 # parent
-                if re.match(r'^(\d+\.\s*“?[a-zA-Z0-9]+)|^(0.5\.)',
+                if re.match(r'^(\d+(\.\d+)*\.\s*“?[a-zA-Z0-9]+)|^(0\.5\.)',
                             note_tag.text.strip()) and note_tag.name == "li":
 
-                    if re.match(r'^(0.5\.)', note_tag.text.strip()) and note_tag.name == "li":
-                        if re.match(r'^(0.5\.)', note_tag.find_previous("li").text.strip()):
+                    if re.match(r'^(0\.5\.)', note_tag.text.strip()) and note_tag.name == "li":
+                        if re.match(r'^(0\.5\.)', note_tag.find_previous("li").text.strip()):
                             new_ul_tag.append(note_tag)
                         else:
                             new_ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
@@ -1318,7 +1339,7 @@ class KYParseHtml(ParserBase):
                             new_ul_tag.wrap(self.soup.new_tag("nav"))
                     elif re.match(r'^(1\.)', note_tag.text.strip()) and note_tag.name == "li":
 
-                        if re.match(r'^(0.5\.)', note_tag.find_previous("li").text.strip()):
+                        if re.match(r'^(0\.5\.)', note_tag.find_previous("li").text.strip()):
                             new_ul_tag.append(note_tag)
                         else:
 
@@ -1414,10 +1435,13 @@ class KYParseHtml(ParserBase):
         else:
             nd_class_name = self.class_regex['ol']
 
+
+
         for nd_tag in self.soup.find_all(class_=nd_class_name):
 
             nd_tag_text = re.sub(r'[\W]', '', nd_tag.get_text()).lower()
-            if re.match(r'^\d+\.', nd_tag.text.strip()) and nd_tag_text in self.nd_list:
+            if re.match(r'^\d+(\.\d+)*\. ', nd_tag.text.strip()) and nd_tag_text in self.nd_list:
+
                 if re.search(r'^(\d+\.(\d+\.)?\s*“*[a-zA-Z0-9]+)', nd_tag.get_text().strip()):
                     prev_head_tag = nd_tag.find_previous("h4").get("id")
                     sub_sec_id = re.sub(r'[\W]', '', nd_tag.get_text()).lower()
@@ -1430,7 +1454,7 @@ class KYParseHtml(ParserBase):
                     nd_tag.string = ''
                     nd_tag.insert(0, nav_link)
                     nav_list.append(nd_tag.text.strip())
-                    if re.match(r'^1.\s*[a-zA-Z]+', nd_tag.text.strip()):
+                    if re.match(r'^1\.\s*[a-zA-Z]+', nd_tag.text.strip()):
                         nav_list = []
                         nav_link_list = []
                         count = 1
@@ -1453,7 +1477,7 @@ class KYParseHtml(ParserBase):
                     nav_link_list.append(p_text)
                     count1 = 1
 
-                elif re.match(r'^(\d+\.\s*—\s*—\s*“?[a-zA-Z0-9]+)', nd_tag.text.strip()):
+                elif re.match(r'^(\d+\.\s*—\s*(—|-)\s*“?[a-zA-Z0-9]+)', nd_tag.text.strip()):
                     p_tag_text = re.sub(r'[\s.—]', '', nd_tag.text.strip())
                     innr_id1 = innr_nav_link1["href"]
                     sub_sec_id = re.sub(r'[\W]', '', nd_tag.get_text()).lower()
@@ -1579,19 +1603,20 @@ class KYParseHtml(ParserBase):
                 ol_head += 1
                 ol_head1 += 1
 
-                if re.search(r'^\(\d+\)(\s)?\([a-z]\)', current_tag_text):
+                if re.search(r'^\(\d+\)(\s)*\([a-z]\)', current_tag_text):
                     alpha_ol = self.soup.new_tag("ol", Class="alpha")
                     li_tag = self.soup.new_tag("li")
-                    li_tag.string = re.sub(r'^\(\d+\)(\s)?\(\w\)', '', current_tag_text)
+                    li_tag.string = re.sub(r'^\(\d+\)(\s)*\(\w\)', '', current_tag_text)
                     li_tag.append(current_tag_text)
                     alpha_cur_tag = li_tag
-                    cur_tag = re.search(r'^\((?P<cid>\d+)\)(\s)?\((?P<pid>\w)\)', current_tag_text)
+                    cur_tag = re.search(r'^\((?P<cid>\d+)\)(\s)*\((?P<pid>\w)\)', current_tag_text)
                     prevnum_id = f'{prev_head_id}ol{ol_count}{cur_tag.group("cid")}'
                     li_tag["id"] = f'{prev_head_id}ol{ol_count}{cur_tag.group("cid")}{cur_tag.group("pid")}'
                     alpha_ol.append(li_tag)
                     p_tag.contents = []
                     p_tag.append(alpha_ol)
                     main_sec_alpha = "b"
+                    num_count = 1
 
                     if re.search(r'^\(\d+\)(\s)?\([a-z]\)\s\d+\.', current_tag_text):
                         num_ol1 = self.soup.new_tag("ol")
@@ -1676,6 +1701,9 @@ class KYParseHtml(ParserBase):
                     elif cap_alpha_cur_tag:
                         prev_id = cap_alpha_cur_tag.get("id")
                         cap_alpha_cur_tag.append(num_ol1)
+                    elif num_cur_tag:
+                        prev_id = num_cur_tag.get("id")
+                        num_cur_tag.append(num_ol1)
 
                     else:
 
@@ -1890,6 +1918,7 @@ class KYParseHtml(ParserBase):
             self.create_main_tag()
             self.create_ul_tag()
             self.create_chapter_section_nav()
+
             self.create_ref_link_to_notetodecision_nav()
             self.create_ul_tag_to_notes_to_decision()
             self.create_and_wrap_with_div_tag()
