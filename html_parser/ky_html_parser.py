@@ -1822,7 +1822,7 @@ class KYParseHtml(ParserBase):
 
                 if re.search(r'^i\.', current_tag_text):
                     roman_ol = self.soup.new_tag("ol", type="i")
-                    print(p_tag)
+
                     p_tag.wrap(roman_ol)
                     alpha_cur_tag1.append(roman_ol)
                     prev_id1 = alpha_cur_tag1.get("id")

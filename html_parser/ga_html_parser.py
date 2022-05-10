@@ -18,7 +18,7 @@ class GAParseHtml(ParserBase):
         self.title = None
         self.previous = None
         self.junk_tag_class = ['Apple-converted-space', 'Apple-tab-span']
-        self.tag_type_dict = {'head1': r'TITLE \d', 'head2': r'^CHAPTER \d|^ARTICLE \d', 'ul': r'^Chap\.|^Art\.|^Sec\.',
+        self.tag_type_dict = {'head1': r'TITLE \d','ul': r'^Chap\.|^Art\.|^Sec\.|^CHAPTER \d|^Article 1', 'head2': r'^CHAPTER \d|^ARTICLE \d|^Article 1',
                               'head4': '^JUDICIAL DECISIONS|OPINIONS OF THE ATTORNEY GENERAL',
                               'ol_p': r'^\([a-z]\)', 'junk1': '^Annotations$', 'normalp': '^Editor\'s note',
                               'article': r'^Article \d$|^Part \d$'}
@@ -56,14 +56,21 @@ class GAParseHtml(ParserBase):
                 using re pattern specified in self.tag_type_dict
           """
         for key, value in self.tag_type_dict.items():
+            # class_tag = self.soup.find(
+            #     lambda tag: tag.name == 'p' and re.search(
+            #         rf'{value}', tag.get_text().strip(), re.I))
+
             class_tag = self.soup.find(
-                lambda tag: tag.name == 'p' and re.search(
-                    rf'{value}', tag.get_text().strip(), re.I))
+                lambda tag: tag.name == 'p' and re.search(self.tag_type_dict.get(key), tag.get_text().strip()) and
+                            tag.attrs["class"][0] not in self.tag_type_dict.values() )
+
             if class_tag:
                 self.tag_type_dict[key] = class_tag['class'][0]
 
                 if re.search('junk', key):
                     self.junk_tag_class.append(class_tag['class'][0])
+
+
 
         if not re.search('constitution', self.html_file_name):
             h3_class = self.soup.find(lambda tag: tag.name == 'p' and re.search(
@@ -114,6 +121,9 @@ class GAParseHtml(ParserBase):
             self.soup.head.append(new_meta)
         print('junk removed')
 
+
+
+
     def replace_tags(self):
         """
             - create dictionary with class names as keys with associated tag name as its value
@@ -130,6 +140,8 @@ class GAParseHtml(ParserBase):
                     self.tag_type_dict['ul']: "li", self.tag_type_dict['article']: "h5",
                     self.tag_type_dict.get('head3.1', ''): 'h3'
                     }
+
+
         for key, value in tag_dict.items():
             ul = self.soup.new_tag("ul", Class="leaders")
             while True:
@@ -155,9 +167,12 @@ class GAParseHtml(ParserBase):
                             ul = self.soup.new_tag("ul", Class="leaders")
 
                 if value in ['h2', 'h3']:
+
+
+
                     if chap_section_regex := re.search(
                             r'^(?P<title>\d+)-(?P<chapter>\d+([a-z])?)-(?P<section>\d+(\.\d+)?)'
-                            r'|(chapter|article|part)\s(?P<chap>\d+([a-z])?)',
+                            r'|^(chapter|article|part)\s(?P<chap>\d+([a-z])?)',
                             p_tag.get_text().strip(), re.I):
                         if chapter := chap_section_regex.group('chap'):
                             if re.search('^article', p_tag.get_text().strip(), re.I) and \
@@ -173,12 +188,19 @@ class GAParseHtml(ParserBase):
                                 p_tag['class'] = 'articleh2'
                             elif re.search('^part', p_tag.get_text().strip(), re.I) and \
                                     (chap_id := p_tag.findPrevious('h2')):
+
                                 if re.search(r'(chapter|article) \d', chap_id.get_text(), re.I):
-                                    p_tag['id'] = f'{chap_id["id"]}p{chapter.zfill(2)}'
+                                    p_tag['id'] = f'{p_tag.find_previous("h2",class_="articleh2").get("id")}p{chapter.zfill(2)}'
+
                                 else:
                                     cleansed_chap = re.sub(r'\d+$', '', chap_id["id"])
-                                    p_tag['id'] = f'{cleansed_chap}{chapter.zfill(2)}'
+                                    # p_tag['id'] = f'{cleansed_chap}{chapter.zfill(2)}'
+                                    p_tag[
+                                        'id'] = f'{p_tag.find_previous("h2", class_="articleh2").get("id")}p{chapter.zfill(2)}'
+
                                 p_tag['class'] = 'parth2'
+
+
                             else:
                                 p_tag['id'] = f't{self.title.zfill(2)}c{chapter.zfill(2)}'
                         else:
@@ -207,41 +229,52 @@ class GAParseHtml(ParserBase):
                         chap_id = re.search(r'chapter (?P<chap_id>\w+)', chap_tag.get_text(), re.I).group('chap_id')
                         section_id = f'{self.title.zfill(2)}-{chap_id.zfill(2)}-{section_match.group("sec")}'
                         p_tag['id'] = f'{chap_tag["id"]}s{section_id}'
+
+                    elif re.search(r'^Subpart \d+[A-Z]*',p_tag.get_text().strip()):
+                        sec_id = re.search(r'^Subpart (?P<sno>\d+[A-Z]*)',p_tag.get_text().strip()).group("sno")
+                        p_tag['id'] = f'{p_tag.find_previous("h2",class_="parth2").get("id")}s{sec_id}'
+
                     else:
                         p_tag.name = 'h5'
-                elif value == 'h4':
-                    chap_tag = p_tag.find_previous('h2')
-                    if self.headers_class_dict.get(p_tag.get_text()):
-                        p_tag['class'] = self.headers_class_dict.get(p_tag.get_text())
-                    p_tag['id'] = re.sub(r'\s+|\'', '', f't{self.title.zfill(2)}-{p_tag.get_text()}')
-                    part_tag = p_tag.find_previous(
-                        lambda tag: re.search(r'h\d', tag.name) and tag.name != 'h5' and tag.has_attr('class')
-                                    and tag['class'] not in self.headers_class_dict.values())
-                    if re.search(r'^\d', p_tag.get_text()):
-                        chap_id = p_tag.find_previous_sibling(lambda tag: re.search('^[a-zA-Z]', tag.get_text())
-                                                                          and tag.name != 'h5' and re.search(r'h\d',
-                                                                                                             tag.name))
-                    elif part_tag and part_tag.has_attr('class') and part_tag['class'] == 'part_header':
-                        chap_id = part_tag
-                    elif not p_tag.has_attr('class') or p_tag['class'] not in self.headers_class_dict.values():
-                        chap_id = p_tag.find_previous(lambda tag: tag.name in ['h2', 'h3'] or tag.has_attr('class') and
-                                                                  tag['class'] in self.headers_class_dict.values())
-                    else:
-                        chap_id = p_tag.find_previous(lambda tag: tag.name in ['h2', 'h3'])
-                    if chap_id and chap_id.has_attr('id'):
-                        id_text = re.sub(r'\s|"|\'', '', p_tag.get_text())
-                        p_tag['id'] = f'{chap_id["id"]}-{id_text}'
-                    if self.tag_type_dict.get('part') and key == self.tag_type_dict['part']:
-                        part_num = re.search(r'^part\s(?P<num>\w+(\.\w+)?)', p_tag.get_text().strip(), re.I).group(
-                            'num')
-                        p_tag['class'] = 'part_header'
-                        p_tag['id'] = f'{chap_tag["id"]}p{part_num.zfill(2)}'
-                    if p_tag.get('class') in self.headers_class_dict.values():
-                        previous_id_num = 0
-                        if previous_h4 := p_tag.findPrevious(
-                                lambda tag: tag.name == 'h4' and re.search(f"{p_tag['id']}\d+$", tag['id'], re.I)):
-                            previous_id_num = int(re.search(r'\d+$', previous_h4['id'], re.I).group())
-                        p_tag['id'] = f'{p_tag["id"]}{str(previous_id_num + 1).zfill(2)}'
+
+
+                # elif value == 'h4':
+                    # chap_tag = p_tag.find_previous('h2')
+                    # if self.headers_class_dict.get(p_tag.get_text()):
+                    #     p_tag['class'] = self.headers_class_dict.get(p_tag.get_text())
+                    # p_tag['id'] = re.sub(r'\s+|\'', '', f't{self.title.zfill(2)}-{p_tag.get_text()}')
+                    # part_tag = p_tag.find_previous(
+                    #     lambda tag: re.search(r'h\d', tag.name) and tag.name != 'h5' and tag.has_attr('class')
+                    #                 and tag['class'] not in self.headers_class_dict.values())
+                    # if re.search(r'^\d', p_tag.get_text()):
+                    #     chap_id = p_tag.find_previous_sibling(lambda tag: re.search('^[a-zA-Z]', tag.get_text())
+                    #                                                       and tag.name != 'h5' and re.search(r'h\d',
+                    #                                                                                          tag.name))
+                    # elif part_tag and part_tag.has_attr('class') and part_tag['class'] == 'part_header':
+                    #     chap_id = part_tag
+                    # elif not p_tag.has_attr('class') or p_tag['class'] not in self.headers_class_dict.values():
+                    #     chap_id = p_tag.find_previous(lambda tag: tag.name in ['h2', 'h3'] or tag.has_attr('class') and
+                    #                                               tag['class'] in self.headers_class_dict.values())
+                    # else:
+                    #     chap_id = p_tag.find_previous(lambda tag: tag.name in ['h2', 'h3'])
+                    # if chap_id and chap_id.has_attr('id'):
+                    #     id_text = re.sub(r'\s|"|\'', '', p_tag.get_text())
+                    #     p_tag['id'] = f'{chap_id["id"]}-{id_text}'
+                    # if self.tag_type_dict.get('part') and key == self.tag_type_dict['part']:
+                    #     part_num = re.search(r'^part\s(?P<num>\w+(\.\w+)?)', p_tag.get_text().strip(), re.I).group(
+                    #         'num')
+                    #     p_tag['class'] = 'part_header'
+                    #     p_tag['id'] = f'{chap_tag["id"]}p{part_num.zfill(2)}'
+                    # if p_tag.get('class') in self.headers_class_dict.values():
+                    #     previous_id_num = 0
+                    #     if previous_h4 := p_tag.findPrevious(
+                    #             lambda tag: tag.name == 'h4' and re.search(f"{p_tag['id']}\d+$", tag['id'], re.I)):
+                    #         previous_id_num = int(re.search(r'\d+$', previous_h4['id'], re.I).group())
+                    #     p_tag['id'] = f'{p_tag["id"]}{str(previous_id_num + 1).zfill(2)}'
+
+
+
+
                 elif value == 'h5':
                     if re.search(r'\w+', p_tag.get_text()):
 
@@ -264,6 +297,24 @@ class GAParseHtml(ParserBase):
                         title_tag = p_tag
                     else:
                         p_tag.name = 'h5'
+
+        cur_id_list = []
+        for tag in self.soup.find_all("h4"):
+            if re.search(r'\. —$', tag.get_text()) or tag.get_text().isupper():
+                h4_text = re.sub(r'\s+','',tag.get_text()).lower()
+                h4_id = f'{tag.find_previous({"h3","h2","h1"}).get("id")}-{h4_text}'
+                if h4_id in cur_id_list:
+                    tag["id"] = f'{h4_id}.1'
+                else:
+                    tag["id"] = f'{h4_id}'
+
+                cur_id_list.append(tag["id"])
+
+            else:
+                tag.name = "p"
+
+
+
 
         stylesheet_link_tag = self.soup.new_tag('link')
         stylesheet_link_tag.attrs = {'rel': 'stylesheet', 'type': 'text/css',
@@ -288,7 +339,7 @@ class GAParseHtml(ParserBase):
         main_sec_alpha = 'a'
         cap_alpha = 'A'
         ol_head = 1
-        alpha_ol = self.soup.new_tag("ol", Class="alpha")
+        alpha_ol = self.soup.new_tag("ol", type="a")
         cap_alpha_ol = self.soup.new_tag("ol", type="A")
         inner_ol = self.soup.new_tag("ol", type="i")
         roman_ol = self.soup.new_tag("ol", type="I")
@@ -372,7 +423,7 @@ class GAParseHtml(ParserBase):
                     prev_rom_id = p_tag.find_previous("li").get("id")
                     p_tag.find_previous("li").append(cap_roman_ol)
                 else:
-
+                    print(p_tag)
                     cap_roman_ol.append(p_tag)
 
                 rom_head = re.search(r'^\((?P<rom>[IVX]+)\)', p_tag.text.strip())
@@ -533,7 +584,7 @@ class GAParseHtml(ParserBase):
                 alpha_li_id = None
                 previous_roman_li = None
                 sec_sub_ol = None
-                alpha_ol = self.soup.new_tag("ol", Class="alpha")
+                alpha_ol = self.soup.new_tag("ol", type="a")
                 num_ol = self.soup.new_tag("ol")
 
             else:
@@ -889,6 +940,47 @@ class GAParseHtml(ParserBase):
                         li.append(anchor)
 
 
+            elif re.search(r'^CHAPTER \d+[A-Z]*', li.text.strip()):
+                chap_no = re.search('^CHAPTER (?P<cno>\d+[A-Z]*)', li.get_text().strip()).group('cno')
+                header_id = f'#t{self.title.zfill(2)}c{chap_no.zfill(2)}'
+                anchor = self.soup.new_tag('a', href=header_id)
+                cleansed_header_id = header_id.strip("#")
+                anchor.attrs['aria-describedby'] = cleansed_header_id
+                li['id'] = f'{cleansed_header_id}-cnav{str(li_num).zfill(2)}'
+                anchor.string = li.text
+                if li.string:
+                    li.string.replace_with(anchor)
+                else:
+                    li.contents = []
+                    li.append(anchor)
+
+
+            elif re.search(r'^Subpart \d+[A-Z]*', li.text.strip()):
+                chap_no = re.search('^Subpart (?P<cno>\d+[A-Z]*)', li.get_text().strip()).group('cno')
+                header_id = f'#{li.find_previous("h2",class_="parth2").get("id")}s{chap_no}'
+                anchor = self.soup.new_tag('a', href=header_id)
+                cleansed_header_id = header_id.strip("#")
+                anchor.attrs['aria-describedby'] = cleansed_header_id
+                li['id'] = f'{cleansed_header_id}-cnav{str(li_num).zfill(2)}'
+                anchor.string = li.text
+                if li.string:
+                    li.string.replace_with(anchor)
+                else:
+                    li.contents = []
+                    li.append(anchor)
+            elif re.search(r'^PART \d+[A-Z]*', li.text.strip()):
+                chap_no = re.search('^PART (?P<cno>\d+[A-Z]*)', li.get_text().strip()).group('cno')
+                header_id = f'#{li.find_previous("h2").get("id")}p{chap_no.zfill(2)}'
+                anchor = self.soup.new_tag('a', href=header_id)
+                cleansed_header_id = header_id.strip("#")
+                anchor.attrs['aria-describedby'] = cleansed_header_id
+                li['id'] = f'{cleansed_header_id}-cnav{str(li_num).zfill(2)}'
+                anchor.string = li.text
+                if li.string:
+                    li.string.replace_with(anchor)
+                else:
+                    li.contents = []
+                    li.append(anchor)
 
         print('added anchor tags')
 
@@ -986,7 +1078,7 @@ class GAParseHtml(ParserBase):
             soup_str = re.sub(rf'{tag}', rf'{cleansed_tag}', soup_str, re.I)
         print("validating")
         # html5validate.validate(soup_str)
-        with open(f"/home/mis/PycharmProjects/cic-code-ga/transforms/ga/ocga/r{self.release_number}/{self.html_file_name}", "w") as file:
+        with open(f"../../cic-code-ga/transforms/ga/ocga/r{self.release_number}/{self.html_file_name}", "w") as file:
             # file.write(soup_str)
             file.write(soup_str.replace('<br/>', '<br />'))
 
