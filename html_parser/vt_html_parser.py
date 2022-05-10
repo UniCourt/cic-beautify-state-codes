@@ -152,7 +152,6 @@ class VTParseHtml(ParserBase):
                                 new_tag.string = tag_text
                                 p_tag.append(new_tag)
                                 new_tag["class"] = "analysisnote"
-
                         p_tag.unwrap()
 
     def replace_tags(self):
@@ -530,7 +529,7 @@ class VTParseHtml(ParserBase):
             else:
                 sec_pattern = re.compile(r'^(?P<sec_id>\d+([a-z])*([A-Z])*(\.\d+)*(-\d+([a-z])*)*(\.\d+)*(\.-\d+)*)\.*')
                 sec_pattern1 = re.compile(r'^(?P<sec_id>\d[A-Z]*-\d{3}[A-Z]*)\.')
-                sec_pattern2 = re.compile(r'^(?P<sec_id>\d+([a-z])*([A-Z])*(\.\d+)*)(,\s)*(-\d+([a-z])*)*(\.\d+)*(\.-\d+)*(\d+)*\.*\s\[(Repealed|Reserved for future use|Redesignated)\.\]')
+                sec_pattern2 = re.compile(r'^(?P<sec_id>\d+([a-z])*([A-Z])*(\.\d+)*)(,\s)*(-\d+([a-z])*)*(\.\d+)*(\.-\d+)*(\d+)*\.*\s\[(Repealed|Reserved for future use|Redesignated|Reserved)\.\]')
 
                 if sec_pattern1.search(list_item.text.strip()):
 
@@ -649,7 +648,7 @@ class VTParseHtml(ParserBase):
                 print()
             header.wrap(new_chap_div)
             while True:
-                    print(header)
+
                     next_sec_tag = sec_header.find_next_sibling()
                     if sec_header.name == 'h3':
                         new_sec_div = self.soup.new_tag('div')
@@ -743,7 +742,11 @@ class VTParseHtml(ParserBase):
             if p_tag.i:
                 p_tag.i.unwrap()
 
+            if re.search(r'^4\.1 Term of permit\.', current_tag_text):
+                print()
+
             if re.search(r'^\([ivx]+\)', current_tag_text) and main_sec_alpha not in ['i','v','x'] :
+
                 p_tag.name = "li"
                 roman_cur_tag = p_tag
 
@@ -759,22 +762,30 @@ class VTParseHtml(ParserBase):
                             p_tag["id"] = f'{prev_id1}i'
                             p_tag.string = re.sub(r'^\(i\)', '', current_tag_text)
                             main_sec_alpha = 'j'
+                        elif num_tag:
+                            num_tag.append(roman_ol)
+                            prev_id1 = num_tag.get('id')
+                            p_tag["id"] = f'{prev_id1}i'
+                            p_tag.string = re.sub(r'^\(i\)', '', current_tag_text)
                         else:
                             prev_id1 = f"{p_tag.find_previous('h4', class_='subsection').get('id')}ol{ol_count}"
+                            prev_id1 = f'{prev_id1}'
                             p_tag["id"] = f'{prev_id1}i'
                             p_tag.string = re.sub(r'^\(i\)', '', current_tag_text)
                     else:
-                        prev_li = p_tag.find_previous("li")
-                        prev_li.append(roman_ol)
-                        prev_id1 = prev_li.get("id")
-                        p_tag["id"] = f'{prev_li.get("id")}i'
-                        p_tag.string = re.sub(r'^\(i\)', '', current_tag_text)
+
+                            prev_li = p_tag.find_previous("li")
+                            prev_li.append(roman_ol)
+                            prev_id1 = prev_li.get("id")
+                            p_tag["id"] = f'{prev_li.get("id")}i'
+                            p_tag.string = re.sub(r'^\(i\)', '', current_tag_text)
                 else:
                     roman_ol.append(p_tag)
                     rom_head = re.search(r'^\((?P<rom>[ivx]+)\)', current_tag_text).group("rom")
 
                     p_tag["id"] = f'{prev_id1}{rom_head}'
                     p_tag.string = re.sub(r'^\([ivx]+\)', '', current_tag_text)
+
 
                 if re.search(rf'^\([ivx]+\)\s*\(I\)', current_tag_text):
                     cap_roman_ol = self.soup.new_tag("ol", type="I")
@@ -789,22 +800,26 @@ class VTParseHtml(ParserBase):
                     p_tag.string = ""
                     p_tag.append(cap_roman_ol)
 
-            elif re.search(r'^\d\.\d+(\.\d+)*',current_tag_text) and p_tag.name == 'p':
+            elif re.search(r'^\d{0,2}\.\d+(\.\d+)*',current_tag_text) and p_tag.name == 'p':
                 p_tag.name = "li"
                 num_tag = p_tag
                 main_sec_alpha = 'a'
 
-                if re.search(r'^\d\.1',current_tag_text):
+
+
+                if re.search(r'^\d\.1\s',current_tag_text):
+
                     num_ol = self.soup.new_tag("ol")
                     p_tag.wrap(num_ol)
                 else:
                     num_ol.append(p_tag)
 
-                prev_num_id = f"{p_tag.find_previous({'h5', 'h4', 'h3', 'h2'}).get('id')}ol{ol_count}"
-                num_id = re.search(r'^(?P<n_id>\d\.\d+(\.\d+)*)',current_tag_text).group("n_id")
 
+                prev_num_id = f"{p_tag.find_previous({'h5', 'h4', 'h3', 'h2'}).get('id')}ol{ol_count}"
+                num_id = re.search(r'^(?P<n_id>\d{0,2}\.\d+(\.\d+)*)',current_tag_text).group("n_id")
                 p_tag["id"] = f'{prev_num_id}{num_id}'
-                p_tag.string = re.sub(rf'^\d\.\d+\.*(\.\d+)*', '', current_tag_text)
+                p_tag.string = re.sub(r'^\d{0,2}\.\d+\.*(\d+)*', '', p_tag.text.strip())
+
 
 
             elif re.search(rf'^\({main_sec_alpha}\)', current_tag_text):
@@ -966,6 +981,7 @@ class VTParseHtml(ParserBase):
                 p_tag.string = re.sub(rf'^\({cap_alpha1}\)', '', current_tag_text)
                 if cap_alpha1 =='Z':
                     cap_alpha1 ='A'
+
                 else:
                     cap_alpha1 = chr(ord(cap_alpha1) + 1)
 
@@ -976,7 +992,7 @@ class VTParseHtml(ParserBase):
                     li_tag.append(current_tag_text)
                     roman_cur_tag = li_tag
                     cur_tag = re.search(r'^\((?P<cid>[A-Z])\)\s*\((?P<pid>[ivx]+)\)', current_tag_text)
-                    prev_id1 = f'{cap_alpha_cur_tag1.get("id")}{cur_tag.group("cid")}'
+                    prev_id1 = f'{cap_alpha_cur_tag1.get("id")}'
                     li_tag["id"] = f'{cap_alpha_cur_tag1.get("id")}{cur_tag.group("pid")}'
                     roman_ol.append(li_tag)
                     p_tag.string = ""
@@ -1111,8 +1127,9 @@ class VTParseHtml(ParserBase):
             - write html str to an output file
         """
         soup_str = str(self.soup.prettify(formatter=None))
-        with open(f"../transforms/vt/ocvt/r{self.release_number}/{self.html_file_name}", "w") as file:
+        with open(f"../../cic-code-vt/transforms/vt/ocvt/r{self.release_number}/{self.html_file_name}", "w") as file:
             file.write(soup_str)
+
 
 
     def start_parse(self):

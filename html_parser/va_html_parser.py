@@ -18,6 +18,7 @@ class VAParseHtml(ParserBase):
         self.class_regex = {'ul': '^\d+\-\d+\.\s*|^\d+\.\d+\.|^\d+\.\d+[A-Z]*-\d+\.', 'head2': '^Chapter \d+\.', 'head1': '^Title|^The Constitution of the United States of America',
                             'head3': r'^§\s\d+(\.\d+)*[A-Z]*\-\d+\.\s*','junk': '^Statute text','article':'——————————',  'head4': '^CASE NOTES','ol': r'^A\.\s', \
                             'head':'^§§\s*\d+-\d+\s*through\s*\d+-\d+\.|^§§+\s(?P<sec_id>\d+.\d+(-\d+)*)\.*\s*|^Part \d+\.'}
+
         self.title_id = None
         self.soup = None
         self.junk_tag_class = ['Apple-converted-space', 'Apple-tab-span']
@@ -26,6 +27,7 @@ class VAParseHtml(ParserBase):
         self.navhead = None
         self.snav_count = 1
         self.cnav_count = 1
+        self.meta_tags = []
 
         self.watermark_text = """Release {0} of the Official Code of Virginia Annotated released {1}.
         Transformed and posted by Public.Resource.Org using cic-beautify-state-codes.py version 1.4 on {2}.
@@ -1875,14 +1877,21 @@ class VAParseHtml(ParserBase):
             if tag.span:
                 tag.span.unwrap()
 
-            if re.search(r"§*\s\d+(\.\d+)*-\d+(\.\d+)*\.*\s*(:\d+)*|\d+\sVa.\s\d+|S\.E\. \d+|Va\. App\. LEXIS \d+|Titles (\d+(\.\d+)*)", tag.text.strip()):
+            if re.search(r"§{0,2}\s\d+(\.\d+)*-\d+(\.\d+)*\.*\s*(:\d+)*|\d+\sVa.\s\d+|S\.E\. \d+|Va\. App\. LEXIS \d+|Titles (\d+(\.\d+)*)", tag.text.strip()):
                 text = str(tag)
 
-                for match in set(x[0] for x in re.findall(r'(§\s*\d+(\.\d+)*-\d+(\.\d+)*(:\d+)*|'
-                                                              r'§§\s*\d+(\.\d+)*-\d+(\.\d+)*(:\d+)*|'
-                                                              r'\s*\d+(\.\d+)*-\d+(\.\d+)*(:\d+)*|\d+\sVa.\s\d+|S\.E\. \d+|'
-                                                              r'Va\. App\. LEXIS \d+|Titles (\d+(\.\d+)*))',
+                # for match in set(x[0] for x in re.findall(r'(§\s*\d+(\.\d+)*-\d+(\.\d+)*(:\d+)*|'
+                #                                               r'§§\s*\d+(\.\d+)*-\d+(\.\d+)*(:\d+)*|'
+                #                                               r'\s*\d+(\.\d+)*-\d+(\.\d+)*(:\d+)*|\d+\sVa.\s\d+|S\.E\. \d+|'
+                #                                               r'Va\. App\. LEXIS \d+|Titles (\d+(\.\d+)*))',
+                #                                               tag.get_text())):
+
+
+
+
+                for match in set(x[0] for x in re.findall(r'(§{0,2}\s\d+(\.\d+)*-\d+(\.\d+)*\.*\s*(:\d+)*|\d+\sVa\.\s\d+|S\.E\. \d+|Va\. App\. LEXIS \d+|Titles (\d+(\.\d+)*))',
                                                               tag.get_text())):
+
 
                     inside_text = re.sub(r'<p\sclass="\w\d+">|</p>|^<p\sclass="\w\d+"\sid=".+">|</p>$', '',
                                          text, re.DOTALL)
@@ -1932,7 +1941,11 @@ class VAParseHtml(ParserBase):
                         else:
                             if cite_id.group("title_id").zfill(2) in ['2.1','3.1','7.1','8.01','8.03','8.05','8.05A','8.06A']:
                                 tag.clear()
-                                tag_id = f'gov.va.code.title.{cite_id.group("title_id").zfill(2)}.html#t{cite_id.group("title_id").zfill(2)}s{cite_id.group("sec_id")}'
+
+                                # tag_id = f'gov.va.code.title.{cite_id.group("title_id").zfill(2)}.html#t{cite_id.group("title_id").zfill(2)}s{cite_id.group("sec_id")}'
+
+                                tag_id = f'gov.va.code.title.0{cite_id.group("title_id").zfill(2)}.html#t{cite_id.group("title_id").zfill(2)}s{cite_id.group("title_id")}-1'
+
                                 class_name = "ocva"
                                 format_text = f'<cite class="{class_name}"><a href="{tag_id}" target="{target}">{match}</a></cite>'
                                 text = re.sub(fr'{re.escape(match)}', format_text, inside_text, re.I)
@@ -2020,6 +2033,24 @@ class VAParseHtml(ParserBase):
             if tag.name in ['li', 'h4', 'h3', 'p','h2']:
                 del tag["class"]
 
+
+        for tag in self.soup.findAll():
+            if len(tag.contents) == 0:
+                if tag.name == 'meta':
+                    if tag.attrs.get('http-equiv') == 'Content-Style-Type':
+                        tag.decompose()
+                        continue
+                    self.meta_tags.append(tag)
+                elif tag.name == 'br':
+
+                    if not tag.parent or tag in tag.parent.contents:
+                        tag.decompose()
+                continue
+
+            if len(tag.get_text(strip=True)) == 0:
+                tag.extract()
+
+
         print("watermark added")
 
 
@@ -2041,9 +2072,15 @@ class VAParseHtml(ParserBase):
             - convert html to str
             - write html str to an output file
         """
+
         soup_str = str(self.soup.prettify(formatter=None))
-        with open(f"../transforms/va/ocva/r{self.release_number}/{self.html_file_name}", "w") as file:
-            file.write(soup_str)
+
+        for tag in self.meta_tags:
+            cleansed_tag = re.sub(r'/>', ' />', str(tag))
+            soup_str = re.sub(rf'{tag}', rf'{cleansed_tag}', soup_str, re.I)
+
+        with open(f"../../cic-code-va/transforms/va/ocva/r{self.release_number}/{self.html_file_name}", "w") as file:
+            file.write(soup_str.replace('<br/>','<br />'))
 
 
     def start_parse(self):
