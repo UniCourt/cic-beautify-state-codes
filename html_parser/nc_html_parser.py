@@ -22,11 +22,12 @@ class NCParseHtml(ParserBase):
         self.title = None
         self.previous = None
         self.junk_tag_class = ['Apple-converted-space', 'Apple-tab-span']
-        self.class_regex = {'head1': r'Chapter \d+', 'ul': r'^Article|^1\.|^(?P<sec_id>\d+([A-Z])*-\d+(\.\d+)*)',
-                            'head2': r'^ARTICLE \d+\.',
+        self.class_regex = {'head1': r'Chapter \d+',
+                            'ul': r'^Article|^1\.|^(?P<sec_id>\d+([A-Z])*-\d+(\.\d+)*)|^§|^Article 1.',
+                            'head2': r'^ARTICLE \d+\.|^Article 1.|^ARTICLE I\.',
                             'head4': '^CASE NOTES|^OFFICIAL COMMENT',
-                            'head3': '^§* \d+([A-Z])*-\d+(-\d+)*(\.|,| through)', 'ol_p': r'^\(\d\)|^I\.',
-                            'junk1': '^Annotations$', 'nav': '^Subchapter I\.|^——————————'}
+                            'head3': r'^§* \d+([A-Z])*-\d+(-\d+)*(\.|,| through)|^§', 'ol_p': r'^\(\d\)|^I\.',
+                            'junk1': '^Annotations$', 'nav': r'^Subchapter I\.|^——————————'}
 
         self.watermark_text = """Release {0} of the Official Code of North Carolina Annotated released {1}. 
         Transformed and posted by Public.Resource.Org using cic-beautify-state-codes version v1.3 on {2}. 
@@ -91,7 +92,7 @@ class NCParseHtml(ParserBase):
             junk_tag.decompose()
 
         [text_junk.decompose() for text_junk in self.soup.find_all("p", class_=self.class_regex["junk1"]) if
-         re.search('^Annotations|^Text|^Statute text', text_junk.text.strip())]
+         re.search('^Annotations|^Text|^Statute text|^History', text_junk.text.strip())]
 
         [text_junk.decompose() for text_junk in self.soup.find_all("p", class_=self.class_regex["nav"]) if
          re.search('^——————————', text_junk.text.strip())]
@@ -126,14 +127,29 @@ class NCParseHtml(ParserBase):
                     new_tag["class"] = "casenote"
                 p_tag.unwrap()
 
+            if re.search(r'^Analysis', p_tag.text.strip()):
+                for tag in p_tag.find_next_siblings():
+                    if tag.get('class') == [self.class_regex["head4"]]:
+                        break
+                    else:
+                        tag["class"] = "casenote"
+
+                # for tag in next_sibling_tags:
+                #     if re.search(r'^([IVX]|[A-Z]|[1-9])\. ',tag.text.strip()):
+                #         print(tag)
+
     def replace_tags(self):
         watermark_p = None
         title_tag = None
+        analysis_list = []
         cur_head_list = []
         cur_id_list = []
-        cap_alpha = 'A'
+        # cap_alpha = 'A'
+        cap_alpha = None
         cap_roman = "I"
+        cap_num = None
         alpha = None
+
         ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
         head4_list = ['Revision of title. —', 'Cross references. —', 'Law reviews. —', 'Editor\'s notes. —',
                       'History.', 'Effective dates. —']
@@ -150,7 +166,7 @@ class NCParseHtml(ParserBase):
 
                 if header_tag.get("class") == [self.class_regex["head1"]]:
                     if re.search(r'^Constitution of North Carolina|^Constitution of the United States',
-                                 header_tag.text.strip()):
+                                 header_tag.text.strip(), re.I):
                         header_tag.name = "h1"
                         header_tag.wrap(self.soup.new_tag("nav"))
                         header_tag['id'] = self.title_id
@@ -161,14 +177,12 @@ class NCParseHtml(ParserBase):
                         self.soup.find("nav").insert(0, watermark_p)
 
                 elif header_tag.get("class") == [self.class_regex["head2"]]:
-                    if re.search(r'^ARTICLE [IVX]+', header_tag.text.strip()):
+                    if re.search(r'^(ARTICLE|Article) [IVX]+', header_tag.text.strip(), re.I):
                         header_tag.name = "h2"
-                        article_id = re.search(r'^ARTICLE (?P<ar_id>[IVX]+)', header_tag.text.strip()).group('ar_id')
+                        article_id = re.search(r'^(ARTICLE|Article) (?P<ar_id>[IVX]+)', header_tag.text.strip(),
+                                               re.I).group('ar_id')
                         header_tag[
                             'id'] = f"{header_tag.find_previous('h1').get('id')}a{article_id.zfill(2)}"
-
-
-
 
                     elif re.search(r'^§ \d+\.', header_tag.text.strip()):
                         header_tag.name = "h3"
@@ -176,19 +190,18 @@ class NCParseHtml(ParserBase):
                         header_tag[
                             'id'] = f"{header_tag.find_previous('h2').get('id')}s{sec_id.zfill(2)}"
 
-                    if re.search(r'^AMENDMENTS|^Preamble', header_tag.text.strip()):
+                    if re.search(r'^(\d+[A-Z])*? AMENDMENTS|^Preamble', header_tag.text.strip(), re.I):
                         header_tag.name = "h2"
                         article_id = re.sub(r'[\s\W]+', '', header_tag.text.strip()).lower()
                         header_tag[
                             'id'] = f"{header_tag.find_previous('h1').get('id')}a{article_id.zfill(2)}"
                         header_tag['class'] = "amend"
 
-
-
                 elif header_tag.get("class") == [self.class_regex["head3"]]:
                     if re.search(r'^§ \d+\.', header_tag.text.strip()):
                         header_tag.name = "h3"
                         sec_id = re.search(r'^§ (?P<s_id>\d+)\.', header_tag.text.strip()).group('s_id')
+
                         header_tag[
                             'id'] = f"{header_tag.find_previous('h2').get('id')}s{sec_id.zfill(2)}"
                     elif re.search(r'^(Section|Sec\.) \d+', header_tag.text.strip()):
@@ -201,13 +214,12 @@ class NCParseHtml(ParserBase):
                             header_tag[
                                 'id'] = f"{header_tag.find_previous('h3', class_='amend').get('id')}s{sec_id.zfill(2)}"
 
-                    elif re.search(r'^Amendment \d+', header_tag.text.strip()):
+                    elif re.search(r'^Amendment (\d+|[IVX]+)', header_tag.text.strip()):
                         header_tag.name = "h3"
-                        sec_id = re.search(r'^Amendment (?P<s_id>\d+)', header_tag.text.strip()).group('s_id')
+                        sec_id = re.search(r'^Amendment (?P<s_id>(\d+|[IVX]+))', header_tag.text.strip()).group('s_id')
 
                         header_tag[
                             'id'] = f"{header_tag.find_previous('h2', class_='amend').get('id')}s{sec_id.zfill(2)}"
-
 
                 elif header_tag.get("class") == [self.class_regex["head4"]]:
                     if re.search(r'^CASE NOTES|^OFFICIAL COMMENT|^COMMENT', header_tag.text.strip()):
@@ -248,13 +260,9 @@ class NCParseHtml(ParserBase):
                         h5_num_id = f"{h5_alpha_id}-{h5_num_text}"
                         header_tag['id'] = h5_num_id
 
-
-
-
-                elif header_tag.get("class") == [self.class_regex["ul"]] and not re.search('^(Article|Sec\.)',
+                elif header_tag.get("class") == [self.class_regex["ul"]] and not re.search('^(Article|Sec\.)$',
                                                                                            header_tag.text.strip()):
                     header_tag.name = "li"
-
                     if header_tag.find_previous().name == "li":
                         ul_tag.append(header_tag)
 
@@ -268,19 +276,20 @@ class NCParseHtml(ParserBase):
                             nav_tag = self.soup.new_tag("nav")
                             ul_tag.wrap(nav_tag)
 
-
             # titlefiles
             else:
                 title_pattern = re.compile(r'^(Chapter)\s(?P<title_id>\d+([A-Z])*)')
-                subchapter_pattern = re.compile(r'^Subchapter (?P<s_id>[IVX]+([A-Z])*)\.')
+                subchapter_pattern = re.compile(r'^(Subchapter|SUBCHAPTER) (?P<s_id>[IVX]+-*?([A-Z])*)\.')
                 section_pattern = re.compile(
-                    r'^§+\s*(?P<sec_id>\d+([A-Z])*-\d+([A-Z])*(\.\d+[A-Z]*)*(-\d+)*)[:., through]')
+                    r'^§+\s*(?P<sec_id>\d+([A-Z])*-\d+([A-Z])*(\.\d+[A-Z]*)*(-\d+)*|\d+([A-Z])*)[:., through]')
                 chap_ul_pattern = re.compile(r'^(?P<s_id>[0-9]*[A-Z]*(\.\d+)*)([:.,]| through| to)')
                 sec_ul_pattern = re.compile(r'^(?P<sec_id>\d+([A-Z])*-\d+([A-Z])*(\.\d+)*(-\d+)*)[., through]')
-                SUBCHAPTER_pattern = re.compile(r'^SUBCHAPTER (?P<s_id>[IVX]+([A-Z])*)\.')
-                article_pattern = re.compile(r'^ARTICLE (?P<a_id>\d+([A-Z])*)(\.| to)')
+                rule_pattern = re.compile(r'^Rule(s)*?\s(?P<r_id>(\d+[A-Z]*?-\d+[A-Z]*?-\d+[A-Z]*?)|\d+)[:., through]')
+                article_pattern = re.compile(r'^(ARTICLE|Article) (?P<a_id>\d+([A-Z])*(\.\d+)*|[IVX]+)(\.| to)')
                 section_rule_pattern = re.compile(r'^Rule(s)*\s(?P<r_id>\d+(\.\d+)*)[:., through]')
                 sub_article_pattern = re.compile(r'^(ARTICLE|Article) (?P<s_id>([IVX]+([A-Z])*)*(\d+)*)')
+                part_pattern = re.compile(r'^Part (?P<pid>\d+[A-Z]*?)\.')
+                subpart_pattern = re.compile(r'Subpart (?P<aid>[0-9A-Z]+)\.')
 
                 if header_tag.get("class") == [self.class_regex["head1"]]:
                     if title_pattern.search(header_tag.text.strip()):
@@ -296,13 +305,40 @@ class NCParseHtml(ParserBase):
 
 
                 elif header_tag.get("class") == [self.class_regex["head2"]]:
-
-                    if SUBCHAPTER_pattern.search(header_tag.text.strip()):
+                    if subchapter_pattern.search(header_tag.text.strip()):
                         header_tag.name = "h2"
-                        subchapter_id = SUBCHAPTER_pattern.search(header_tag.text.strip()).group('s_id')
+                        subchapter_id = subchapter_pattern.search(header_tag.text.strip()).group('s_id')
                         header_tag[
                             'id'] = f"{header_tag.find_previous('h1').get('id')}s{subchapter_id.zfill(2)}"
                         header_tag["class"] = "subchap"
+
+                    elif part_pattern.search(header_tag.text.strip()):
+                        header_tag.name = "h2"
+                        subchapter_id = part_pattern.search(header_tag.text.strip()).group('pid')
+                        curr_head_id = f"{header_tag.find_previous('h2',class_='article').get('id')}p{subchapter_id.zfill(2)}"
+                        if curr_head_id in cur_head_list:
+                            header_tag['id'] = f"{curr_head_id}.1"
+                        else:
+                            header_tag['id'] = f"{curr_head_id}"
+
+                        header_tag["class"] = "part"
+                        cur_head_list.append(curr_head_id)
+
+
+                    elif subpart_pattern.search(header_tag.text.strip()):
+                        header_tag.name = "h2"
+                        subchapter_id = subpart_pattern.search(header_tag.text.strip()).group('aid')
+                        curr_head_id = f"{header_tag.find_previous('h2',class_='part').get('id')}sp{subchapter_id.zfill(2)}"
+
+                        if curr_head_id in cur_head_list:
+                            header_tag[
+                            'id'] = f"{header_tag.find_previous('h2',class_='part').get('id')}sp{subchapter_id.zfill(2)}.1"
+                        else:
+                            header_tag[
+                                'id'] = f"{header_tag.find_previous('h2', class_='part').get('id')}sp{subchapter_id.zfill(2)}"
+
+                        header_tag["class"] = "subpart"
+                        cur_head_list.append(curr_head_id)
 
                     elif article_pattern.search(header_tag.text.strip()):
                         header_tag.name = "h2"
@@ -318,6 +354,26 @@ class NCParseHtml(ParserBase):
                         header_tag["class"] = "article"
                         self.count = 1
 
+                    elif section_pattern.search(header_tag.text.strip()):
+                        header_tag.name = "h3"
+                        section_id = section_pattern.search(header_tag.text.strip()).group('sec_id')
+
+                        curr_head_id = f"{header_tag.find_previous({'h2', 'h1'}).get('id')}s{section_id.zfill(2)}"
+
+                        if curr_head_id in cur_head_list:
+
+                            header_tag[
+                                'id'] = f"{header_tag.find_previous({'h2', 'h1'}).get('id')}s{section_id.zfill(2)}.{self.count}."
+                            self.count += 1
+                        else:
+                            header_tag[
+                                'id'] = f"{header_tag.find_previous({'h2', 'h1'}).get('id')}s{section_id.zfill(2)}"
+
+                        cur_head_list.append(curr_head_id)
+                        header_tag["class"] = "section"
+                        self.head4count = 1
+
+
 
                 elif header_tag.get("class") == [self.class_regex["head3"]]:
                     if section_pattern.search(header_tag.text.strip()):
@@ -329,7 +385,7 @@ class NCParseHtml(ParserBase):
 
                         if curr_head_id in cur_head_list:
                             header_tag[
-                                'id'] = f"{header_tag.find_previous({'h2', 'h1'}).get('id')}s{section_id.zfill(2)}.{self.count}"
+                                'id'] = f"{header_tag.find_previous({'h2', 'h1'}).get('id')}s{section_id.zfill(2)}.{self.count}."
                             self.count += 1
                         else:
                             header_tag[
@@ -339,11 +395,18 @@ class NCParseHtml(ParserBase):
                         header_tag["class"] = "section"
                         self.head4count = 1
 
-                    elif section_rule_pattern.search(header_tag.text.strip()):
+                    elif section_rule_pattern.search(header_tag.text.strip()) or \
+                            rule_pattern.search(header_tag.text.strip()):
                         header_tag.name = "h3"
-                        rule_sec = section_rule_pattern.search(header_tag.text.strip()).group("r_id")
+                        if section_rule_pattern.search(header_tag.text.strip()):
+                            rule_sec = section_rule_pattern.search(header_tag.text.strip()).group("r_id")
+
+                        else:
+                            rule_sec = rule_pattern.search(header_tag.text.strip()).group("r_id")
+
                         header_tag[
                             'id'] = f"{header_tag.find_previous('h2', class_='article').get('id')}r{rule_sec.zfill(2)}"
+
                         header_tag["class"] = "rulesec"
 
 
@@ -370,27 +433,32 @@ class NCParseHtml(ParserBase):
 
 
                     elif re.search(rf'^{cap_roman}\.', header_tag.text.strip()):
-
                         header_tag.name = "h5"
-
                         h5_rom_text = re.search(r'^(?P<h5_id>[IVX]+)\.', header_tag.text.strip()).group("h5_id")
-                        h5_rom_id = f"{header_tag.find_previous('h4').get('id')}-{h5_rom_text}"
+                        h5_rom_id = f"{header_tag.find_previous({'h4', 'h3'}).get('id')}-{h5_rom_text}"
                         header_tag['id'] = h5_rom_id
                         cap_alpha = 'A'
                         cap_roman = roman.toRoman(roman.fromRoman(cap_roman.upper()) + 1)
 
-                    elif re.search(fr'^{cap_alpha}\.', header_tag.text.strip()):
+
+                    elif cap_alpha and re.search(fr'^{cap_alpha}\.', header_tag.text.strip()):
                         header_tag.name = "h5"
                         h5_alpha_text = re.search(r'^(?P<h5_id>[A-Z]+)\.', header_tag.text.strip()).group("h5_id")
                         h5_alpha_id = f"{h5_rom_id}-{h5_alpha_text}"
                         header_tag['id'] = h5_alpha_id
                         cap_alpha = chr(ord(cap_alpha) + 1)
+                        cap_num = 1
 
-                    elif re.search(r'^\d+\.', header_tag.text.strip()):
+
+                    elif cap_num and re.search(fr'^{cap_num}\.', header_tag.text.strip()):
                         header_tag.name = "h5"
                         h5_num_text = re.search(r'^(?P<h5_id>\d+)\.', header_tag.text.strip()).group("h5_id")
+
                         h5_num_id = f"{h5_alpha_id}-{h5_num_text}"
                         header_tag['id'] = h5_num_id
+
+                        cap_num += 1
+
 
 
                 elif header_tag.get("class") == [self.class_regex["nav"]]:
@@ -414,14 +482,22 @@ class NCParseHtml(ParserBase):
                         chapter_id = sub_article_pattern.search(header_tag.text.strip()).group('s_id')
 
                         header_tag[
-                            'id'] = f"{header_tag.find_previous('h3').get('id')}a{chapter_id.zfill(2)}"
-
+                            'id'] = f"{header_tag.find_previous({'h3','h2','h1'}).get('id')}a{chapter_id.zfill(2)}"
                         header_tag["class"] = "subar"
+
+
+
 
                 elif header_tag.get("class") == [self.class_regex["ul"]]:
 
                     if chap_ul_pattern.search(header_tag.text.strip()) or \
-                            sec_ul_pattern.search(header_tag.text.strip()):
+                            sec_ul_pattern.search(header_tag.text.strip()) or \
+                            section_pattern.search(header_tag.text.strip()) or \
+                            article_pattern.search(header_tag.text.strip()) or \
+                            subchapter_pattern.search(header_tag.text.strip()) or \
+                            rule_pattern.search(header_tag.text.strip()) or \
+                            part_pattern.search(header_tag.text.strip()) or \
+                            subpart_pattern.search(header_tag.text.strip()):
                         header_tag.name = "li"
 
                         if header_tag.find_previous().name == "li":
@@ -454,6 +530,7 @@ class NCParseHtml(ParserBase):
         stylesheet_link_tag.attrs = {'rel': 'stylesheet', 'type': 'text/css',
                                      'href': 'https://unicourt.github.io/cic-code-ga/transforms/ga/stylesheet/ga_code_stylesheet.css'}
         self.soup.style.replace_with(stylesheet_link_tag)
+        self.meta_tags.append(stylesheet_link_tag)
 
         print('tags replaced')
 
@@ -489,15 +566,18 @@ class NCParseHtml(ParserBase):
 
         count = 0
 
-        section_pattern = re.compile(r'^(?P<sec_id>\d+([A-Z])*-\d+([A-Z])*(\.\d+[A-Z]*)*(-\d+)*)[., through]')
-        ul_pattern = re.compile(r'^(?P<s_id>[0-9]*[A-Z]*(\.\d+)*)[:., through]')
-        subchapter_pattern = re.compile(r'^Subchapter (?P<s_id>[IVX]+([A-Z])*)\.')
+        section_pattern = re.compile(r'^§*?\s*?(?P<sec_id>\d+([A-Z])*-\d+([A-Z])*(\.\d+[A-Z]*)*(-\d+)*|\d+([A-Z])*)[., through]')
+        ul_pattern = re.compile(r'^Article*?\s*?(?P<s_id>[0-9A-Z]+(\.\d+)*)[:., through]')
+        subchapter_pattern = re.compile(r'^Subchapter (?P<s_id>[IVX]+-*?([A-Z])*)\.')
+        rule_pattern = re.compile(r'^Rule(s)*?\s(?P<r_id>(\d+[A-Z]*?-\d+[A-Z]*?-\d+[A-Z]*?)|\d+)[:., through]')
+        part_pattern = re.compile(r'^Part (?P<pid>\d+[A-Z]*?)\.')
+        subpart_pattern = re.compile(r'Subpart (?P<aid>[0-9A-Z]+)\.')
 
         for list_item in self.soup.find_all():
             if list_item.name == "li":
                 if re.search('constitution', self.html_file_name):
-                    if re.search(r'^[IVX]+\.', list_item.text.strip()):
-                        chap_num = re.search(r'^(?P<chap>[IVX]+)\. ', list_item.text.strip()).group(
+                    if re.search(r'^Article [IVX]+ ', list_item.text.strip()):
+                        chap_num = re.search(r'^Article (?P<chap>[IVX]+) ', list_item.text.strip()).group(
                             "chap").zfill(2)
                         sub_tag = "a"
                         prev_id = None
@@ -505,7 +585,7 @@ class NCParseHtml(ParserBase):
                         cnav = f'anav{self.c_nav_count:02}'
                         self.set_chapter_section_nav(list_item, chap_num.zfill(2), sub_tag, prev_id, None, cnav)
 
-                    elif re.search(r'^Preamble|^AMENDMENTS', list_item.text.strip()):
+                    elif re.search(r'^Preamble|^(\d+[A-Z])*? AMENDMENTS', list_item.text.strip(), re.I):
                         article_id = re.sub(r'[\s\W]+', '', list_item.text.strip()).lower()
                         sub_tag = "a"
                         prev_id = None
@@ -513,9 +593,18 @@ class NCParseHtml(ParserBase):
                         cnav = f'anav{self.c_nav_count:02}'
                         self.set_chapter_section_nav(list_item, article_id, sub_tag, prev_id, None, cnav)
 
+                    elif re.search(r'^Amendment [IVX]+\.', list_item.text.strip()):
+                        article_id = re.search(r'^Amendment (?P<aid>[IVX]+)\.', list_item.text.strip()).group(
+                            "aid").zfill(2)
+                        sub_tag = "s"
+                        prev_id = list_item.find_previous('h2', class_='amend').get("id")
+                        self.c_nav_count += 1
+                        cnav = f'anav{self.c_nav_count:02}'
+                        self.set_chapter_section_nav(list_item, article_id, sub_tag, prev_id, None, cnav)
 
-                    elif re.search(r'^\d+\.', list_item.text.strip()):
-                        chap_num = re.search(r'^(?P<chap>\d+)\. ', list_item.text.strip()).group(
+
+                    elif re.search(r'^§ \d+\.', list_item.text.strip()):
+                        chap_num = re.search(r'^§ (?P<chap>\d+)\. ', list_item.text.strip()).group(
                             "chap").zfill(2)
                         sub_tag = "s"
                         prev_id = list_item.find_previous('h2').get("id")
@@ -531,17 +620,52 @@ class NCParseHtml(ParserBase):
                         self.s_nav_count += 1
                         cnav = f'snav{self.s_nav_count:02}'
                         self.set_chapter_section_nav(list_item, chap_id.zfill(2), sub_tag, prev_id, None, cnav)
+
+                    elif rule_pattern.search(list_item.text.strip()):
+                        chap_id = rule_pattern.search(list_item.text.strip()).group('r_id')
+                        sub_tag = "r"
+                        prev_id = list_item.find_previous('h2').get("id")
+                        self.s_nav_count += 1
+                        cnav = f'snav{self.s_nav_count:02}'
+                        self.set_chapter_section_nav(list_item, chap_id.zfill(2), sub_tag, prev_id, None, cnav)
+
+
                     elif ul_pattern.search(list_item.text.strip()):
                         chap_id = ul_pattern.search(list_item.text.strip()).group('s_id')
                         sub_tag = "a"
 
                         if list_item.find_previous('p', class_="nav"):
                             prev_id = f"t{self.title_id}s{subchapter_pattern.search(list_item.find_previous('p', class_='nav').text.strip()).group('s_id').zfill(2)}"
-                        elif list_item.find_previous('h2', class_="article"):
-                            prev_id = list_item.find_previous('h2', class_="article").get("id")
-                            sub_tag = "r"
+                        elif list_item.find_previous('h2', class_="subchap"):
+                            prev_id = list_item.find_previous('h2', class_="subchap").get("id")
+                            sub_tag = "a"
                         else:
                             prev_id = list_item.find_previous('h1').get("id")
+                        self.s_nav_count += 1
+                        cnav = f'snav{self.s_nav_count:02}'
+                        self.set_chapter_section_nav(list_item, chap_id.zfill(2), sub_tag, prev_id, None, cnav)
+
+                    elif subchapter_pattern.search(list_item.text.strip()):
+                        chap_id = subchapter_pattern.search(list_item.text.strip()).group('s_id')
+                        sub_tag = "s"
+                        prev_id = list_item.find_previous('h1').get("id")
+                        self.s_nav_count += 1
+                        cnav = f'snav{self.s_nav_count:02}'
+                        self.set_chapter_section_nav(list_item, chap_id.zfill(2), sub_tag, prev_id, None, cnav)
+
+                    elif  part_pattern.search(list_item.text.strip()):
+                        chap_id = part_pattern.search(list_item.text.strip()).group('pid')
+                        sub_tag = "p"
+                        prev_id = list_item.find_previous('h2',class_="article").get("id")
+                        self.s_nav_count += 1
+                        cnav = f'snav{self.s_nav_count:02}'
+                        self.set_chapter_section_nav(list_item, chap_id.zfill(2), sub_tag, prev_id, None, cnav)
+
+                    elif  subpart_pattern.search(list_item.text.strip()):
+
+                        chap_id = subpart_pattern.search(list_item.text.strip()).group('aid')
+                        sub_tag = "sp"
+                        prev_id = list_item.find_previous('h2',class_="part").get("id")
                         self.s_nav_count += 1
                         cnav = f'snav{self.s_nav_count:02}'
                         self.set_chapter_section_nav(list_item, chap_id.zfill(2), sub_tag, prev_id, None, cnav)
@@ -670,12 +794,14 @@ class NCParseHtml(ParserBase):
         cap_roman = "I"
         small_roman = "i"
         roman_cur_tag = None
+        p_tag_terminator = None
 
         for p_tag in self.soup.body.find_all(['h3', 'h4', 'h5', 'p']):
 
             current_tag_text = p_tag.text.strip()
 
             if re.search(rf'^\({main_sec_alpha}\)', current_tag_text) and p_tag.name == "p":
+                p_tag_terminator = 1
                 p_tag.name = "li"
                 sec_alpha_cur_tag = p_tag
                 num_count = 1
@@ -712,14 +838,34 @@ class NCParseHtml(ParserBase):
 
             elif re.search(rf'^\([a-z]\d+\)', current_tag_text) and p_tag.name == "p":
                 p_tag.name = "li"
-                sec_alpha_cur_tag = p_tag
-                num_count = 1
-                sec_alpha_ol.append(p_tag)
 
+                num_count = 1
+                if sec_alpha_cur_tag:
+                    sec_alpha_cur_tag.append(p_tag)
+                else:
+                    sec_alpha_ol = self.soup.new_tag("ol", type="a")
+                    p_tag.wrap(sec_alpha_ol)
+
+                sec_alpha_cur_tag = p_tag
                 li_id = re.search(rf'^\((?P<id>[a-z]\d+)\)', current_tag_text).group("id")
 
                 p_tag["id"] = f'{sec_alpha_id}-{li_id}'
                 p_tag.string = re.sub(rf'^\({li_id}\)', '', current_tag_text)
+
+                if re.search(rf'^\([a-z]\d+\)\s*\(1\)', current_tag_text):
+                    num_ol1 = self.soup.new_tag("ol")
+                    li_tag = self.soup.new_tag("li")
+                    li_tag.string = re.sub(r'^\([a-z]\d+\)\s*\(1\)', '', current_tag_text)
+                    li_tag.append(current_tag_text)
+                    num_cur_tag1 = li_tag
+                    cur_tag1 = re.search(r'^\((?P<cid>[a-z]\d+\)\s*\((?P<pid>1)\))', current_tag_text)
+
+                    num_id1 = f'{sec_alpha_cur_tag.get("id")}{cur_tag1.group("cid")}'
+                    li_tag["id"] = f'{sec_alpha_cur_tag.get("id")}{cur_tag1.group("pid")}'
+                    num_ol1.append(li_tag)
+                    p_tag.string = ""
+                    p_tag.append(num_ol1)
+                    num_count = 2
 
 
             elif re.search(rf'^\({num_count}\)', current_tag_text) and p_tag.name == "p":
@@ -727,6 +873,7 @@ class NCParseHtml(ParserBase):
                 num_cur_tag1 = p_tag
                 main_sec_alpha1 = 'a'
                 small_roman = "i"
+                p_tag_terminator = 1
 
                 if re.search(r'^\(1\)', current_tag_text):
                     num_ol1 = self.soup.new_tag("ol")
@@ -808,6 +955,7 @@ class NCParseHtml(ParserBase):
                 sec_alpha_cur_tag1 = p_tag
                 small_roman = "i"
                 cap_alpha1_cur_tag = None
+                ol_head = 1
 
                 if re.search(r'^a\.', current_tag_text):
                     sec_alpha_ol1 = self.soup.new_tag("ol", type="a")
@@ -826,8 +974,6 @@ class NCParseHtml(ParserBase):
                 p_tag.string = re.sub(rf'^{main_sec_alpha1}\.', '', current_tag_text)
                 main_sec_alpha1 = chr(ord(main_sec_alpha1) + 1)
 
-                ol_head = 1
-
                 if re.search(rf'^[a-z]\.\s*1\.', current_tag_text):
                     head_ol = self.soup.new_tag("ol")
                     li_tag = self.soup.new_tag("li")
@@ -844,11 +990,13 @@ class NCParseHtml(ParserBase):
                     ol_head = 2
 
 
-            elif re.search(rf'^{ol_head}\.', current_tag_text) and p_tag.get("class") != "casenote" and not p_tag.b:
+            elif re.search(rf'^{ol_head}\.', current_tag_text) and p_tag.get("class") != "casenote":
+
                 p_tag.name = "li"
                 ol_head_tag = p_tag
                 cap_roman = "I"
                 small_roman = "i"
+                p_tag_terminator = 1
 
                 if re.search(r'^1\.', current_tag_text):
                     head_ol = self.soup.new_tag("ol")
@@ -874,10 +1022,11 @@ class NCParseHtml(ParserBase):
 
 
             elif re.search(rf'^{cap_roman}\.', current_tag_text) \
-                    and p_tag.get("class") != "casenote" and not p_tag.b and ol_head_tag:
+                    and p_tag.get("class") != "casenote" and ol_head_tag:
 
                 p_tag.name = "li"
                 roman_cur_tag = p_tag
+                cap_alpha1 = 'A'
 
                 if re.search(r'^I\.', current_tag_text):
                     roman_ol = self.soup.new_tag("ol", type="I")
@@ -899,12 +1048,9 @@ class NCParseHtml(ParserBase):
                 p_tag.name = "li"
                 roman_cur_tag = p_tag
 
-
-
                 if re.search(r'^\(i\)', current_tag_text):
                     smallroman_ol = self.soup.new_tag("ol", type="i")
                     p_tag.wrap(smallroman_ol)
-
 
                     prev_id1 = p_tag.find_previous("li").get('id')
                     p_tag.find_previous("li").append(smallroman_ol)
@@ -920,26 +1066,36 @@ class NCParseHtml(ParserBase):
 
 
             elif re.search(rf'^{cap_alpha1}\.', current_tag_text) \
-                    and p_tag.get("class") != "casenote" and not p_tag.b:
+                    and p_tag.get("class") != "casenote" and p_tag.name == "p":
                 p_tag.name = "li"
                 cap_alpha1_cur_tag = p_tag
-                ol_head = 1
+                p_tag_terminator = 1
+                # ol_head = 1
 
                 if re.search(r'^A\.', current_tag_text):
                     cap_alpha1_ol = self.soup.new_tag("ol", type="A")
                     p_tag.wrap(cap_alpha1_ol)
 
-                    if sec_alpha_cur_tag:
-                        sec_alpha_cur_tag.append(cap_alpha1_ol)
-                        cap_alpha1_id = sec_alpha_cur_tag.get("id")
-                    elif roman_cur_tag:
-                        roman_cur_tag.append(cap_alpha1_ol)
-                        cap_alpha1_id = roman_cur_tag.get("id")
-                    else:
+                    if re.search(r'^ARTICLE [IVX]+',p_tag.find_previous("h4").text.strip()):
                         cap_alpha1_id = f"{p_tag.find_previous({'h5', 'h4', 'h3', 'h2'}).get('id')}ol{ol_count}"
                         ol_count += 1
+                        ol_head = 1
+                    else:
+                        if sec_alpha_cur_tag:
+                            sec_alpha_cur_tag.append(cap_alpha1_ol)
+                            cap_alpha1_id = sec_alpha_cur_tag.get("id")
+                        elif roman_cur_tag:
+                            roman_cur_tag.append(cap_alpha1_ol)
+                            cap_alpha1_id = roman_cur_tag.get("id")
+                        else:
+                            cap_alpha1_id = f"{p_tag.find_previous({'h5', 'h4', 'h3', 'h2'}).get('id')}ol{ol_count}"
+                            ol_count += 1
+
+
                 else:
                     cap_alpha1_ol.append(p_tag)
+                    if re.search(r'^ARTICLE [IVX]+', p_tag.find_previous("h4").text.strip()):
+                        ol_head = 1
 
                 p_tag["id"] = f'{cap_alpha1_id}{cap_alpha1}'
                 p_tag.string = re.sub(rf'^{cap_alpha1}\.', '', current_tag_text)
@@ -968,7 +1124,25 @@ class NCParseHtml(ParserBase):
 
                     p_tag.string = re.sub(rf'^\([a-z]\)', '', current_tag_text)
 
-            if re.search(r'^CASE NOTES|^"Sec\. \d+\.', current_tag_text) or p_tag.name in ['h3', 'h4', 'h5']:
+            # elif re.search(rf'^\(\d+\)', current_tag_text) and p_tag.name == "p":
+            #     p_tag.name = "li"
+            #     num_cur_tag1 = p_tag
+            #     main_sec_alpha1 = 'a'
+            #     small_roman = "i"
+            #     num_ol1.append(p_tag)
+            #     tag_num = re.search(r'^\((?P<nid>\d+)\)',current_tag_text).group("nid")
+            #     p_tag["id"] = f'{num_id1}{tag_num}'
+            #     p_tag.string = re.sub(rf'^\(\d+\)', '', current_tag_text)
+
+            # elif not re.search(r'^CASE NOTES|^SECTION|^"Sec\. \d+\.|^Official Commentary|^History\.|^Editor’s Note\.', current_tag_text) and p_tag.name == "p":
+            #    if  p_tag_terminator:
+            #        p_tag.find_previous("li").append(p_tag)
+
+
+            if re.search(r'^CASE NOTES|^SECTION|^"Sec\. \d+\.|^Official Commentary|^History\.|^Editor’s Note\.|^ARTICLE [IVX]+\.', current_tag_text) or p_tag.name in ['h3', 'h4', 'h5']:
+
+                p_tag_terminator = None
+
                 ol_head = 1
                 ol_count = 1
                 num_count = 1
@@ -979,9 +1153,12 @@ class NCParseHtml(ParserBase):
                 cap_alpha1 = "A"
                 cap_alpha1_cur_tag = None
                 sec_alpha_cur_tag1 = None
+
                 ol_head_tag = None
                 cap_roman = "I"
                 small_roman = "i"
+                if re.search(r'^Official Commentary|^History\.',current_tag_text):
+                    ol_count += 1
 
         print('ol tags added')
 
@@ -1098,7 +1275,8 @@ class NCParseHtml(ParserBase):
                     id_reg = re.search(r'Chapter (?P<title>\d+[A-Z]*)', match.strip())
                 else:
                     id_reg = re.search(
-                        r'G\.S\.\s*(?P<cite>(?P<title>\d+[A-Z]*)-(?P<sec>\d+(\.\d+)*)(-\d+)*)(?P<ol>\([a-z]*\)(\([0-9]+\))*(\([a-z]\))*)*',
+                        r'G\.S\.\s*(?P<cite>(?P<title>\d+[A-Z]*)-(?P<sec>\d+(\.\d+)*)(-\d+)*)(?P<ol>\([a-z]*\)(\(['
+                        r'0-9]+\))*(\([a-z]\))*)*',
                         match.strip())
 
                 title = id_reg.group("title").strip()
@@ -1150,12 +1328,13 @@ class NCParseHtml(ParserBase):
                                         target = "_blank"
                                         if id_reg.group("ol"):
                                             ol_id = re.sub(r'[() ]+', '', id_reg.group("ol"))
-                                            a_id = f'gov.nc.stat.title.{title_id1}.html#{head_id.group("h_id")}ol1{ol_id}'
+                                            a_id = f'gov.nc.stat.title.{title_id1}.html#{head_id.group("h_id")}ol1{ol_id} '
                                         else:
                                             a_id = f'gov.nc.stat.title.{title_id1}.html#{head_id.group("h_id")}'
 
                                     text = re.sub(fr'\s{re.escape(match)}',
-                                                  f' <cite class="octn"><a href="{a_id}" target="{target}">{match}</a></cite>',
+                                                  f' <cite class="octn"><a href="{a_id}" target="{target}">{match}</a'
+                                                  f'></cite>',
                                                   inside_text,
                                                   re.I)
                                     tag.append(text)
@@ -1223,12 +1402,11 @@ class NCParseHtml(ParserBase):
             soup_str = re.sub(rf'{tag}', rf'{cleansed_tag}', soup_str, re.I)
 
         print("validating")
-        with open(f"../../code-nc/transforms/nc/ocnc/r{self.release_number}/{self.html_file_name}", "w") as file:
+        with open(f"../../cic-code-nc-1/transforms/nc/ocnc/r{self.release_number}/{self.html_file_name}", "w") as file:
             file.write(soup_str)
 
     def create_case_note_nav(self):
         cap_alpha = None
-
         for case_tag in self.soup.find_all("p", class_='casenote'):
             if re.search(r'^[IVX]+\. ', case_tag.text.strip()):
                 if case_tag.find_next("p", class_='casenote') and cap_alpha == "I":
@@ -1322,12 +1500,14 @@ class NCParseHtml(ParserBase):
 
     def create_case_note_nav1(self):
         cap_alpha = None
+        num = None
         cap_roman = "I"
 
         for case_tag in self.soup.find_all({"p", "h4"}):
-
-            if case_tag.get("class") == "casenote" and case_tag.name == "p":
-                if re.search(rf'^{cap_roman}\. ', case_tag.text.strip()):
+            # if case_tag.get("class") == "casenote" and case_tag.name == "p":
+            if case_tag.name == "p":
+                if re.search(rf'^{cap_roman}\.', case_tag.text.strip()) \
+                        and case_tag.get("class") == "casenote":
                     nav_list = []
                     nav_link = self.soup.new_tag('a')
                     nav_link.append(case_tag.text)
@@ -1339,6 +1519,26 @@ class NCParseHtml(ParserBase):
                     case_tag["class"] = "casenote"
                     cap_alpha = 'A'
                     cap_roman = roman.toRoman(roman.fromRoman(cap_roman.upper()) + 1)
+                elif re.search(r'^[IVX]+\.', case_tag.text.strip()):
+                    if case_tag.get("class") == [self.class_regex['head4']]:
+
+                        case_tag.name = "h5"
+                        h5_rom_text = re.search(r'^(?P<h5_id>[IVX]+)\.', case_tag.text.strip()).group("h5_id")
+                        h5_rom_id = f"{case_tag.find_previous('h4').get('id')}-{h5_rom_text}"
+                        case_tag['id'] = h5_rom_id
+                    else:
+                        nav_list = []
+                        nav_link = self.soup.new_tag('a')
+                        nav_link.append(case_tag.text)
+                        case_id = re.search(r'^(?P<cid>[IVX]+)\.', case_tag.text.strip()).group("cid")
+
+                        rom_id = f"{case_tag.find_previous('h4').get('id')}-{case_id}"
+                        nav_link["href"] = f"#{case_tag.find_previous({'h4', 'h3'}).get('id')}-{case_id}"
+                        nav_list.append(nav_link)
+                        case_tag.contents = nav_list
+                        case_tag["class"] = "casenote"
+                        cap_alpha = 'A'
+                        cap_roman = roman.toRoman(roman.fromRoman(cap_roman.upper()) + 1)
 
                 elif cap_alpha:
                     if re.search(fr'^{cap_alpha}\.', case_tag.text.strip()):
@@ -1353,17 +1553,20 @@ class NCParseHtml(ParserBase):
                         case_tag.contents = nav_list
                         case_tag["class"] = "casenote"
                         cap_alpha = chr(ord(cap_alpha) + 1)
+                        num = 1
 
-                    elif re.search(r'^[0-9]+\.', case_tag.text.strip()):
+                    elif num and re.search(fr'^{num}\.', case_tag.text.strip()):
                         nav_list = []
                         nav_link = self.soup.new_tag('a')
                         nav_link.append(case_tag.text)
                         case_id = re.search(r'^(?P<cid>[0-9]+)\.', case_tag.text.strip()).group("cid")
+
                         digit_id = f"{alpha_id}-{case_id}"
                         nav_link["href"] = f"#{alpha_id}-{case_id}"
                         nav_list.append(nav_link)
                         case_tag.contents = nav_list
                         case_tag["class"] = "casenote"
+                        num += 1
 
             elif case_tag.name == "h4":
                 cap_roman = "I"
@@ -1404,7 +1607,16 @@ class NCParseHtml(ParserBase):
                         case_tag.wrap(digit_ul)
                         alpha_tag.append(digit_ul)
                     else:
+
                         digit_ul.append(case_tag)
+                else:
+                    if re.search(r'^II\.', case_tag.a.text.strip()):
+                        rom_ul = self.soup.new_tag("ul", **{"class": "leaders"})
+                        case_tag.wrap(rom_ul)
+                    else:
+                        rom_ul.append(case_tag)
+
+
 
             elif case_tag.name == "h4":
                 cap_roman = "I"
@@ -1421,8 +1633,8 @@ class NCParseHtml(ParserBase):
         print(start_time)
         self.create_page_soup()
         if re.search('constitution', self.html_file_name):
-            self.class_regex = {'head1': r'^Constitution of North Carolina|Constitution of the United States',
-                                'ul': r'^(Article|Preamble)', 'head2': '^ARTICLE I',
+            self.class_regex = {'head1': r'^Constitution of North Carolina|CONSTITUTION OF THE UNITED STATES',
+                                'ul': r'^(Article|Preamble)', 'head2': '^(ARTICLE|Article) I',
                                 'head4': '^CASE NOTES', 'ol_p': r'^\(\d\)', 'junk1': '^Annotations$',
                                 'head': '^Section added\.',
                                 'head3': r'^§ \d|^sec\.|^Section \d', 'nav': '^Subchapter I\.|^——————————'}
@@ -1449,7 +1661,6 @@ class NCParseHtml(ParserBase):
             self.wrap_div_tags()
 
         self.clean_html_and_add_cite()
-        self.write_soup_to_file()
+        # self.write_soup_to_file()
         print(f'finished {self.html_file_name}')
         print(datetime.now() - start_time)
-

@@ -144,13 +144,7 @@ class ARParseHtml(ParserBase):
         for key, value in tag_dict.items():
             ul = self.soup.new_tag("ul", Class="leaders")
             while True:
-
-
-
                 p_tag = self.soup.find('p', {"class": key})
-
-
-
                 if not p_tag or p_tag.has_attr('Class') and p_tag['Class'] == 'transformation':
                     break
                 p_tag.name = value
@@ -1406,9 +1400,6 @@ class ARParseHtml(ParserBase):
                         header['id'] = header_id.strip('#')
                 nav_tag.append(new_ul)
                 case_notes_nav.replace_with(nav_tag)
-
-
-
         print('created analysis tag')
 
 

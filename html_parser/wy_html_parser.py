@@ -1085,9 +1085,13 @@ class WYParseHtml(ParserBase):
 
         print("validating")
 
-        with open(f"../../cic-code-wy/transforms/wy/ocwy/r{self.release_number}/{self.html_file_name}", "w") as file:
-            file.write(soup_str.replace('& ','&amp; '))
+        with open(f"../../cic-code-wy-1/transforms/wy/ocwy/r{self.release_number}/{self.html_file_name}", "w") as file:
+            # file.write(soup_str.replace('& ','&amp; '))
 
+            soup_str = re.sub(r'&(?!amp;)', '&amp;', soup_str)
+            soup_str = re.sub('<br/>', '<br />', soup_str)
+            soup_str = re.sub(r'<span class.*?>\s*</span>', '', soup_str)
+            file.write(soup_str)
 
 
     def create_case_note_nav(self):
@@ -1177,7 +1181,7 @@ class WYParseHtml(ParserBase):
         self.create_page_soup()
         if re.search('constitution', self.html_file_name):
             self.class_regex = {'head1': r'^Constitution of the State of Wyoming|THE CONSTITUTION OF THE UNITED STATES OF AMERICA', 'ul': r'^(PREAMBLE|Preamble)','head2':'Article \d\.',
-                                  'head4': '^History\.', 'ol_p': r'^\(\d\)', 'junk1': '^Annotations$','head':'^Section added\.',
+                                  'head4': r'^History\.', 'ol_p': r'^\(\d\)', 'junk1': '^Annotations$','head':'^Section added\.',
                                   'head3': r'^§ \d|^sec\.|^Section \d',}
 
             self.generate_class_name()

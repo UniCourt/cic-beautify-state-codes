@@ -189,5 +189,5 @@ In subsequent months, we intend to add two more features:
 
       Child class name format : <state_key>_html_parser eg:co_html_parser.
       Mandatory functions in child :
-         Pre_process :
+         pre_process :
          convert_paragraph_to_alphabetical_ol_tags
