@@ -5,6 +5,7 @@
 import importlib
 import argparse
 import os
+from datetime import datetime
 
 
 class HtmlParseRunner:
@@ -22,6 +23,9 @@ if __name__ == '__main__':
         - set environment variables using parsed command line args
         - Call start parse method with state_key as arg 
     """
+    start_time = datetime.now()
+    print(start_time)
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--state_key", help="State of which parser should be run", required=True, type=str)
     parser.add_argument("--input_file_name", help="file which needs to be parsed",  type=str)
@@ -32,3 +36,5 @@ if __name__ == '__main__':
     os.environ.setdefault('release_number', args.release_number)
     os.environ.setdefault('release_date', args.release_date)
     HtmlParseRunner.start_parser(args.state_key)
+
+    print("finished at",datetime.now() - start_time)

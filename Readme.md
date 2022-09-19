@@ -1,4 +1,4 @@
-# cic-beautify-state-codes
+# cic-beautify-state-codes-framework
 
 Welcome to the Code Improvement Commission
 
@@ -8,15 +8,14 @@ This repository contains software that transforms official codes from ugly .rtf 
 
 Currently this code supports following states:
 
-1. ###Georgia (GA): 
+1. ###Alaska (AK): 
    
-   **Code repo:** https://github.com/UniCourt/cic-code-ga
+   **Code repo:** https://github.com/UniCourt/cic-code-ak
    
-   **Code pages:** https://unicourt.github.io/cic-code-ga
+   **Code pages:** https://unicourt.github.io/cic-code-ak
 
-   **Original RTF:** https://archive.org/download/gov.ga.ocga.2018
+   **Original RTF:** https://archive.org/download/gov.ak.code
 
-   
 
 2. ###Arkansas (AR):
    
@@ -27,32 +26,7 @@ Currently this code supports following states:
    **Original RTF:** https://archive.org/download/gov.ar.code
 
 
-3. ###Mississippi (MS):
-   
-   **Code repo:** https://github.com/UniCourt/cic-code-ms
-   
-   **Code pages:** https://unicourt.github.io/cic-code-ms
-   
-   **Original RTF:** https://archive.org/download/gov.ms.code.ann.2018
-
-
-4. ###Tennessee (TN):
-   
-   **Code repo:** https://github.com/UniCourt/cic-code-tn
-   
-   **Code pages:** https://unicourt.github.io/cic-code-tn
-   
-   **Original RTF:** https://archive.org/details/gov.tn.tca
-
-5. ###Kentucky (KY):
-   
-   **Code repo:** https://github.com/UniCourt/cic-code-ky
-   
-   **Code pages:** https://unicourt.github.io/cic-code-ky
-   
-   **Original RTF:** https://archive.org/details/gov.ky.code
-
-6. ###Colorado (CO):
+3. ###Colorado (CO):
    
    **Code repo:** https://github.com/UniCourt/cic-code-co
    
@@ -61,7 +35,16 @@ Currently this code supports following states:
    **Original RTF:** https://archive.org/download/gov.co.crs.bulk
 
 
-7. ###Idaho (ID):
+4. ###Georgia (GA):
+   
+   **Code repo:** https://github.com/UniCourt/cic-code-ga
+   
+   **Code pages:** https://unicourt.github.io/cic-code-ga
+   
+   **Original RTF:** https://archive.org/download/gov.ga.ocga.2018
+
+
+5. ###Idaho (ID):
    
    **Code repo:** https://github.com/UniCourt/cic-code-id
    
@@ -70,24 +53,70 @@ Currently this code supports following states:
    **Original files can be found here:** https://archive.org/details/govlaw?and%5B%5D=subject%3A%22idaho.gov%22+AND+subject%3A%222020+Code%22&sin=&sort=titleSorter
 
 
-8. ###Virginia (VA):
+6. ###Kentucky (KY):
    
-   **Code repo:** https://github.com/UniCourt/cic-code-va
+   **Code repo:** https://github.com/UniCourt/cic-code-ky
    
-   **Code pages:** https://unicourt.github.io/cic-code-va
+   **Code pages:** https://unicourt.github.io/cic-code-ky
    
-   **Original RTF:**  https://archive.org/download/gov.va.code/
+   **Original RTF:** https://archive.org/details/gov.ky.code
 
 
-9. ###Vermont (VT):
+7. ###Mississippi (MS):
    
-   **Code repo:** https://github.com/UniCourt/cic-code-vt
+   **Code repo:** https://github.com/UniCourt/cic-code-ms
    
-   **Code pages:** https://unicourt.github.io/cic-code-vt
+   **Code pages:** https://unicourt.github.io/cic-code-ms
    
-   **Original RTF:** https://archive.org/download/gov.vt.code
+   **Original RTF:** https://archive.org/download/gov.ms.code.ann.2018
 
-10. ###Wyoming (WY):
+
+8. ###North Carolina (NC):
+   
+   **Code repo:** https://github.com/UniCourt/cic-code-nc
+   
+   **Code pages:** https://unicourt.github.io/cic-code-nc
+   
+   **Original RTF:**  https://archive.org/download/gov.nc.code
+
+
+9.  ###North Dakota (ND):
+   
+      **Code repo:** https://github.com/UniCourt/cic-code-nd
+      
+      **Code pages:** https://unicourt.github.io/cic-code-nd
+      
+      **Original RTF:**  https://archive.org/details/gov.nd.code
+
+
+10. ###Tennessee (TN):
+   
+      **Code repo:** https://github.com/UniCourt/cic-code-tn
+      
+      **Code pages:** https://unicourt.github.io/cic-code-tn
+      
+      **Original RTF:** https://archive.org/details/gov.tn.tca
+
+
+11. ###Vermont (VT):
+   
+      **Code repo:** https://github.com/UniCourt/cic-code-vt
+      
+      **Code pages:** https://unicourt.github.io/cic-code-vt
+      
+      **Original RTF:** https://archive.org/download/gov.vt.code
+
+
+12. ###Virginia (VA):
+   
+      **Code repo:** https://github.com/UniCourt/cic-code-va
+      
+      **Code pages:** https://unicourt.github.io/cic-code-va
+      
+      **Original RTF:**  https://archive.org/download/gov.va.code/
+
+
+13. ###Wyoming (WY):
    
       **Code repo:** https://github.com/UniCourt/cic-code-wy
       
@@ -98,8 +127,10 @@ Currently this code supports following states:
 
 In subsequent months, we intend to add two more features:
 
-1. Extend the code to handle the official codes Colorado and Idaho.
-2. Add a "redline" capability to show diffs. 
+1. Extend the code to handle the official codes Rhode Island and other states.
+2. Add a "redline" capability to show diffs.
+3. Adding citation to external links.
+
 
 **REQUIREMENTS AND INSTALLATION**
 
@@ -127,10 +158,9 @@ In subsequent months, we intend to add two more features:
                     │   │   file012.py
                     |
                     └───transforms
-                    │   └───ga
-                    │       └───ocga
-                    │              └───raw
-                    │                     title_01.html
+                    │   └───co
+                    │       └───occo
+                    │              └───title_01.html 
     
 
 5. Python3.8 should be installed in development environment to run this project  
@@ -139,12 +169,25 @@ In subsequent months, we intend to add two more features:
 
 **Usage:** python html_parser/html_parse_runner.py
 
-        [--state_key (GA)]
-        
-        [--release_label (Release-75)]
-        
-        [--release_date (DD-MM-YYYY)]
-        
-        [--input_file_name (gov.ga.ocga.title.01.html) This is an optional argument,
-        
-        if this argument is not passed all the files for provided release label will be parsed]
+         [--state_key (CO)]
+
+         [--path     This argument can be in three different types,
+                     To run single file : (/co/occo/r80/gov.co.code.title.01.html) 
+                     To run all files from particular release : (/co/occo/r80/) 
+                     To run all the release of particular state : (/co/occo/) ]
+    
+         [--run_after_release (83) This is an optional argument,this helps to run all releases after the mentioned release]
+
+
+**Additional required files:**
+      
+      Release_dates.txt :
+		             This is a file where all states release dates are stored in the format <state_key>_r<release_number>< ><release_date> 
+                     eg: [CO_r71 2020.08.01]
+
+**Implementation of Child class:**
+
+      Child class name format : <state_key>_html_parser eg:co_html_parser.
+      Mandatory functions in child :
+         pre_process :
+         convert_paragraph_to_alphabetical_ol_tags

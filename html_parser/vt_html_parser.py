@@ -218,7 +218,7 @@ class VTParseHtml(ParserBase):
 
                 elif header_tag.get("class") == [self.class_regex["head3"]]:
 
-                    if re.search(r'^§\s\d+\.\[.+\]', header_tag.text.strip()):
+                    if re.search(r'^§\s\d+\.\[.+]', header_tag.text.strip()):
                         header_tag.name = "h3"
                         sec_id = re.sub(r'[\W\s\d]','',header_tag.text.strip()).lower()
                         header_tag[
@@ -742,8 +742,7 @@ class VTParseHtml(ParserBase):
             if p_tag.i:
                 p_tag.i.unwrap()
 
-            if re.search(r'^4\.1 Term of permit\.', current_tag_text):
-                print()
+
 
             if re.search(r'^\([ivx]+\)', current_tag_text) and main_sec_alpha not in ['i','v','x'] :
 
@@ -1063,7 +1062,6 @@ class VTParseHtml(ParserBase):
                          r"|\d+\sU\.S\.C\.\s§\s\d+\(*[a-z]\)*"
                          r"|\d+,\sNo\.\s\d+",tag.text.strip()):
                 text = str(tag)
-
 
                 for match in set(x[0] for x in re.findall(r'(\d+\sV\.S\.A\.\s§+\s\d+(-\d+)*([a-z]+)*(\([a-z]\))*(\(\d+\))*(\([A-Z]\))*'
                                                           r'|\d+\sU\.S\.C\.\s§\s\d+\(*[a-z]\)*'
