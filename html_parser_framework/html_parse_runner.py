@@ -12,6 +12,8 @@ import multiprocessing
 import re
 import traceback
 from datetime import datetime
+
+import roman
 from loguru import logger
 from concurrent.futures import ProcessPoolExecutor
 import os
@@ -105,13 +107,15 @@ def add_cite_to_file(soup_obj, meta_tag, state_key, release_number, input_file_n
 
         for match in set(x[0] for x in getattr(cite_parser_obj, "cite_pattern").findall(tag.text.strip())):
 
-            inside_text = re.sub(r'<p\sclass="\w\d+">|</p>|<b>|</b>|<p>|<p.+>|^<li id="[a-z.A-Z\d-]+">|</li>$', '', text, re.DOTALL)
-
+            inside_text = re.sub(r'<p\sclass="\w\d+">|</p>|<b>|</b>|<p>|<p.+>|^<li id="[a-z.A-Z\d-]+">|</li>$', '',
+                                 text, re.DOTALL)
             id_reg = getattr(cite_parser_obj, "cite_pattern").search(match.strip())
 
-            if re.search(r'^(?P<name>[a-zA-Z.]+\.)(?P<tid>(\d+(\.\w)*)|(\d+\w*))\.html$', input_file_name.strip()):
-                file_name_pattern = re.search(r'^(?P<name>[a-zA-Z.]+\.)(?P<tid>(\d+(\.\w)*)|(\d+\w*))\.html$',
-                                              input_file_name.strip())
+            if re.search(r'^(?P<name>[a-zA-Z.]+\.)(?P<tid>(\d+(\.\w)*)|(\d+\w*)|(\d+[A-Z]?\.\d+[A-Z]?))\.html$',
+                         input_file_name.strip()):
+                file_name_pattern = re.search(
+                    r'^(?P<name>[a-zA-Z.]+\.)(?P<tid>(\d+(\.\w)*)|(\d+\w*)|(\d+[A-Z]?\.\d+[A-Z]?))\.html$',
+                    input_file_name.strip())
                 title_id = file_name_pattern.group("tid").zfill(2)
                 file_name = file_name_pattern.group("name")
             else:
@@ -125,6 +129,15 @@ def add_cite_to_file(soup_obj, meta_tag, state_key, release_number, input_file_n
                     cite_title_id = f'0{id_reg.group("title").strip()}'
                 else:
                     cite_title_id = f'00{id_reg.group("title").strip()}'
+            elif state_key == 'VA':
+                if re.search(r'^\d\.\d[A-Z]?', id_reg.group("title").strip()):
+                    title_reg = re.search(r'^(?P<id1>\d)\.(?P<id2>\d[A-Z]?)', id_reg.group("title").strip())
+                    if id_reg.group("title").strip() in ['2.1', '2.2', '3.1', '3.2', '4.1', '5.1', '6.1', '7.1', '6.2']:
+                        cite_title_id = f'0{title_reg.group("id1")}.{title_reg.group("id2")}'
+                    else:
+                        cite_title_id = f'0{title_reg.group("id1")}.0{title_reg.group("id2")}'
+                else:
+                    cite_title_id = id_reg.group("title").strip().zfill(2)
             else:
                 cite_title_id = id_reg.group("title").strip().zfill(2)
 
@@ -136,13 +149,16 @@ def add_cite_to_file(soup_obj, meta_tag, state_key, release_number, input_file_n
 
             if cite_pattern in id_dictionary:
                 cite_id = id_dictionary[cite_pattern]
+                if state_key == "KY":
+                    t_id = re.search(r'^t0?(?P<tid>[IVXL]+)', cite_id).group("tid")
+                    cite_title_id = roman.fromRoman(t_id.upper())
+                    cite_title_id = f'{cite_title_id:02}'
                 if cite_title_id == title_id:
                     target = "_self"
                     a_id = f'#{cite_id}'
                 else:
                     target = "_blank"
                     a_id = f'{file_name}{cite_title_id}.html#{cite_id}'
-
                 tag.clear()
                 text = re.sub(fr'\s{re.escape(match)}',
                               f' <cite class="oc{state_key.lower()}"><a href="{a_id}" target="{target}">{match}</a></cite>',

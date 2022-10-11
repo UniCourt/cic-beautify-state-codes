@@ -3,6 +3,8 @@ import importlib
 import os
 import re
 from datetime import datetime
+
+import roman
 from bs4 import BeautifulSoup, Doctype
 from regex_pattern import RegexPatterns
 from loguru import logger
@@ -213,7 +215,6 @@ class ParseHtml:
 
         """
 
-        prev_class_name = None
         text = re.search(r'^\S+', header_tag.text.strip()).group().lower()
 
         if text == self.h2_order[0]:
@@ -235,40 +236,39 @@ class ParseHtml:
                 self.h2_rep_id.append(header_tag_id)
 
         elif text == self.h2_order[1]:
-            self.set_id_for_h2_tags(header_tag, text, prev="oneh2", cur="twoh2")
+            self.set_id_for_h2_tags(header_tag, text, prev={"gen", "oneh2"}, cur="twoh2")
 
         elif text == self.h2_order[2]:
-            self.set_id_for_h2_tags(header_tag, text, prev={"twoh2", "oneh2"}, cur="threeh2")
+            self.set_id_for_h2_tags(header_tag, text, prev={"twoh2", "oneh2", "gen"}, cur="threeh2")
 
         elif text == self.h2_order[3]:
-            self.set_id_for_h2_tags(header_tag, text, prev={"oneh2", "twoh2", "threeh2"}, cur="fourh2")
+            self.set_id_for_h2_tags(header_tag, text, prev={"oneh2", "twoh2", "threeh2", "gen"}, cur="fourh2")
 
-        else:
-            if self.h2_pattern_text:
-                for list_pattern in self.h2_pattern_text:
-                    h2_pattern = re.compile(list_pattern)
-                    if h2_tag := h2_pattern.search(header_tag.text.strip()):
-                        header_tag.name = "h2"
+        elif self.h2_pattern_text:
+            for list_pattern in self.h2_pattern_text:
+                h2_pattern = re.compile(list_pattern)
+                if h2_tag := h2_pattern.search(header_tag.text.strip()):
+                    header_tag.name = "h2"
+                    if header_tag.find_previous("h2"):
+                        prev_header_tag = header_tag.find_previous(
+                            lambda tag: tag.name == 'h2' and not h2_pattern.search(tag.text.strip()) and
+                                        not re.search(rf'{h2_tag.group("tag").lower()}', tag.get("id").strip()))
 
-                        if header_tag.find_previous("h2"):
+                        if re.search(r'(1|A|I)\.', header_tag.text.strip()):
                             prev_header_tag = header_tag.find_previous(
                                 lambda tag: tag.name == 'h2' and not h2_pattern.search(tag.text.strip()) and
                                             not re.search(rf'{h2_tag.group("tag")}', tag.get("id").strip()))
-
-                            # if re.search(r'(1|A|I)\.', header_tag.text.strip()):
-                            #     prev_header_tag = header_tag.find_previous(
-                            #         lambda tag: tag.name == 'h2' and not h2_pattern.search(tag.text.strip()) and
-                            #                     not re.search(rf'{h2_tag.group("tag")}', tag.get("id").strip()))
-                            #
-                            # else:
-                            #     prev_header_tag = header_tag.find_previous("h2", class_=f'{prev_class_name}')
-
+                            self.prev_class_name = prev_header_tag.get("class")
                         else:
-                            prev_header_tag = self.soup.find("h1")
-                            prev_class_name = prev_header_tag.get("class")
+                            prev_header_tag = header_tag.find_previous("h2", class_=self.prev_class_name)
 
-                        header_tag[
-                            "id"] = f'{prev_header_tag.get("id")}{h2_tag.group("tag").lower()}{h2_tag.group("id").zfill(2)}'
+                    else:
+                        prev_header_tag = self.soup.find("h1")
+                        self.prev_class_name = prev_header_tag.get("class")
+
+                    header_tag[
+                        "id"] = f'{prev_header_tag.get("id")}{h2_tag.group("tag").lower()}{h2_tag.group("id").zfill(2)}'
+                    header_tag["class"] = "gen"
 
         if self.h2_rename_pattern:
             for list_pattern in self.h2_rename_pattern:
@@ -287,18 +287,20 @@ class ParseHtml:
             if self.format_id(sec_id, header_tag):
                 sec_id = self.format_id(sec_id, header_tag)
             header_tag.name = "h3"
-            if header_tag.find_previous({"h2", "h3"}, class_={"oneh2", "twoh2", "threeh2","fourh2"}):
-                header_tag_id = f'{header_tag.find_previous({"h2", "h3"}, class_={"oneh2", "twoh2", "threeh2","fourh2"}).get("id")}s{sec_id.zfill(2)}'
+            if header_tag.find_previous({"h2", "h3"}, class_={"oneh2", "twoh2", "threeh2", "fourh2", "gen"}):
+                header_tag_id = f'{header_tag.find_previous({"h2", "h3"}, class_={"oneh2", "twoh2", "threeh2", "fourh2", "gen"}).get("id")}s{sec_id.zfill(2)}'
                 if header_tag_id in h3_id_list:
-                    header_tag["id"] = f'{header_tag_id}.{self.h3_count:02}'
+                    header_tag_id = f'{header_tag_id}.{self.h3_count:02}'
+                    header_tag["id"] = f'{header_tag_id}'
                     self.h3_count += 1
                 else:
                     header_tag["id"] = f'{header_tag_id}'
                     self.h3_count = 1
             else:
-                header_tag_id = f'{header_tag.find_previous("h1").get("id")}s{sec_id}'
+                header_tag_id = f'{header_tag.find_previous("h1").get("id")}c{sec_id}'
                 if header_tag_id in h3_id_list:
-                    header_tag["id"] = f'{header_tag_id}.{self.h3_count:02}'
+                    header_tag_id = f'{header_tag_id}.{self.h3_count:02}'
+                    header_tag["id"] = f'{header_tag_id}'
                     self.h3_count += 1
                 else:
                     header_tag["id"] = f'{header_tag_id}'
@@ -311,8 +313,8 @@ class ParseHtml:
             if sec_id := getattr(self.parser_obj, "section_pattern_1").search(header_tag.text.strip()):
                 sec_id = re.sub(r'\s+|\.$', '', sec_id.group("id"))
                 header_tag.name = "h3"
-                if header_tag.find_previous({"h2", "h3"}, class_={"oneh2", "twoh2", "threeh2","fourh2"}):
-                    header_tag_id = f'{header_tag.find_previous({"h2", "h3"}, class_={"oneh2", "twoh2", "threeh2","fourh2"}).get("id")}s{sec_id.zfill(2)}'
+                if header_tag.find_previous({"h2", "h3"}, class_={"oneh2", "twoh2", "threeh2", "fourh2", "gen"}):
+                    header_tag_id = f'{header_tag.find_previous({"h2", "h3"}, class_={"oneh2", "twoh2", "threeh2", "fourh2", "gen"}).get("id")}s{sec_id.zfill(2)}'
                     if header_tag_id in h3_id_list:
                         header_tag["id"] = f'{header_tag_id}.{self.h3_count:02}'
                         self.h3_count += 1
@@ -337,8 +339,8 @@ class ParseHtml:
                     if h3_tag := h3_pattern.search(header_tag.text.strip()):
                         header_tag.name = "h3"
                         sec_id = h3_tag.group("id")
-                        if header_tag.find_previous("h2", class_={"oneh2", "twoh2", "threeh2","fourh2"}):
-                            header_tag_id = f'{header_tag.find_previous("h2", class_={"oneh2", "twoh2", "threeh2","fourh2"}).get("id")}s{sec_id.zfill(2)}'
+                        if header_tag.find_previous("h2", class_={"oneh2", "twoh2", "threeh2", "fourh2"}):
+                            header_tag_id = f'{header_tag.find_previous("h2", class_={"oneh2", "twoh2", "threeh2", "fourh2"}).get("id")}s{sec_id.zfill(2)}'
                             if header_tag_id in h3_id_list:
                                 header_tag["id"] = f'{header_tag_id}.{self.h3_count:02}'
                                 self.h3_count += 1
@@ -356,7 +358,7 @@ class ParseHtml:
 
                         h3_id_list.append(header_tag_id)
 
-    def replace_h4_tag_titles(self, header_tag, h4_count):
+    def replace_h4_tag_titles(self, header_tag, h4_count, id):
 
         """
             - if the text of the tag matches to the text in the list h4.head,
@@ -364,7 +366,10 @@ class ParseHtml:
         """
 
         header_tag.name = "h4"
-        header4_tag_text = re.sub(r'[\W.]+', '', header_tag.text.strip()).lower()
+        if id:
+            header4_tag_text = id
+        else:
+            header4_tag_text = re.sub(r'[\W.]+', '', header_tag.text.strip()).lower()
         h4_tag_id = f'{header_tag.find_previous({"h3", "h2", "h1"}).get("id")}-{header4_tag_text}'
 
         if h4_tag_id in self.h4_cur_id_list:
@@ -380,11 +385,10 @@ class ParseHtml:
         """
             based on the class of the tag ,the tag name is updated
         """
-
         self.h4_count = 1
         h3_id_list: list = []
         self.ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
-
+        self.get_h2_order()
         for header_tag in self.soup.find_all("p"):
             if header_tag.get("class") == [self.tag_type_dict["head1"]]:
                 self.replace_h1_tags_titles(header_tag)
@@ -394,18 +398,9 @@ class ParseHtml:
             elif header_tag.get("class") == [self.tag_type_dict["head2"]]:
                 self.replace_h2_tags_titles(header_tag)
                 self.ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
-                if self.h2_text and header_tag.text.strip() in self.h2_text:
-                    header_tag.name = "h2"
-                    p_tag_text = re.sub(r'\W+', '', header_tag.text.strip()).lower()
-                    header_tag_id = f'{self.soup.find("h1").get("id")}-{p_tag_text}'
-                    if header_tag_id in self.h2_rep_id:
-                        header_tag["id"] = f'{header_tag_id}.{self.h2_id_count:02}'
-                        self.h2_id_count += 1
-                    else:
-                        header_tag["id"] = f'{header_tag_id}'
-                        self.h2_id_count = 1
-                    header_tag["class"] = "oneh2"
-                    self.h2_rep_id.append(header_tag['id'])
+                header_tag_text = re.sub(r'\W+', '', header_tag.text.strip())
+                if self.h2_text and header_tag_text in self.h2_text:
+                    self.h2_set_id(header_tag)
                 else:
                     self.replace_h3_titles(header_tag, h3_id_list)
 
@@ -415,11 +410,11 @@ class ParseHtml:
 
             elif header_tag.get("class") == [self.tag_type_dict["head4"]]:
                 if header_tag.text.strip() in self.h4_head:
-                    self.replace_h4_tag_titles(header_tag, self.h4_count)
+                    self.replace_h4_tag_titles(header_tag, self.h4_count, None)
                 self.ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
 
             elif header_tag.get("class") == [self.tag_type_dict["ul"]]:
-                if not re.search(r'^(Section\.?|Chapter|Sec\.)$', header_tag.text.strip()):
+                if not re.search(r'^(Section\.?|Chapter|Sec\.|Chap.)$', header_tag.text.strip()):
                     header_tag.name = "li"
                     header_tag.wrap(self.ul_tag)
 
@@ -440,10 +435,12 @@ class ParseHtml:
         li_list.append(li_link)
         list_item.contents = li_list
         if li_link_id in self.list_ids:
-            list_item['id'] = f'{li_link_id}.{self.list_id_count:02}-{cnav}'
-            list_item.a['href'] = f'#{li_link_id}.{self.list_id_count:02}'
+            li_link_id = f"{li_link_id}.{self.list_id_count:02}"
+            list_item['id'] = f'{li_link_id}-{cnav}'
+            list_item.a['href'] = f'#{li_link_id}'
             self.list_id_count += 1
         else:
+            li_link_id = f"{prev_id}{sub_tag}{chap_num.zfill(2)}"
             list_item['id'] = f'{li_link_id}-{cnav}'
             list_item.a['href'] = f'#{li_link_id}'
             self.list_id_count = 1
@@ -458,10 +455,13 @@ class ParseHtml:
 
         """
         pnav_count = 1
+
         for li_tag in self.soup.findAll():
-            if li_tag.name == "li" and len(li_tag.text.strip()) > 0:
+            if li_tag.name == "li" and len(li_tag.text.strip()) > 0 and \
+                    li_tag.get('class') and li_tag.get('class')[0] == self.tag_type_dict['ul']:
                 text = re.search(r'^\S+', li_tag.text.strip()).group().lower()
                 pattern = f'h2_{text}_pattern'
+                li_tag_text = re.sub(r'\W+', '', li_tag.text.strip())
                 if text == self.h2_order[0]:
                     instance = getattr(self.parser_obj, pattern)
                     if instance.search(li_tag.text.strip()):
@@ -485,18 +485,18 @@ class ParseHtml:
                     if instance.search(li_tag.text.strip()):
                         chap_num = instance.search(li_tag.text.strip()).group('id')
                         self.p_nav_count += 1
-                        if li_tag.find_previous("h2", class_="twoh2") or li_tag.find_previous("h3", class_="twoh2"):
+                        if li_tag.find_previous("h2", class_={"twoh2", "gen"}) or li_tag.find_previous("h3",
+                                                                                                       class_="twoh2"):
                             self.set_chapter_section_id(li_tag, chap_num,
                                                         sub_tag=f"{text[0]}",
                                                         prev_id=li_tag.find_previous({"h2", "h1"}).get("id"),
                                                         cnav=f'{text[0]}nav{self.p_nav_count:02}')
-
                 elif text == self.h2_order[3]:
                     instance = getattr(self.parser_obj, pattern)
                     if instance.search(li_tag.text.strip()):
                         chap_num = instance.search(li_tag.text.strip()).group('id')
                         self.s_nav_count += 1
-                        if li_tag.find_previous("h2", class_="threeh2"):
+                        if li_tag.find_previous("h2", class_={"threeh2", "gen"}):
                             self.set_chapter_section_id(li_tag, chap_num,
                                                         sub_tag=f"{text[0]}",
                                                         prev_id=li_tag.find_previous({"h2", "h1"}).get("id"),
@@ -507,8 +507,9 @@ class ParseHtml:
                     sec_num = re.sub(r'\s+|\.$', '', sec_num)
                     if self.format_id(sec_num, li_tag):
                         sec_num = self.format_id(sec_num, li_tag)
-                    if li_tag.find_previous(class_={"oneh2", "twoh2", "threeh2","fourh2"}):
-                        prev_id = li_tag.find_previous(class_={"navhead1", "navhead", "oneh2", "twoh2", "threeh2","fourh2"}).get(
+                    if li_tag.find_previous(class_={"gen", "oneh2", "twoh2", "threeh2", "fourh2"}):
+                        prev_id = li_tag.find_previous(
+                            class_={"navhead1", "navhead", "gen", "oneh2", "twoh2", "threeh2", "fourh2"}).get(
                             "id")
                         prev_p_tag = li_tag.find_previous("p")
                         if prev_p_tag and re.search(r'^(Section\.?|Chapter|Sec\.)$', prev_p_tag.text.strip()):
@@ -523,41 +524,44 @@ class ParseHtml:
                     cnav = f'snav{self.s_nav_count:02}'
                     self.set_chapter_section_id(li_tag, sec_num, sub_tag, prev_id, cnav)
 
-
-                elif self.h2_text and li_tag.text.strip() in self.h2_text:
+                elif self.h2_text and li_tag_text in self.h2_text:
                     chap_num = re.sub(r'\W+', '', li_tag.text.strip()).lower()
                     if li_tag.find_previous("li") and li_tag.find_previous("li").get("id"):
                         self.chp_nav_count = int(
-                            re.search(r'nav(?P<ncount>\d+)', li_tag.find_previous("li").get("id").strip()).group(
+                            re.search(r'-(?P<ntag>\w+)nav(?P<ncount>\d+)',
+                                      li_tag.find_previous("li").get("id").strip()).group(
                                 "ncount")) + 1
+                        ntag = f"{re.search(r'-(?P<ntag>[a-z]+)nav(?P<ncount>[0-9]+)', li_tag.find_previous('li').get('id').strip()).group('ntag')}"
                     else:
                         self.chp_nav_count += 1
+                        ntag = "c"
                     self.set_chapter_section_id(li_tag, chap_num,
                                                 sub_tag="-",
-                                                prev_id=li_tag.find_previous("h1").get("id"),
-                                                cnav=f'cnav{self.chp_nav_count:02}')
-                else:
-                    if self.h2_pattern_text:
-                        for list_pattern in self.h2_pattern_text:
-                            h2_pattern = re.compile(list_pattern)
-                            if h2_tag := h2_pattern.search(li_tag.text.strip()):
-                                self.p_nav_count += 1
-                                self.set_chapter_section_id(li_tag, h2_tag.group("id"),
-                                                            sub_tag=h2_tag.group("tag"),
-                                                            prev_id=li_tag.find_previous({"h2", "h1"}).get("id"),
-                                                            cnav=f'{h2_tag.group("tag")}nav{self.p_nav_count:02}')
-                    if self.h3_pattern_text:
-                        for list_pattern in self.h3_pattern_text:
-                            h3_pattern = re.compile(list_pattern)
-                            if h3_tag := h3_pattern.search(li_tag.text.strip()):
-                                self.a_nav_count += 1
-                                self.set_chapter_section_id(li_tag, h3_tag.group("id"),
-                                                            sub_tag='s',
-                                                            prev_id=li_tag.find_previous(
-                                                                class_={"navhead1", "navhead", "oneh2", "twoh2",
-                                                                        "threeh2"}).get(
-                                                                "id"),
-                                                            cnav=f'cnav{self.a_nav_count:02}')
+                                                prev_id=li_tag.find_previous(
+                                                    class_={"title", "oneh2", "twoh2", "threeh2", "fourh2"}).get("id"),
+                                                cnav=f'{ntag}nav{self.chp_nav_count:02}')
+
+                elif self.h2_pattern_text:
+                    for list_pattern in self.h2_pattern_text:
+                        h2_pattern = re.compile(list_pattern)
+                        if h2_tag := h2_pattern.search(li_tag.text.strip()):
+                            self.p_nav_count += 1
+                            self.set_chapter_section_id(li_tag, h2_tag.group("id"),
+                                                        sub_tag=h2_tag.group("tag").lower(),
+                                                        prev_id=li_tag.find_previous({"h2", "h1"}).get("id"),
+                                                        cnav=f'{h2_tag.group("tag")}nav{self.p_nav_count:02}')
+                elif self.h3_pattern_text:
+                    for list_pattern in self.h3_pattern_text:
+                        h3_pattern = re.compile(list_pattern)
+                        if h3_tag := h3_pattern.search(li_tag.text.strip()):
+                            self.a_nav_count += 1
+                            self.set_chapter_section_id(li_tag, h3_tag.group("id"),
+                                                        sub_tag='s',
+                                                        prev_id=li_tag.find_previous(
+                                                            class_={"navhead1", "navhead", "oneh2", "twoh2",
+                                                                    "threeh2"}).get(
+                                                            "id"),
+                                                        cnav=f'cnav{self.a_nav_count:02}')
 
             if self.h2_rename_pattern and li_tag.name == "li" and li_tag.a:
                 for list_tag in self.h2_rename_pattern:
@@ -690,12 +694,14 @@ class ParseHtml:
 
                 """
 
+        digit_tag, s_alpha_ul, digit_id, s_alpha_tag, s_rom_ul, s_alpha_id = None, None, None, None, None, None
         rom_ul = self.soup.new_tag("ul", **{"class": "leaders"})
         alpha_ul = self.soup.new_tag("ul", **{"class": "leaders"})
         digit_ul = self.soup.new_tag("ul", **{"class": "leaders"})
 
         cap_alpha = 'A'
-        cap_roman = "I"
+        s_roman = "i"
+        s_alpha = 'a'
         case_count = 1
         case_tag_id = None
         a_tag_id = None
@@ -752,17 +758,20 @@ class ParseHtml:
                 cap_alpha = chr(ord(cap_alpha) + 1)
                 a_tag_id = alpha_id
 
-            elif re.search(r'^d+\.', case_tag.text.strip()):
+            elif re.search(r'^\d+\.', case_tag.text.strip()):
                 digit_tag = case_tag
+                s_alpha = 'a'
                 if re.search(r'^1\.', case_tag.text.strip()):
                     digit_ul = self.soup.new_tag("ul", **{"class": "leaders"})
                     case_tag.wrap(digit_ul)
+                    alpha_tag.append(digit_ul)
                     if alpha_tag:
                         alpha_tag.append(digit_ul)
                 else:
                     digit_ul.append(case_tag)
 
                 digit_num = re.search(r'^(?P<nid>\d+)\.', case_tag.text.strip()).group("nid")
+                digit_id = f"{alpha_id}-{digit_num}"
                 a_tag_id = f"{alpha_id}-{digit_num}"
 
             elif re.search(r'^—\w+', case_tag.text.strip()):
@@ -790,9 +799,34 @@ class ParseHtml:
                 case_tag_id_list.append(case_tag_id)
                 a_tag_id = case_tag_id
 
-            else:
+            elif re.search(rf'^{s_alpha}\.', case_tag.text.strip()):
+                s_alpha_tag = case_tag
+                s_roman = "i"
+                if re.search(r'^a\.', case_tag.text.strip()):
+                    s_alpha_ul = self.soup.new_tag("ul", **{"class": "leaders"})
+                    case_tag.wrap(s_alpha_ul)
+                    digit_tag.append(s_alpha_ul)
+                else:
+                    s_alpha_ul.append(case_tag)
 
-                if re.search(r'^ANNOTATIONS$', case_tag.find_previous("h4").text.strip(), re.I):
+                s_alpha_id = f"{digit_id}-{s_alpha}"
+                a_tag_id = f"{digit_id}-{s_alpha}"
+                s_alpha = chr(ord(s_alpha) + 1)
+
+            elif re.search(rf'^{s_roman}\.', case_tag.text.strip()):
+                s_rom_tag = case_tag
+                if re.search(r'^i\.', case_tag.text.strip()):
+                    s_rom_ul = self.soup.new_tag("ul", **{"class": "leaders"})
+                    case_tag.wrap(s_rom_ul)
+                    s_alpha_tag.append(s_rom_ul)
+                else:
+                    s_rom_ul.append(case_tag)
+
+                a_tag_id = f"{s_alpha_id}-{s_roman}"
+                s_roman = roman.toRoman(roman.fromRoman(s_roman.upper()) + 1).lower()
+            else:
+                if case_tag.find_previous("h4") and \
+                        re.search(r'^ANNOTATIONS$', case_tag.find_previous("h4").text.strip(), re.I):
                     case_head_tag = case_tag
                     case_tag_text = re.sub(r'[\W\s]+', '', case_tag.text.strip()).lower()
 
@@ -1049,60 +1083,135 @@ class ParseHtml:
         note_id = None
         note_inner_tag = None
         note_inr_id = None
+        inner_tag_id = None
+        doubledash_inner_tag_id = None
+        inner_tag = None
+        doubledash_inner_tag = None
+        subsection_tag = None
+        doubledash_inner_ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
         inner_ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
         ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
         note_inner_ul = self.soup.new_tag("ul", **{"class": "leaders"})
         note_inner1_ul = self.soup.new_tag("ul", **{"class": "leaders"})
+        tripledash_inner_ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
+        new_ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
+        rom_ul = self.soup.new_tag("ul", **{"class": "leaders"})
         note_tag_id: list = []
         count = 1
         inr_count = 1
 
         for note_tag in self.soup.find_all("li", class_="note"):
-            if re.search(r'^\d+\.\s*—\s*\w+', note_tag.text.strip()):
+            if re.search(r'^—?\d+\.?\s*—\s*(\w+|“)', note_tag.text.strip()):
                 inner_tag = note_tag
                 inner_tag_text = re.sub(r'[\W\s]+', '', note_tag.text.strip()).lower()
-                case_tag_id = f'{case_head_id}-{inner_tag_text}'
+                inner_tag_id = f'{case_head_id}-{inner_tag_text}'
 
-                if not re.search(r'^\d+\.\s*—\s*\w+', note_tag.find_previous("li").text.strip()):
+                if not re.search(r'^—?\d+\.?\s*—\s*(\w+|“)', note_tag.find_previous("li").text.strip()):
                     inner_ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
                     note_tag.wrap(inner_ul_tag)
                     case_head_tag.append(inner_ul_tag)
                 else:
                     inner_ul_tag.append(note_tag)
 
-            elif re.search(r'^\d+\.\s*— —\w+', note_tag.text.strip()):
+                if inner_tag_id in note_tag_id:
+                    inner_tag_id = f'{inner_tag_id}.{inr_count:02}'
+                    inr_count += 1
+                else:
+                    inner_tag_id = f'{inner_tag_id}'
+                    inr_count = 1
+
+                case_tag_id = f'{inner_tag_id}'
+                note_tag_id.append(case_tag_id)
+
+            elif re.search(r'^—?\d+\.?\s*—\s*—\s*(\w+|“)', note_tag.text.strip()):
+                doubledash_inner_tag = note_tag
+                doubledash_inner_tag_text = re.sub(r'[\W\s]+', '', note_tag.text.strip()).lower()
+                doubledash_inner_tag_id = f'{inner_tag_id}-{doubledash_inner_tag_text}'
+
+                if doubledash_inner_tag_id in note_tag_id:
+                    doubledash_inner_tag_id = f'{doubledash_inner_tag_id}.{inr_count:02}'
+                    inr_count += 1
+                else:
+                    doubledash_inner_tag_id = f'{doubledash_inner_tag_id}'
+                    inr_count = 1
+
+                case_tag_id = f'{doubledash_inner_tag_id}'
+                note_tag_id.append(case_tag_id)
+
+                if not re.search(r'^—?\d+\.?\s*—\s*—\s*(\w+|“)', note_tag.find_previous("li").text.strip()):
+                    doubledash_inner_ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
+                    note_tag.wrap(doubledash_inner_ul_tag)
+                    inner_tag.append(doubledash_inner_ul_tag)
+                else:
+                    doubledash_inner_ul_tag.append(note_tag)
+
+            elif re.search(r'^—?\d+\.?\s*—\s*—\s*—\s*(\w+|“)', note_tag.text.strip()):
+                tripledash_inner_tag_text = re.sub(r'[\W\s]+', '', note_tag.text.strip()).lower()
+                tripledash_inner_tag_id = f'{doubledash_inner_tag_id}-{tripledash_inner_tag_text}'
+
+                if tripledash_inner_tag_id in note_tag_id:
+                    tripledash_inner_tag_id = f'{tripledash_inner_tag_id}.{inr_count:02}'
+                    inr_count += 1
+                else:
+                    tripledash_inner_tag_id = f'{tripledash_inner_tag_id}'
+                    inr_count = 1
+                case_tag_id = f'{tripledash_inner_tag_id}'
+                note_tag_id.append(case_tag_id)
+
+                if not re.search(r'^—?\d+\.?\s*—\s*—\s*—\s*(\w+|“)', note_tag.find_previous("li").text.strip()):
+                    tripledash_inner_ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
+                    note_tag.wrap(tripledash_inner_ul_tag)
+                    doubledash_inner_tag.append(tripledash_inner_ul_tag)
+                else:
+                    tripledash_inner_ul_tag.append(note_tag)
+
+            elif re.search(r'^\d+\.?\s*—\s*—\s*—\s*—\s*(\w+|“)', note_tag.text.strip()):
                 pass
-            elif re.search(r'^\d+\.\s*— — —\w+', note_tag.text.strip()):
-                pass
-            elif re.search(r'^\d+\.\s*— — — —\w+', note_tag.text.strip()):
-                pass
+
             elif re.search(r'^[IVX]+\.', note_tag.text.strip()):
                 rom_tag = note_tag
                 rom_num = re.search(r'^(?P<id>[IVX]+)\.', note_tag.text.strip()).group("id")
                 if re.search(r'^I\.', note_tag.text.strip()):
-                    rom_ul = inner_ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
+                    rom_ul = self.soup.new_tag("ul", **{"class": "leaders"})
                     note_tag.wrap(rom_ul)
                 else:
                     rom_ul.append(note_tag)
-                case_tag_id = f'#{note_tag.find_previous({"h3", "h2", "h1"}).get("id")}-notetodecision-{rom_num}'
+                case_tag_id = f'#{note_tag.find_previous({"h4", "h3", "h2", "h1"}).get("id")}-notetodecision-{rom_num}'
             else:
                 case_head_tag = note_tag
                 case_tag_text = re.sub(r'[\W\s]+', '', note_tag.text.strip()).lower()
-                if re.search(r'^\d+\.', note_tag.text.strip()):
-                    if re.search(r'^1\.', note_tag.text.strip()):
-                        inner_ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
-                        note_tag.wrap(inner_ul_tag)
-                    else:
-                        inner_ul_tag.append(note_tag)
-
-                    case_head_id = f'#{note_tag.find_previous({"h3", "h2", "h1"}).get("id")}-notetodecision-{case_tag_text}'
-                    case_tag_id = f'#{note_tag.find_previous({"h3", "h2", "h1"}).get("id")}-notetodecision-{case_tag_text}'
-
-                    if note_tag.find_previous().name != "a":
+                if re.search(r'^\d+\.?', note_tag.text.strip()):
+                    if re.search(r'^0\.5\.?', note_tag.text.strip()):
                         ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
                         note_tag.wrap(ul_tag)
+
+                    elif re.search(r'^1\.', note_tag.text.strip()):
+                        if note_tag.find_previous("li") and \
+                                re.search(r'^0\.5\.?', note_tag.find_previous("li").text.strip()):
+                            ul_tag.append(note_tag)
+
+                        else:
+                            ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
+                            note_tag.wrap(ul_tag)
+                            if subsection_tag:
+                                subsection_tag.append(ul_tag)
                     else:
-                        ul_tag.append(note_tag)
+                        if note_tag.find_previous().name != 'a':
+                            ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
+                            note_tag.wrap(ul_tag)
+                        else:
+                            ul_tag.append(note_tag)
+
+                    case_head_id = f'#{note_tag.find_previous({"h4", "h3", "h2", "h1"}).get("id")}-{case_tag_text}'
+                    case_tag_id = f'#{note_tag.find_previous({"h4", "h3", "h2", "h1"}).get("id")}-{case_tag_text}'
+
+                elif re.search(r'^(FIRST|SECOND|THIRD) SUBSECTION', note_tag.text.strip()):
+                    subsection_tag = note_tag
+                    if re.search(r'^FIRST SUBSECTION', note_tag.text.strip()):
+                        new_ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
+                        note_tag.wrap(new_ul_tag)
+                    else:
+                        new_ul_tag.append(note_tag)
 
                 else:
                     if re.search(r'^—\w+', note_tag.text.strip()):
@@ -1343,7 +1452,8 @@ class ParseHtml:
                         tag.decompose()
                 continue
 
-            if tag.name == "ul" and tag.li and re.search(r'p\d+', str(tag.li.get("class"))):
+            if tag.name == "ul" and tag.li and re.search(r'p\d+',
+                                                         str(tag.li.get("class"))) and tag.parent.name != "nav":
                 tag.wrap(self.soup.new_tag("nav"))
 
         clss = re.compile(r'p\d+')
@@ -1373,8 +1483,9 @@ class ParseHtml:
             cleansed_tag = re.sub(r'/>', ' />', str(tag))
             soup_str = re.sub(rf'{tag}', rf'{cleansed_tag}', soup_str, re.I)
 
-        with open(f"../../cic-code-{self.state_key.lower()}/transforms/{self.state_key.lower()}/oc{self.state_key.lower()}/r{self.release_number}/{self.input_file_name}",
-                      "w") as file:
+        with open(
+                f"/home/mis/PycharmProjects/cic_code_framework/transforms_output/{self.state_key.lower()}/oc{self.state_key.lower()}/r{self.release_number}/{self.input_file_name}",
+                "w") as file:
             soup_str = getattr(self.parser_obj, "amp_pattern").sub('&amp;', soup_str)
             soup_str = getattr(self.parser_obj, "br_pattern").sub('<br />', soup_str)
             soup_str = re.sub(r'<span class.*?>\s*</span>|<p>\s*</p>', '', soup_str)
@@ -1411,14 +1522,14 @@ class ParseHtml:
                     header_tag["id"] = f'{header_tag_id}'
                     count = 1
 
-                # header_tag["class"] = "section"
                 self.ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
 
     def replace_tags_constitution(self):
         h4_count = 1
         h3_id_list = []
         h2_id_list = []
-        h2_count = 1
+        count = 1
+        self.get_h2_order()
         for header_tag in self.soup.find_all("p"):
             if header_tag.get("class") == [self.tag_type_dict["head1"]]:
                 if self.regex_pattern_obj.h1_pattern_con.search(header_tag.text.strip()):
@@ -1432,7 +1543,8 @@ class ParseHtml:
 
             elif header_tag.get("class") == [self.tag_type_dict["head2"]]:
                 self.ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
-                text = re.search(r'^\S+', header_tag.text.strip()).group().lower()
+                header_tag_text = re.sub(r'\W+', '', header_tag.text.strip())
+                text = re.search(r'^(\S+)', header_tag.text.strip()).group().lower()
                 if text == self.h2_order[0]:
                     pattern = f'h2_{text}_pattern_con'
                     instance = getattr(self.parser_obj, pattern)
@@ -1481,16 +1593,25 @@ class ParseHtml:
                     self.ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
 
                 elif self.regex_pattern_obj.section_pattern_con.search(header_tag.text.strip()):
+                    if re.search(r'§ 4\. Power inherent in the', header_tag.text.strip()):
+                        print()
+
                     header_tag.name = "h3"
                     chap_no = self.regex_pattern_obj.section_pattern_con.search(header_tag.text.strip()).group('id')
-                    header_tag[
-                        "id"] = f'{header_tag.find_previous("h2", class_={"oneh2", "gen"}).get("id")}-s{chap_no.zfill(2)}'
+                    header_tag_id = f'{header_tag.find_previous("h2", class_={"oneh2", "gen"}).get("id")}-s{chap_no.zfill(2)}'
+
+                    if header_tag.find_previous("h3", id=header_tag_id):
+                        header_tag_id = f'{header_tag_id}.{count:02}'
+                        header_tag["id"] = f'{header_tag_id}.{count:02}'
+                        count += 1
+                    else:
+                        header_tag["id"] = f'{header_tag_id}'
+                        count = 1
                     self.ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
 
-                elif self.h2_text_con and header_tag.text.strip() in self.h2_text_con:
+                elif self.h2_text_con and header_tag_text in self.h2_text_con:
                     header_tag.name = "h2"
-                    p_tag_text = re.sub(r'\s+', '', header_tag.text.strip()).lower()
-                    header_tag["id"] = f'{self.soup.find("h1").get("id")}-{p_tag_text}'
+                    header_tag["id"] = f'{self.soup.find("h1").get("id")}-{header_tag_text.lower()}'
                     header_tag["class"] = "oneh2"
 
                 elif self.h2_pattern_text_con:
@@ -1502,7 +1623,7 @@ class ParseHtml:
                             header_tag[
                                 "id"] = f'{header_tag.find_previous("h2", class_="gen").get("id")}-amd{h2_tag.group("id").zfill(2)}'
 
-                elif self.h2_text_con and header_tag.text.strip() in self.h2_text_con:
+                elif self.h2_text_con and header_tag_text in self.h2_text_con:
                     header_tag.name = "h2"
                     p_tag_text = re.sub(r'\W+', '', header_tag.text.strip()).lower()
                     header_tag_id = f'{self.soup.find("h1").get("id")}-{p_tag_text}'
@@ -1528,8 +1649,7 @@ class ParseHtml:
                     header_tag.name = "h3"
                     chap_no = self.regex_pattern_obj.section_pattern_con.search(header_tag.text.strip()).group('id')
                     header_tag[
-                        "id"] = f'{header_tag.find_previous("h2", class_={"oneh2", "gen", "amd"}).get("id")}-s{chap_no.zfill(2)}'
-                    # header_tag["class"] = "section"
+                        "id"] = f'{header_tag.find_previous({"h2", "h3"}, class_={"oneh2", "gen", "amd"}).get("id")}-s{chap_no.zfill(2)}'
                     self.ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
 
                 if self.h3_pattern_text_con:
@@ -1559,7 +1679,7 @@ class ParseHtml:
 
             elif header_tag.get("class") == [self.tag_type_dict["head4"]]:
                 if header_tag.text.strip() in self.h4_head:
-                    self.replace_h4_tag_titles(header_tag, h4_count)
+                    self.replace_h4_tag_titles(header_tag, h4_count, None)
                     h4_count += 1
                 self.ul_tag = self.soup.new_tag("ul", **{"class": "leaders"})
 
@@ -1571,6 +1691,7 @@ class ParseHtml:
     def add_anchor_tags_con(self):
         for li_tag in self.soup.findAll():
             if li_tag.name == "li":
+                li_tag_text = re.sub(r'\W+', '', li_tag.text.strip())
                 text = re.search(r'^\S+', li_tag.text.strip()).group().lower()
                 pattern = f'h2_{text}_pattern_con'
                 if text == self.h2_order[0]:
@@ -1622,19 +1743,20 @@ class ParseHtml:
 
                 elif self.regex_pattern_obj.section_pattern_con.search(li_tag.text.strip()):
                     chap_num = self.regex_pattern_obj.section_pattern_con.search(li_tag.text.strip()).group("id")
-                    self.c_nav_count += 1
+                    self.s_nav_count += 1
                     if self.regex_pattern_obj.section_pattern_con1.search(li_tag.text.strip()):
                         if li_tag.find_previous("h3", class_={"oneh2", "gen", "amend"}):
                             self.set_chapter_section_id(li_tag, chap_num,
                                                         sub_tag="-s",
                                                         prev_id=li_tag.find_previous("h3", class_={"oneh2", "gen",
                                                                                                    "amend"}).get("id"),
-                                                        cnav=f'cnav{self.c_nav_count:02}')
+                                                        cnav=f'snav{self.s_nav_count:02}')
                         else:
+
                             self.set_chapter_section_id(li_tag, chap_num,
                                                         sub_tag="-s",
-                                                        prev_id=li_tag.find_previous("h2", "h1").get("id"),
-                                                        cnav=f'cnav{self.c_nav_count:02}')
+                                                        prev_id=li_tag.find_previous({"h2", "h1"}).get("id"),
+                                                        cnav=f'snav{self.s_nav_count:02}')
 
                     elif li_tag.find_previous("h4") and \
                             self.regex_pattern_obj.h2_article_pattern_con.search(
@@ -1642,7 +1764,7 @@ class ParseHtml:
                         self.set_chapter_section_id(li_tag, chap_num,
                                                     sub_tag="-s",
                                                     prev_id=li_tag.find_previous("h4").get("id"),
-                                                    cnav=f'cnav{self.c_nav_count:02}')
+                                                    cnav=f'snav{self.s_nav_count:02}')
 
                     elif li_tag.find_previous("h3") and \
                             self.regex_pattern_obj.amend_pattern_con.search(
@@ -1650,13 +1772,13 @@ class ParseHtml:
                         self.set_chapter_section_id(li_tag, chap_num,
                                                     sub_tag="-s",
                                                     prev_id=li_tag.find_previous("h3").get("id"),
-                                                    cnav=f'cnav{self.c_nav_count:02}')
+                                                    cnav=f'snav{self.s_nav_count:02}')
 
                     else:
                         self.set_chapter_section_id(li_tag, chap_num,
                                                     sub_tag="-s",
                                                     prev_id=li_tag.find_previous({"h2", "h1"}).get("id"),
-                                                    cnav=f'cnav{self.c_nav_count:02}')
+                                                    cnav=f'snav{self.s_nav_count:02}')
 
                 elif re.search(r'^PREAMBLE|^AMENDMENTS|^Schedule', li_tag.text.strip(), re.I) or \
                         self.h2_pattern_text and li_tag.text.strip() in self.h2_pattern_text:
@@ -1668,21 +1790,21 @@ class ParseHtml:
                                                 cnav=f'cnav{self.c_nav_count:02}')
                 elif self.regex_pattern_obj.amend_pattern_con.search(li_tag.text.strip()):
                     chap_num = self.regex_pattern_obj.amend_pattern_con.search(li_tag.text.strip()).group("id")
-                    self.c_nav_count += 1
+                    self.a_nav_count += 1
                     self.set_chapter_section_id(li_tag, chap_num,
                                                 sub_tag="-",
                                                 prev_id=li_tag.find_previous({"h2", "h1"}).get("id"),
-                                                cnav=f'cnav{self.c_nav_count:02}')
+                                                cnav=f'amnav{self.a_nav_count:02}')
 
-                elif self.h2_text_con and li_tag.text.strip() in self.h2_text_con:
-                    chap_num = re.sub(r'\W+', '', li_tag.text.strip()).lower()
+                elif self.h2_text_con and li_tag_text in self.h2_text_con:
                     if li_tag.find_previous("li") and li_tag.find_previous("li").get("id"):
                         self.chp_nav_count = int(
-                            re.search(r'cnav(?P<ncount>\d+)', li_tag.find_previous("li").get("id").strip()).group(
+                            re.search(r'(c|s|am|a)nav(?P<ncount>\d+)',
+                                      li_tag.find_previous("li").get("id").strip()).group(
                                 "ncount")) + 1
                     else:
                         self.chp_nav_count += 1
-                    self.set_chapter_section_id(li_tag, chap_num,
+                    self.set_chapter_section_id(li_tag, li_tag_text.lower(),
                                                 sub_tag="-",
                                                 prev_id=li_tag.find_previous("h1").get("id"),
                                                 cnav=f'cnav{self.chp_nav_count:02}')
@@ -1690,14 +1812,19 @@ class ParseHtml:
                     for list_pattern in self.h3_pattern_text_con:
                         h3_pattern = re.compile(list_pattern)
                         if h3_tag := h3_pattern.search(li_tag.text.strip()):
-                            self.c_nav_count += 1
+                            self.s_nav_count += 1
                             self.set_chapter_section_id(li_tag, h3_tag.group("id"),
                                                         sub_tag='s',
                                                         prev_id=li_tag.find_previous(
                                                             class_={"navhead1", "navhead", "oneh2", "twoh2",
                                                                     "threeh2"}).get(
                                                             "id"),
-                                                        cnav=f'cnav{self.c_nav_count:02}')
+                                                        cnav=f'snav{self.s_nav_count:02}')
+            elif li_tag.name in ['h2', 'h3', 'h4']:
+                self.a_nav_count = 0
+                self.c_nav_count = 0
+                self.p_nav_count = 0
+                self.s_nav_count = 0
 
     def create_analysis_nav_tag_con(self):
         pass
@@ -1753,7 +1880,7 @@ class ParseHtml:
         return str(self.soup.prettify(formatter=None)), self.meta_tags
 
     def storing_header_ids(self):
-        title_id = re.search(r'(?P<tid>\d+(\w)*|\d+(\.\w+)*)', self.input_file_name).group("tid")
+        title_id = re.search(r'(?P<tid>(\d+[A-Z]?\.\d+[A-Z]?)|\d+(\w)*|\d+(\.\w+)*)', self.input_file_name).group("tid")
         if not os.path.exists(f'{self.state_key}_cite_id'):
             os.mkdir(f'{self.state_key}_cite_id')
         if not os.path.exists(f'{self.state_key}_cite_id/{self.state_key}{self.release_number}'):
@@ -1765,7 +1892,7 @@ class ParseHtml:
             list_of_ids = []
             for tag in self.soup.find_all({'h3', "li"}):
                 if tag.name == "h3" and tag.get("id"):
-                    key = re.search(r'.+s(?P<sec_id>.+)$', tag.get("id").strip()).group("sec_id")
+                    key = re.search(r'.+(s|c)(?P<sec_id>.+)$', tag.get("id").strip()).group("sec_id")
                     value = tag.get("id")
                     list_of_ids.append(f'{key} {value}\n')
                 elif tag.name == "li" and tag.get("id") and tag.parent.name == "ol":
@@ -1787,7 +1914,8 @@ class ParseHtml:
                 if href_to_id not in header_id_list:
                     print(li_tag)
                     li_tag.a.unwrap()
-                    logger.warning(f"*{li_tag.text.strip()}* is invalid link")
+                    logger.warning(
+                        f"*{li_tag.text.strip()}* is invalid link in r{self.release_number}f{self.input_file_name}")
 
         logger.info("validated for broken links")
 
@@ -1796,3 +1924,13 @@ class ParseHtml:
 
     def format_id(self, sec_id, tag):
         pass
+
+    def h2_set_id(self, header_tag):
+        pass
+
+    def get_h2_order(self):
+        if len(self.h2_order) < 4:
+            self.h2_order += [""] * (abs(4 - len(self.h2_order)))
+            logger.warning("appending empty element to h2_order list")
+        elif len(self.h2_order) > 4:
+            logger.warning("ignoring elements of he_order list after 4 elements")
