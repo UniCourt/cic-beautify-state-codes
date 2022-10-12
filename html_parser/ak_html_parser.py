@@ -819,9 +819,9 @@ class AKParseHtml(ParserBase):
                 title_id = id_reg.group("title").strip().zfill(2)
 
                 if os.path.isfile(
-                        f"../../code-ak/transforms/ak/ocak/r{self.release_number}/gov.ak.code.title.{title_id}.html"):
+                        f"/home/mis/PycharmProjects/cic-code-ak-1/transforms/ak/ocak/r{self.release_number}/gov.ak.code.title.{title_id}.html"):
                     with open(
-                            f"../../code-ak/transforms/ak/ocak/r{self.release_number}/gov.ak.code.title.{title_id}.html",
+                            f"/home/mis/PycharmProjects/cic-code-ak-1/transforms/ak/ocak/r{self.release_number}/gov.ak.code.title.{title_id}.html",
                             'r') as firstfile:
 
                         for line in firstfile:
@@ -843,7 +843,7 @@ class AKParseHtml(ParserBase):
 
                                     tag.clear()
                                     text = re.sub(fr'\s{re.escape(match)}',
-                                                  f' <cite class="ocnd"><a href="{a_id}" target="{target}">{match}</a></cite>',
+                                                  f' <cite class="ocak"><a href="{a_id}" target="{target}">{match}</a></cite>',
                                                   inside_text,
                                                   re.I)
                                     tag.append(text)
@@ -863,7 +863,7 @@ class AKParseHtml(ParserBase):
 
                                     tag.clear()
                                     text = re.sub(fr'\s{re.escape(match)}',
-                                                  f' <cite class="ocnd"><a href="{a_id}" target="{target}">{match}</a></cite>',
+                                                  f' <cite class="ocak"><a href="{a_id}" target="{target}">{match}</a></cite>',
                                                   inside_text,
                                                   re.I)
                                     tag.append(text)
@@ -937,8 +937,13 @@ class AKParseHtml(ParserBase):
             soup_str = re.sub(rf'{tag}', rf'{cleansed_tag}', soup_str, re.I)
 
         print("validating")
-        with open(f"../../code-ak/transforms/ak/ocak/r{self.release_number}/{self.html_file_name}", "w") as file:
+        with open(f"../../cic-code-ak-1/transforms/ak/ocak/r{self.release_number}/{self.html_file_name}", "w") as file:
+            # soup_str = re.sub(r'&(?!amp;)', '&amp;', soup_str)
+            # file.write(soup_str)
+
             soup_str = re.sub(r'&(?!amp;)', '&amp;', soup_str)
+            soup_str = re.sub('<br/>', '<br />', soup_str)
+            soup_str = re.sub(r'<span class.*?>\s*</span>', '', soup_str)
             file.write(soup_str)
 
     def create_Notes_to_Decisions_ul_con(self):

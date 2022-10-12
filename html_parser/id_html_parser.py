@@ -10,7 +10,7 @@ from datetime import datetime
 from parser_base import ParserBase
 
 
-class idParseHtml(ParserBase):
+class IDParseHtml(ParserBase):
     def __init__(self, input_file_name):
         super().__init__()
         self.html_file_name = input_file_name
@@ -145,7 +145,6 @@ class idParseHtml(ParserBase):
                     sec_count = 1
                     self.snav_count = 1
 
-
                 elif chap_head := re.search(r'(Chapter(s?)|CHAPTER(s?))\s(?P<c_title>\d+[a-zA-Z]?)',header_tag.get_text()):
                     header_tag.name = "h2"
                     header_tag["id"] = f't{self.title}c{chap_head.group("c_title").zfill(2)}'
@@ -180,7 +179,6 @@ class idParseHtml(ParserBase):
                     header_tag.name = "h3"
                     header_tag["class"] = "articleh3"
                     case_note_count = 1
-
 
                 elif header_tag.get_text().isupper():
                     header_tag.name = "h4"
@@ -221,7 +219,6 @@ class idParseHtml(ParserBase):
                         sub_sec_id.append(subsec_head_id)
                         sub_sec_count = 1
                         self.case_note_head.append(header_tag.get_text().lower())
-
 
             if header_tag.get("class") == [self.tag_type_dict['ul']]:
                 if re.search(r'^\d+-\d+[a-zA-Z]?[a-zA-Z]?(-\d+)?\.?\s[“[a-zA-Z]+|^\d+-\d+[a-zA-Z]?[a-zA-Z]?(-\d+)?\s?[—,]\s?\d+-\d+[a-zA-Z]?(-\d+)?\.?\s[“[a-zA-Z]',header_tag.get_text()) or (re.search(r'^\d+\.|Chapter \d+[a-zA-Z]?[.—,-]',header_tag.get_text()) and not header_tag.find_previous("h3")) :
@@ -1040,7 +1037,7 @@ class idParseHtml(ParserBase):
 
         soup_str = str(self.soup.prettify(formatter=None))
 
-        with open(f"/home/mis/cic-code-id/transforms/id/ocid/r{self.release_number}/{self.html_file_name}", "w") as file:
+        with open(f"../../cic-code-id-1/transforms/id/ocid/r{self.release_number}/{self.html_file_name}", "w") as file:
             file.write(soup_str)
 
 

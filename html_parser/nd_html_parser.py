@@ -226,7 +226,8 @@ class NDParseHtml(ParserBase):
                             and not re.search(r'^Analysis', header_tag.text.strip()):
                         header_tag.name = "li"
                         header_tag['class'] = "note"
-                        note_to_decision_list.append(header_tag.text.strip())
+                        header_tag_text = re.sub(r'\W+','',header_tag.text.strip())
+                        note_to_decision_list.append(header_tag_text)
 
                     elif re.search(r'^Source:', header_tag.text.strip()) and header_tag.b:
                         new_tag = self.soup.new_tag("h4")
@@ -249,6 +250,7 @@ class NDParseHtml(ParserBase):
                         header_tag.b.clear()
 
                 elif header_tag.get("class") == [self.class_regex["NTD"]]:
+                    note_tag_text = re.sub(r'\W+','', header_tag.text.strip())
                     if header_tag.text.strip() in self.head4_list:
                         header_tag.name = "h4"
                         NTD_rom_head_tag = None
@@ -265,7 +267,7 @@ class NDParseHtml(ParserBase):
                         cur_id_list.append(header_tag['id'])
                         header4_tag = header_tag
 
-                    elif header_tag.text.strip() in note_to_decision_list:
+                    elif note_tag_text in note_to_decision_list:
                         if re.search(r'^[IVX]+\.', header_tag.text.strip()):
                             header_tag.name = "h5"
                             NTD_rom_head_tag = header_tag
@@ -1062,36 +1064,60 @@ class NDParseHtml(ParserBase):
                                        match.strip())
                 else:
                     id_reg = re.search(
-                        r'(?P<cite>(?P<title>\d+(\.\d+)*)-\d+(\.\d+)*-\d+(\.\d+)*)',
+                        r'(?P<cite>(?P<title>\d+(\.\d+)*)-\d+(\.\d+)*-\d+(\.\d+)*)(?P<ol>(\([a-z]\))(\(\d+\))*)*',
                         match.strip())
 
                 title = id_reg.group("title").strip()
                 title_id = f'{title.zfill(2)}'
 
                 if os.path.isfile(
-                        f"../../code-nd/transforms/nd/ocnd/r{self.release_number}/gov.nd.code.title.{title_id}.html"):
+                        f"/home/mis/PycharmProjects/cic-code-nd-1/transforms/nd/ocnd/r{self.release_number}/gov.nd.code.title.{title_id}.html"):
                     with open(
-                            f"../../code-nd/transforms/nd/ocnd/r{self.release_number}/gov.nd.code.title.{title_id}.html",
+                            f"/home/mis/PycharmProjects/cic-code-nd-1/transforms/nd/ocnd/r{self.release_number}/gov.nd.code.title.{title_id}.html",
                             'r') as firstfile:
 
                         for line in firstfile:
 
-                            if re.search(rf'id=".+(s|c){id_reg.group("cite")}">$', line.strip()):
-                                tag.clear()
-                                head_id = re.search(rf'id="(?P<h_id>.+(s|c){id_reg.group("cite")})">$', line.strip())
+                            if id_reg.group("ol"):
+                                ol_id = re.sub(r'[() ]+', '', id_reg.group("ol"))
+                                cite_id = f'{id_reg.group("cite")}ol1{ol_id}'
 
-                                if title_id == self.title_id:
-                                    target = "_self"
-                                    a_id = f'#{head_id.group("h_id")}'
-                                else:
-                                    target = "_blank"
-                                    a_id = f'gov.nd.stat.title.{title_id}.html#{head_id.group("h_id")}'
+                                if re.search(rf'id=".+{cite_id}">$', line.strip()):
+                                    li_id = re.search(rf'id="(?P<l_id>.+{cite_id})">$',
+                                                      line.strip()).group("l_id")
 
-                                text = re.sub(fr'\s{re.escape(match)}',
-                                              f' <cite class="ocnd"><a href="{a_id}" target="{target}">{match}</a></cite>',
-                                              inside_text,
-                                              re.I)
-                                tag.append(text)
+                                    if title_id == self.title.zfill(2):
+                                        target = "_self"
+                                        a_id = f'#{li_id}'
+                                    else:
+                                        target = "_blank"
+                                        a_id = f'gov.nd.stat.title.{title_id}.html#{li_id}'
+
+                                    tag.clear()
+                                    text = re.sub(fr'\s{re.escape(match)}',
+                                                  f' <cite class="ocak"><a href="{a_id}" target="{target}">{match}</a></cite>',
+                                                  inside_text,
+                                                  re.I)
+                                    tag.append(text)
+
+
+                            else:
+                                if re.search(rf'id=".+(s|c){id_reg.group("cite")}">$', line.strip()):
+                                    tag.clear()
+                                    head_id = re.search(rf'id="(?P<h_id>.+(s|c){id_reg.group("cite")})">$', line.strip())
+
+                                    if title_id == self.title_id:
+                                        target = "_self"
+                                        a_id = f'#{head_id.group("h_id")}'
+                                    else:
+                                        target = "_blank"
+                                        a_id = f'gov.nd.stat.title.{title_id}.html#{head_id.group("h_id")}'
+
+                                    text = re.sub(fr'\s{re.escape(match)}',
+                                                  f' <cite class="ocnd"><a href="{a_id}" target="{target}">{match}</a></cite>',
+                                                  inside_text,
+                                                  re.I)
+                                    tag.append(text)
 
             for match in set(
                     x for x in re.findall(r'N\.D\. LEXIS \d+',
@@ -1133,8 +1159,6 @@ class NDParseHtml(ParserBase):
             if len(tag.get_text(strip=True)) == 0:
                 tag.extract()
 
-
-
     def write_soup_to_file(self):
         """
             - add the space before self closing meta tags
@@ -1149,8 +1173,12 @@ class NDParseHtml(ParserBase):
             soup_str = re.sub(rf'{tag}', rf'{cleansed_tag}', soup_str, re.I)
 
         print("validating")
-        with open(f"../../code-nd/transforms/nd/ocnd/r{self.release_number}/{self.html_file_name}", "w") as file:
-            file.write(soup_str.replace('& ', '&amp; '))
+        with open(f"../../cic-code-nd-1/transforms/nd/ocnd/r{self.release_number}/{self.html_file_name}", "w") as file:
+            soup_str = re.sub(r'&(?!amp;)','&amp;',soup_str)
+            soup_str = re.sub('<br/>','<br />',soup_str)
+            soup_str = re.sub(r'<span class.*?>\s*</span>', '', soup_str)
+            file.write(soup_str)
+            # file.write(soup_str.replace('& ', '&amp; '))
 
     def create_Notes_to_Decisions(self):
         note_to_dec_ids: list = []
@@ -1448,4 +1476,5 @@ class NDParseHtml(ParserBase):
         self.clean_html_and_add_cite()
         self.write_soup_to_file()
         print(f'finished {self.html_file_name}')
+        print(datetime.now())
         print(datetime.now() - start_time)
