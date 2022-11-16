@@ -1178,7 +1178,7 @@ class NDParseHtml(ParserBase):
             soup_str = re.sub('<br/>','<br />',soup_str)
             soup_str = re.sub(r'<span class.*?>\s*</span>', '', soup_str)
             file.write(soup_str)
-            # file.write(soup_str.replace('& ', '&amp; '))
+
 
     def create_Notes_to_Decisions(self):
         note_to_dec_ids: list = []
