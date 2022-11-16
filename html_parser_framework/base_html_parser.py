@@ -1484,7 +1484,7 @@ class ParseHtml:
             soup_str = re.sub(rf'{tag}', rf'{cleansed_tag}', soup_str, re.I)
 
         with open(
-                f"/home/mis/PycharmProjects/cic_code_framework/transforms_output/{self.state_key.lower()}/oc{self.state_key.lower()}/r{self.release_number}/{self.input_file_name}",
+                f"../../cic_code_framework/transforms/{self.state_key.lower()}/oc{self.state_key.lower()}/r{self.release_number}/{self.input_file_name}",
                 "w") as file:
             soup_str = getattr(self.parser_obj, "amp_pattern").sub('&amp;', soup_str)
             soup_str = getattr(self.parser_obj, "br_pattern").sub('<br />', soup_str)
