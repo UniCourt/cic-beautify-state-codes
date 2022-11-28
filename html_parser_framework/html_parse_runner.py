@@ -189,7 +189,7 @@ def add_cite_to_file(soup_obj, meta_tag, state_key, release_number, input_file_n
         soup_str = re.sub(rf'{tag}', rf'{cleansed_tag}', soup_str, re.I)
 
     with open(
-            f"../../cic_code_framework/transforms//{state_key.lower()}/oc{state_key.lower()}"
+            f"../../cic-code-{state_key.lower()}/transforms/{state_key.lower()}/oc{state_key.lower()}"
             f"/r{release_number}/{input_file_name}", "w") as file:
         soup_str = re.sub(r'<span class.*?>\s*</span>|<p>\s*</p>|<b>\s*</b>', '', soup_str)
         file.write(soup_str)
