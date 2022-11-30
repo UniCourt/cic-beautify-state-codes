@@ -89,7 +89,16 @@ Currently this code supports following states:
       **Original RTF:**  https://archive.org/details/gov.nd.code
 
 
-10. ###Tennessee (TN):
+10. ###Rhode Island (RI):
+   
+      **Code repo:** https://github.com/UniCourt/cic-code-ri
+      
+      **Code pages:** https://unicourt.github.io/cic-code-ri
+      
+      **Original RTF:**  https://archive.org/download/gov.ri.code
+
+
+11. ###Tennessee (TN):
    
       **Code repo:** https://github.com/UniCourt/cic-code-tn
       
@@ -98,7 +107,7 @@ Currently this code supports following states:
       **Original RTF:** https://archive.org/details/gov.tn.tca
 
 
-11. ###Vermont (VT):
+12. ###Vermont (VT):
    
       **Code repo:** https://github.com/UniCourt/cic-code-vt
       
@@ -107,7 +116,7 @@ Currently this code supports following states:
       **Original RTF:** https://archive.org/download/gov.vt.code
 
 
-12. ###Virginia (VA):
+13. ###Virginia (VA):
    
       **Code repo:** https://github.com/UniCourt/cic-code-va
       
@@ -116,7 +125,7 @@ Currently this code supports following states:
       **Original RTF:**  https://archive.org/download/gov.va.code/
 
 
-13. ###Wyoming (WY):
+14. ###Wyoming (WY):
    
       **Code repo:** https://github.com/UniCourt/cic-code-wy
       
