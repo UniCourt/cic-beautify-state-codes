@@ -50,8 +50,7 @@ Currently this code supports following states:
    
    **Code pages:** https://unicourt.github.io/cic-code-id
    
-   **Original files can be found here:** https://archive.org/details/govlaw?and%5B%5D=subject%3A%22idaho.gov%22+AND+subject%3A%222020+Code%22&sin=&sort=titleSorter
-
+   **Original files can be found here:** https://archive.org
 
 6. ###Kentucky (KY):
    
